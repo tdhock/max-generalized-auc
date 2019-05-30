@@ -1,0 +1,8 @@
+** 30 May 2019
+
+[[file:figure-neuroblastomaProcessed-complex.R]] creates
+http://members.cbio.mines-paristech.fr/~thocking/figure-neuroblastomaProcessed-complex/
+which shows 8 labeled neuroblastoma data sequences with two different
+ROC curves / predictions. Strangely both achieve 0 errors, but the one
+with predictions in the finite interval has a highly non-monotonic ROC
+curve, and much smaller area inside the ROC polygon.
