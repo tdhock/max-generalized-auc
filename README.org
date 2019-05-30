@@ -6,3 +6,22 @@ which shows 8 labeled neuroblastoma data sequences with two different
 ROC curves / predictions. Strangely both achieve 0 errors, but the one
 with predictions in the finite interval has a highly non-monotonic ROC
 curve, and much smaller area inside the ROC polygon.
+
+[[file:figure-neuroblastomaProcessed-combinations.R]] creates the
+following figure which shows the auc values for all of the 2^8 unique
+combinations of predicted values for 8 labeled profiles. 
+
+[[file:figure-neuroblastomaProcessed-combinations.png]]
+
+Each labeled
+profiles has two minima: one in an infinite interval, and one in a
+finite interval. The panel titles show the difference d from the
+infinite interval limit to the predicted value, e.g. (-Inf, 1.2) with
+d=1 results in a predicted value of 0.2. The overall pattern is that d
+is relevant for AUC, in a range 0.001 to 10, but it has no effect
+outside that range. Surprisingly there are AUC values greater than
+zero, which happens when there are cycles. One example is highlighted
+with a circle in the plot above, and the ROC curves are shown below.
+
+[[file:figure-neuroblastomaProcessed-combinations-worst.png]]
+
