@@ -1,3 +1,16 @@
+** 31 May 2019
+
+
+[[file:figure-neuroblastomaProcessed-combinations.R]] creates the
+following figure which plots auc vs aub:
+
+[[file:figure-neuroblastomaProcessed-combinations-scatter.png]]
+
+Note that the min AUB=0 has AUC=1, and the points with AUC>1 have
+AUB>0. Thus minimizing AUB seems like a reasonable criterion.
+
+
+
 ** 30 May 2019
 
 [[file:figure-neuroblastomaProcessed-complex.R]] creates

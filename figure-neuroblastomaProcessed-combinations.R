@@ -85,8 +85,13 @@ for(size in size.vec){
   auc.dt.list[[paste(size)]] <- pred.dt[, {
     L <- penaltyLearning::ROChange(
       some.err, .SD, c("panel"))
+    L$roc[, min.fp.fn := ifelse(fp<fn, fp, fn)]
+    L$roc[, width.thresh := max.thresh-min.thresh]
+    aub <- L$roc[!(width.thresh==Inf & min.fp.fn==0), {
+      sum(min.fp.fn*width.thresh)
+    }]
     with(L, data.table(
-      auc, size,
+      auc, aub, size,
       n.finite=sum(interval=="finite"),
       thresholds[threshold=="predicted"]))
   }, by=list(combo.i)]
@@ -140,6 +145,51 @@ gg <- ggplot()+
   scale_x_continuous(breaks=seq(0, 1, by=0.5), labels=c("0", "0.5", "1"))+
   scale_y_continuous(breaks=seq(0, 1, by=0.5))
 png("figure-neuroblastomaProcessed-combinations-worst.png", 12, 3, units="in", res=100)
+print(gg)
+dev.off()
+
+gg <- ggplot()+
+  geom_point(aes(
+    aub, auc),
+    color="black",
+    shape=21,
+    size=5,
+    fill=NA,
+    data=auc.dt)+
+  theme_bw()+
+  theme(panel.margin=grid::unit(0, "lines"))+
+  facet_grid(. ~ size)
+print(gg)
+auc.dt[order(aub), .(auc, aub, size, combo.i)]
+
+aub.count <- auc.dt[, list(
+  combos=.N
+), by=list(aub=round(aub, 4), size, auc=round(auc, 4))]
+gg <- ggplot()+
+  geom_hline(aes(
+    yintercept=yint),
+    data=data.table(yint=1),
+    color="grey50")+
+  geom_point(aes(
+    aub, auc, fill=combos),
+    shape=21,
+    size=5,
+    data=aub.count)+
+  scale_fill_gradient(low="white", high="red")+
+  theme_bw()+
+  theme(panel.margin=grid::unit(0, "lines"))+
+  facet_grid(size ~ .)+
+  geom_text(aes(
+    aub, auc, label=combos),
+    size=3,
+    data=aub.count)+
+  scale_y_continuous(
+    "Area under ROC curve",
+    breaks=seq(0, 1.2, by=0.2))+
+  scale_x_continuous(
+    "Area under both TP and FP curves")
+print(gg)
+png("figure-neuroblastomaProcessed-combinations-scatter.png", 12, 9, units="in", res=100)
 print(gg)
 dev.off()
 
