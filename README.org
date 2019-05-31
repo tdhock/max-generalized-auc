@@ -25,3 +25,8 @@ with a circle in the plot above, and the ROC curves are shown below.
 
 [[file:figure-neuroblastomaProcessed-combinations-worst.png]]
 
+** 29 May 2019
+
+[[https://github.com/tdhock/neuroblastoma-data/blob/master/figure-max-auc.R]]
+creates http://members.cbio.mines-paristech.fr/~thocking/figure-max-auc/
+

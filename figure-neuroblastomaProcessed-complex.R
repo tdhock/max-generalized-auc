@@ -109,6 +109,13 @@ ggplot()+
     FPR, TPR, label=row.i),
     data=roc.dt)
 roc.dt[, .(interval, row.i, min.thresh, max.thresh, fp, fn)]
+roc.dt[, min.fp.fn := ifelse(fp<fn, fp, fn)]
+roc.dt[, width.thresh := max.thresh-min.thresh]
+roc.dt[!(width.thresh==Inf & min.fp.fn==0), list(
+  aub=sum(min.fp.fn*width.thresh)
+), by=list(interval)]
+## AUB=0 for good curve / predictions in infinite interval, AUB=2.58
+## for bad cruve / predictions in finite interval.
 
 roc.tall <- melt(
   roc.dt,
