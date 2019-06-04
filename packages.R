@@ -63,5 +63,7 @@ works_with_R(
   directlabels="2018.5.22",
   future="1.13.0",
   RJSONIO="1.3.1.1",
+  jointseg="1.0.2",
   "tdhock/penaltyLearning@cc3cabf33e9d331ecdc21e3b90d76a8138c80e38",
-  "tdhock/animint2@7ac92dcc31ea35af6a6cd016e352e7c980e08198")
+  "tdhock/animint2@7ac92dcc31ea35af6a6cd016e352e7c980e08198",
+  "great-northern-diver/loon@33442bae2ba2dca66050c36081079f9fb45a9358")
