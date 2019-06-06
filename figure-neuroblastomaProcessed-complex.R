@@ -224,7 +224,15 @@ roc.segs <- roc.dt[order(interval, min.thresh), {
 yexp <- 1
 roc.u <- roc.points[, .SD[1], by=list(FPR, TPR, interval)]
 roc.color <- "violet"
-viz <- animint(
+vstat <- c(
+  fp="false positive",
+  fn="false negative",
+  errors="errors")
+vert.dt[, status := vstat[variable] ]
+roc.tall[, status := vstat[variable] ]
+segs.err.tall[, status := vstat[variable] ]
+err.leg <- "Error type"
+animint(
   title="ROC curves for neuroblastoma data with several minima",
   duration=list(thresh=250),
   time=list(variable="thresh", ms=300),
@@ -255,7 +263,7 @@ viz <- animint(
     geom_segment(aes(
       min.log.lambda, value,
       xend=max.log.lambda, yend=value,
-      color=variable, size=variable),
+      color=status, size=status),
       data=segs.err.tall)+
     geom_point(aes(
       pred.plus.thresh, errors,
@@ -270,22 +278,32 @@ viz <- animint(
       breaks=c(0,1),
       limits=c(0-yexp, 1+yexp))+
     scale_x_continuous("log(penalty)")+
-    scale_color_manual(values=err.colors)+
-    scale_size_manual(values=err.sizes.animint),
+    scale_color_manual(
+      err.leg,
+      values=structure(err.colors[names(vstat)], names=vstat))+
+    scale_size_manual(
+      err.leg,
+      values=structure(err.sizes[names(vstat)], names=vstat)),
   thresholds=ggplot()+
     ggtitle("Total label error curves, select threshold")+
+    scale_color_manual(
+      err.leg,
+      values=structure(err.colors[names(vstat)], names=vstat))+
+    scale_size_manual(
+      err.leg,
+      values=structure(err.sizes[names(vstat)], names=vstat))+
     theme_bw()+
     theme_animint(width=600)+
     facet_grid(. ~ interval)+
     geom_segment(aes(
       min.thresh, value,
       xend=max.thresh, yend=value,
-      size=variable, color=variable),
+      size=status, color=status),
       data=roc.tall)+
     geom_segment(aes(
       thresh, value,
       xend=thresh, yend=next.value,
-      color=variable),
+      color=status),
       data=vert.dt)+
     geom_tallrect(aes(
       xmin=thresh-tail.size, xmax=thresh, key=1),
@@ -298,9 +316,8 @@ viz <- animint(
     scale_y_continuous(
       "errors",
       breaks=seq(0, 20, by=2))+
-    scale_x_continuous("Threshold = constant added to predicted values")+
-    scale_color_manual(values=err.colors)+
-    scale_size_manual(values=err.sizes.animint),
+    guides(color="none", size="none")+
+    scale_x_continuous("Threshold = constant added to predicted values"),
   roc=ggplot()+
     ggtitle("ROC curves, select threshold")+
     theme_bw()+
@@ -347,7 +364,7 @@ viz <- animint(
     ggtitle("Noisy data with predicted changes and label errors")+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "lines"))+
-    theme_animint(height=500, width=1400)+
+    theme_animint(height=400, width=1400)+
     facet_grid(panel ~ interval, scales="free")+
     geom_tallrect(aes(
       xmin=min/1e6, xmax=max/1e6, fill=annotation),
@@ -355,7 +372,7 @@ viz <- animint(
       alpha=0.5,
       color="grey")+
     scale_linetype_manual(
-      "Error type",
+      err.leg,
       values=c(
         correct=0,
         "false negative"=3,
@@ -379,7 +396,5 @@ viz <- animint(
       xintercept=change.pos/1e6, key=change.pos),
       data=show.changes,
       showSelected="thresh",
-      color="green"))
-viz$roc
-unlink("figure-neuroblastomaProcessed-complex", recursive=TRUE)
-animint2dir(viz, "figure-neuroblastomaProcessed-complex")
+      color="green"),
+  out.dir="figure-neuroblastomaProcessed-complex")

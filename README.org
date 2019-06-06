@@ -1,3 +1,12 @@
+** 4 June 2019
+
+[[file:figure-aub-convexity.R]] creates figures which show that the aub
+function is continuous but not convex:
+
+[[file:figure-aub-convexity-heatmap.png]]
+
+[[file:figure-aub-convexity.png]]
+
 ** 31 May 2019
 
 

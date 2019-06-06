@@ -64,4 +64,4 @@ works_with_R(
   future="1.13.0",
   RJSONIO="1.3.1.1",
   "tdhock/penaltyLearning@cc3cabf33e9d331ecdc21e3b90d76a8138c80e38",
-  "tdhock/animint2@7ac92dcc31ea35af6a6cd016e352e7c980e08198")
+  "tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef")
