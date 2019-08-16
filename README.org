@@ -1,6 +1,25 @@
+** TODOs
+
+Does greedy AUB minimization result in global AUB minimization? or
+does it depend on the order in which problems are processed?
+
+e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
+- For small margin sizes there is only one prediction combination that results in
+  AUB=0. Do we end up at this combination by greedy minimization?
+- FOr large margin sizes there are several prediction combinations that results
+  in AUB=0. Do we end up at one of these?
+
+** 16 Aug 2019
+
+[[file:figure-neuroblastomaProcessed-combinations-interactive.R]] makes
+
+[[http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/]]
+
 ** 6 June 2019
 
 [[file:curveAlignment.R]] and [[file:figure-curveAlignment.R]]
+
+http://members.cbio.mines-paristech.fr/~thocking/figure-max-auc/
 
 ** 4 June 2019
 
