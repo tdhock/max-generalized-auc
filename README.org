@@ -9,6 +9,12 @@ e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
 - FOr large margin sizes there are several prediction combinations that results
   in AUB=0. Do we end up at one of these?
 
+** 19 Aug 2019
+
+[[file:figure-curveAlignment.R]] computes derivative of area under
+min(fp,fn), updated viz:
+[[http://jan.ucc.nau.edu/~th798/viz/2019-08-19-curveAlignment-aub-deriv/]]
+
 ** 16 Aug 2019
 
 [[file:figure-neuroblastomaProcessed-combinations-interactive.R]] makes

@@ -8,18 +8,54 @@ err.dt.list <- list()
 roc.segs.list <- list()
 roc.win.err.list <- list()
 off.by <- 0.2
+offset.prob <- curveAlignment$problems$prob.dir[2]
 for(offset in seq(-5, 5, by=off.by)){
+  print(offset)
   pred.dt <- data.table(
     curveAlignment$problems, pred.log.lambda=10+c(0, offset))
   pred.eval <- curveAlignment$evaluation[pred.dt, on=list(prob.dir)]
+  pred.eval[, possible.fn := possible.tp]
+  roc <- penaltyLearning::ROChange(
+    pred.eval, pred.dt, "prob.dir")
+  ## compute derivative of Area under min(FP, FN).
+  thresh.dt <- pred.eval[order(-min.log.lambda), {
+    fp.diff <- diff(fp)
+    fp.change <- fp.diff != 0
+    fn.diff <- diff(fn)
+    fn.change <- fn.diff != 0
+    fp.dt <- if(any(fp.change))data.table(
+      log.lambda=min.log.lambda[c(fp.change, FALSE)],
+      fp=as.numeric(fp.diff[fp.change]),
+      fn=0)
+    fn.dt <- if(any(fn.change))data.table(
+      log.lambda=min.log.lambda[c(fn.change, FALSE)],
+      fp=0,
+      fn=as.numeric(fn.diff[fn.change]))
+    ##browser(expr=sample.id=="McGill0322")
+    rbind(fp.dt, fn.dt)
+  }, by=.(prob.dir)]
+  pred.with.thresh <- thresh.dt[pred.dt, on=.(prob.dir), nomatch=0L]
+  pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
+  first.dt <- pred.eval[max.log.lambda==Inf]
+  thresh.ord <- pred.with.thresh[order(-thresh), .(
+    prob.dir=c(NA, prob.dir),
+    min.thresh=c(-Inf, log.lambda),
+    max.thresh=c(log.lambda, Inf),
+    fp = cumsum(c(sum(first.dt$fp), fp)),
+    fn = cumsum(c(sum(first.dt$fn), fn)),
+    change=c(0, ifelse(fp==0, fn, fp))
+    )]
+  thresh.ord[, min.fp.fn := ifelse(fp<fn, fp, fn)]
+  thresh.ord[, min.change := c(NA, diff(min.fp.fn))]
+  prob.deriv <- thresh.ord[min.change==change, .(
+    deriv=-sum(change)
+  ), by=.(prob.dir)]
+  offset.deriv <- prob.deriv[offset.prob, on=.(prob.dir)]
+  ## save info for display.
   pred.eval[, min.thresh := min.log.lambda-pred.log.lambda]
   pred.eval[, max.thresh := max.log.lambda-pred.log.lambda]
   pred.eval[, piece := 1:.N]
-  pred.eval[, possible.fn := possible.tp]
   err.dt.list[[paste(offset)]] <- data.table(offset, pred.eval)
-  print(offset)
-  roc <- penaltyLearning::ROChange(
-    pred.eval, pred.dt, "prob.dir")
   roc$roc[, thresh := (min.thresh+max.thresh)/2]
   pred.some.cols <- pred.dt[, list(id=1, prob.dir, pred.log.lambda)]
   roc.off.id <- data.table(offset, id=1, roc$roc)
@@ -39,11 +75,19 @@ for(offset in seq(-5, 5, by=off.by)){
   off.min <- roc$roc[errors==min(errors)]
   roc$roc[, min.fp.fn := ifelse(fp<fn, fp, fn)]
   roc$roc[, width.thresh := max.thresh-min.thresh]
-  aub <- roc$roc[!(width.thresh==Inf & min.fp.fn==0), {
+  roc$roc[, min.change.after := c(diff(min.fp.fn), NA)]
+  min.positive <- roc$roc[0<min.fp.fn]
+  bad <- min.positive[width.thresh==Inf]
+  if(nrow(bad)){
+    print(bad)
+    stop("infinite aub")
+  }
+  aub <- min.positive[, {
     sum(min.fp.fn*width.thresh)
   }]
   auc.dt.list[[paste(offset)]] <- with(roc, data.table(
     auc, aub, offset,
+    aub.deriv=offset.deriv$deriv,
     min.errors=off.min$errors[1],
     n.min=nrow(off.min),
     thresholds[threshold=="min.error"]))
@@ -80,10 +124,10 @@ err.dt.tall[, sample := id2show(prob.dir)]
 auc.dt[, thresh := (min.thresh+max.thresh)/2]
 roc.dt[, Errors := ifelse(errors==min(errors), "Min", "More"), by=list(offset)]
 auc.dt[, max.correct := as.numeric(labels-min.errors)]
-auc.dt[, optimal.models := as.numeric(n.min)]
+auc.dt[, opt.models := as.numeric(n.min)]
 auc.tall <- melt(
   auc.dt,
-  measure.vars=c("aub", "auc", "max.correct", "optimal.models"))
+  measure.vars=c("aub", "aub.deriv", "auc", "max.correct", "opt.models"))
 min.err <- roc.dt[Errors=="Min"]
 min.err[, piece := 1:.N, by=list(offset)]
 roc.size <- 5
@@ -355,5 +399,6 @@ animint(
     geom_abline(aes(
       slope=slope, intercept=intercept),
       color="grey",
-      data=data.table(slope=1, intercept=0)))
+      data=data.table(slope=1, intercept=0))
+)
 
