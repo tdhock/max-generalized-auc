@@ -1,3 +1,9 @@
+** Result figures
+
+- [[http://jan.ucc.nau.edu/~th798/viz/2019-08-19-curveAlignment-aub-deriv/][Aligning two error curves]].
+- [[http://members.cbio.mines-paristech.fr/~thocking/figure-neuroblastomaProcessed-complex/][8 error curves with 2 different alignments]].
+- [[http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1]].
+
 ** TODOs
 
 Does greedy AUB minimization result in global AUB minimization? or
