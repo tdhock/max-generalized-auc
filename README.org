@@ -16,6 +16,10 @@ e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
 - FOr large margin sizes there are several prediction combinations that results
   in AUB=0. Do we end up at one of these?
 
+** 2 Oct 2019
+
+[[file:auc.improved.R]] copied from [[https://github.com/tdhock/feature-learning-benchmark/blob/master/auc.improved.R]]
+
 ** 19 Aug 2019
 
 [[file:figure-curveAlignment.R]] computes derivative of area under
