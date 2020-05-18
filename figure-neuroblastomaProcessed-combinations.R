@@ -66,6 +66,36 @@ gg <- ggplot()+
 print(gg)
 nb.comb$auc[order(aub), .(auc, aub, size, combo.i)]
 
+nb.comb$auc[, status := ifelse(
+  auc==1 & aub != 0, "counter-example", "other")]
+gg <- ggplot()+
+  ggtitle("AUC=1 does not imply AUM=0,
+each point represents a different vector of 8 predicted values,
+for data sequences n409.4 n485.2 n490.2 n513.3 n7.4 n76.2 p4.2 p496.11")+
+  geom_hline(aes(
+    yintercept=yint),
+    data=data.table(yint=1),
+    color="grey50")+
+  geom_vline(aes(
+    xintercept=xint),
+    data=data.table(xint=0),
+    color="grey50")+
+  geom_point(aes(
+    aub, auc, color=status),
+    data=nb.comb$auc)+
+  theme_bw()+
+  theme(panel.spacing=grid::unit(0, "lines"))+
+  scale_x_continuous(
+    "AUM = Area Under Min(FP, FN)",
+    breaks=c(0:2, max(nb.comb$auc$aub)))+
+  scale_y_continuous(
+    "AUC = Area Under the ROC Curve",
+    limits=c(0, NA),
+    breaks=c(0, 0.5, 1, max(nb.comb$auc$auc)))
+png("figure-neuroblastomaProcessed-combinations-points.png", width=10, height=6, units="in", res=100)
+print(gg)
+dev.off()
+
 rfac <- 5
 nb.comb$auc[, round.aub := round(aub*rfac)/rfac]
 nb.comb$auc[, round.auc := round(auc, 4)]

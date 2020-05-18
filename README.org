@@ -16,6 +16,14 @@ e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
 - FOr large margin sizes there are several prediction combinations that results
   in AUB=0. Do we end up at one of these?
 
+** 18 May 2020
+
+[[file:figure-neuroblastomaProcessed-combinations.R]] makes new figure
+that highlights counter-examples for the proposition (AUC=1 implies
+AUB=0) and shows that there are no counter-examples for the converse.
+
+[[file:figure-neuroblastomaProcessed-combinations-points.png]]
+
 ** 2 Oct 2019
 
 [[file:auc.improved.R]] copied from [[https://github.com/tdhock/feature-learning-benchmark/blob/master/auc.improved.R]]

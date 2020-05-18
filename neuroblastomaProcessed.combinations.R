@@ -33,7 +33,7 @@ some.err.tall <- melt(
   measure.vars=names(err.colors))
 ggplot()+
   theme_bw()+
-  theme(panel.margin=grid::unit(0, "lines"))+
+  theme(panel.spacing=grid::unit(0, "lines"))+
   facet_grid(profile.id + chromosome ~ .)+
   geom_segment(aes(
     min.log.lambda, value,

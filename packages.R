@@ -64,11 +64,14 @@ works_with_R(
   future="1.14.0",
   RJSONIO="1.3.1.1",
   R.utils="2.8.0",
-  "tdhock/penaltyLearning@c7738b140bad89159e5f084a903427ec35015902",
+  ##"tdhock/penaltyLearning@c7738b140bad89159e5f084a903427ec35015902",
+  penaltyLearning="1.0",
   jointseg="1.0.2",
-  "tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef")
-requireGitHub::requireGitHub_package(
-  "great-northern-diver",
-  "loon/R",
-  "33442bae2ba2dca66050c36081079f9fb45a9358",
-  "loon")
+  gridExtra="1.0",
+  ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
+  ggplot2="1.0")
+## requireGitHub::requireGitHub_package(
+##   "great-northern-diver",
+##   "loon/R",
+##   "33442bae2ba2dca66050c36081079f9fb45a9358",
+##   "loon")
