@@ -7,14 +7,21 @@
 
 ** TODOs
 
-Does greedy AUB minimization result in global AUB minimization? or
-does it depend on the order in which problems are processed?
+Does greedy AUB minimization result in global AUB minimization?
+Conjecture, no it depends on the order in which problems are
+processed -- TODO find counter-example.
 
 e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
 - For small margin sizes there is only one prediction combination that results in
   AUB=0. Do we end up at this combination by greedy minimization?
-- FOr large margin sizes there are several prediction combinations that results
+- For large margin sizes there are several prediction combinations that results
   in AUB=0. Do we end up at one of these?
+
+** 16 June 2020
+
+[[file:figure-compare-hinge-loss.R]] makes
+
+[[file:figure-compare-hinge-loss.png]]
 
 ** 18 May 2020
 
