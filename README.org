@@ -7,15 +7,56 @@
 
 ** TODOs
 
-Does greedy AUB minimization result in global AUB minimization?
+Does greedy AUM minimization result in global AUM minimization?
 Conjecture, no it depends on the order in which problems are
 processed -- TODO find counter-example.
 
 e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
 - For small margin sizes there is only one prediction combination that results in
-  AUB=0. Do we end up at this combination by greedy minimization?
+  AUM=0. Do we end up at this combination by greedy minimization?
 - For large margin sizes there are several prediction combinations that results
-  in AUB=0. Do we end up at one of these?
+  in AUM=0. Do we end up at one of these?
+
+
+** 25 Aug 2020
+
+Some R scripts for interactive experimentation with grad desc algo for
+learning linear model that minimizes AUM:
+- [[file:figure-linear-model.R]] uses
+  penaltyLearning::IntervalRegressionCV for initialization.
+- [[file:figure-linear-model-zero-init.R]] uses zero vector for init.
+
+R script with OneFold function that computes train/valid/test error,
+can be parallelized over 198 test folds on the cluster:
+- [[file:figure-linear-model-test.R]]
+
+Initial results on two data sets (ATAC, CTCF) show that
+- Train AUM decreases as a function of iterations (each iteration does
+  line search so that is expected).
+
+[[file:figure-linear-model-test-aum-train-decreases.png]]
+
+- IntervalRegressionCV init is much more accurate (in terms of test
+  AUM, AUC, errors) than zero init.
+
+[[file:figure-linear-model-test-compare-init.png]]
+
+- Using early stopping regularization (select number of iterations
+  with min AUM on validation set) does not decrease test AUM using
+  IntervalRegressionCV initialization.
+
+[[file:figure-linear-model-test-initial-selected.png]]
+
+- The linear model which is best in terms of test AUM, over all
+  iterations, is not much better than the initial iteration, for these
+  two data sets.
+
+[[file:figure-linear-model-test-initial-best.png]]
+
+- How does the best linear model compare to the best test AUM after
+  running gradient descent on just the predicted values? (without
+  linear model)
+- Do we see any improvement on other test folds / data sets?
 
 ** 16 June 2020
 
@@ -27,7 +68,7 @@ e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
 
 [[file:figure-neuroblastomaProcessed-combinations.R]] makes new figure
 that highlights counter-examples for the proposition (AUC=1 implies
-AUB=0) and shows that there are no counter-examples for the converse.
+AUM=0) and shows that there are no counter-examples for the converse.
 
 [[file:figure-neuroblastomaProcessed-combinations-points.png]]
 
@@ -75,10 +116,8 @@ following figure which plots auc vs aub:
 
 [[file:figure-neuroblastomaProcessed-combinations-scatter.png]]
 
-Note that the min AUB=0 has AUC=1, and the points with AUC>1 have
-AUB>0. Thus minimizing AUB seems like a reasonable criterion.
-
-
+Note that the min AUM=0 has AUC=1, and the points with AUC>1 have
+AUM>0. Thus minimizing AUM seems like a reasonable criterion.
 
 ** 30 May 2019
 
