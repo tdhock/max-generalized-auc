@@ -1,10 +1,31 @@
 library(data.table)
 library(ggplot2)
 
+auc.improved <- readRDS("../feature-learning-benchmark/auc.improved.rds")
+roc.dt.list <- list()
+for(test.fold.i in 1:nrow(auc.improved)){
+  one.fold <- auc.improved[test.fold.i]
+  roc.dt.list[[test.fold.i]] <- one.fold[, data.table(
+    data.name=set.name, test.fold=fold, pred.name,
+    rows=.N,
+    roc[[1]])]
+}
+(roc.dt <- do.call(rbind, roc.dt.list))
+roc.dt[, fn0 := fn-min(fn), by=.(data.name, test.fold, pred.name)]
+roc.dt[, min.fp.fn := ifelse(fp<fn0, fp, fn0)]
+roc.dt[, width := max.thresh-min.thresh]
+roc.dt[, area := ifelse(min.fp.fn==0, 0, min.fp.fn*width)]
+(aum.dt <- roc.dt[, .(
+  aum=sum(area)
+), keyby=.(data.name, test.fold, pred.name)])
+best.aum <- aum.dt[, .SD[which.min(aum), .(best.aum=aum)], by=.(data.name, test.fold)]
+
+
 testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*")
 
 OneFold <- function(testFold.path){
   cv.path <- dirname(dirname(testFold.path))
+  folds.csv <- file.path(cv.path, "folds.csv")
   cv.type <- basename(cv.path)
   test.fold <- basename(testFold.path)
   data.dir <- dirname(dirname(cv.path))
@@ -19,7 +40,10 @@ OneFold <- function(testFold.path){
     f.dt <- data.table::fread(f.csv)
     data.list[[f]] <- f.dt
   }
-  folds.csv <- Sys.glob(file.path(data.dir, "cv", "*", "folds.csv"))[1]
+  ## replace positive fp/fn at end with 0 to avoid AUM=Inf.
+  data.list[["evaluation"]][min.log.lambda==-Inf & 0<fn, fn := 0]
+  data.list[["evaluation"]][max.log.lambda==Inf & 0<fp, fp := 0]
+  ## read folds.  
   folds.dt <- data.table::fread(folds.csv)
   folds.dt[fold == test.fold, set := "test"]
   folds.dt[fold != test.fold, set := rep(
@@ -33,6 +57,7 @@ OneFold <- function(testFold.path){
     set.list[[s]] <- rownames(X.finite) %in% folds.dt[s==set, sequenceID]
   }
   X.list <- lapply(set.list, function(i)X.finite[i, ])
+  neg.t.X.subtrain <- -t(X.list[["subtrain"]])
   y.train <- data.list[["outputs"]][
     seqs.train,
     cbind(min.log.lambda, max.log.lambda),
@@ -85,8 +110,14 @@ OneFold <- function(testFold.path){
         "it=%d seed=%d init=%s\n",
         iteration, seed, init.name))
       g.dt <- set.roc.list[["subtrain"]][["aum.grad"]]
-      g.vec <- g.dt$lo
-      direction.vec <- -t(X.list[["subtrain"]]) %*% g.vec
+      ## If aum.grad has some problems with no changes in error then
+      ## they may be missing.
+      g.vec <- rep(0, ncol(neg.t.X.subtrain))
+      names(g.vec) <- colnames(neg.t.X.subtrain)
+      g.vec[
+        g.dt[["sequenceID"]]
+      ] <- g.dt[["lo"]]
+      direction.vec <- neg.t.X.subtrain %*% g.vec
       take.step <- function(s){
         weight.vec + s*direction.vec
       }
@@ -187,14 +218,42 @@ test.best.ids <- all.it[
   .SD[which.min(aum), .(iteration)],
   by=.(data.name, test.fold, init.name, seed)]
 
+## model selection.
 test.it1 <- all.it[set=="test" & iteration==1]
 test.selected <- all.it[set=="test"][valid.best.ids, on=names(valid.best.ids)]
 test.best <- all.it[set=="test"][test.best.ids, on=names(test.best.ids)]
+
+## compare with best predictions (no linear model).
+best.compare <- best.aum[
+  test.best,
+  .(data.name, test.fold, init.name, seed, aum, best.aum),
+  on=.(data.name, test.fold)]
+best.compare[, aum.diff := aum-best.aum]
+ggplot()+
+  geom_point(aes(
+    aum.diff, init.name),
+    shape=1,
+    data=best.compare)+
+  facet_grid(. ~ data.name + test.fold, scales="free", labeller=label_both)+
+  theme_bw()+
+  scale_x_log10()+
+  theme(panel.spacing=grid::unit(0, "lines"))
+best.compare[, .(
+  min.diff=min(aum.diff),
+  max.diff=max(aum.diff)
+), by=.(data.name, test.fold, init.name)]
+
+best.pred <- best.aum[
+  unique(test.best[, .(data.name, test.fold)]),
+  on=.(data.name, test.fold)]
 test.show <- rbind(
   data.table(iterations="initial", test.it1),
-  data.table(iterations="best", test.best),
+  data.table(iterations="best.linear", test.best),
   data.table(iterations="selected", test.selected))
-test.show[, Iterations := factor(iterations, c("initial", "selected", "best"))]
+ifac <- function(x)factor(
+  x, c("initial", "selected", "best.linear", "best.pred"))
+test.show[, Iterations := ifac(iterations)]
+best.pred[, Iterations := ifac("best.pred")]
 gg <- ggplot()+
   ggtitle("Test AUM, selected=min valid aum, best=min test aum, max it=50")+
   theme_bw()+
@@ -203,13 +262,18 @@ gg <- ggplot()+
     aum, Iterations, color=factor(test.fold)),
     shape=1,
     data=test.show)+
+  scale_y_discrete(drop=FALSE)+
+  geom_point(aes(
+    best.aum, Iterations, color=factor(test.fold)),
+    shape=1,
+    data=best.pred)+
   facet_grid(init.name ~ data.name, scales="free", labeller=label_both)
 png(
   "figure-linear-model-test-compare-init.png",
   width=8, height=6, res=100, units="in")
 print(gg)
 dev.off()
-
+b
 test.show[, neg.auc := -auc]
 test.show.tall <- melt(
   test.show[init.name=="IntervalRegressionCV"],
@@ -234,7 +298,7 @@ dev.off()
 gg <- ggplot()+
   ggtitle("Test set metrics, init=IntervalRegressionCV, best about the same as initial")+
   geom_point(aes(
-    initial, best, color=factor(seed)),
+    initial, best.linear, color=factor(seed)),
     shape=1,
     data=test.iCV)+
   geom_abline()+
@@ -244,7 +308,4 @@ png(
   width=10, height=6, res=100, units="in")
 print(gg)
 dev.off()
-
-
-
 
