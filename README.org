@@ -37,7 +37,9 @@ Initial results on two data sets (ATAC, CTCF) show that
 [[file:figure-linear-model-test-aum-train-decreases.png]]
 
 - IntervalRegressionCV init is much more accurate (in terms of test
-  AUM, AUC, errors) than zero init.
+  AUM, AUC, errors) than zero init. Best linear model is not as
+  accurate as best predictions, after running gradient descent on just
+  the predicted values (without linear model).
 
 [[file:figure-linear-model-test-compare-init.png]]
 
@@ -53,9 +55,6 @@ Initial results on two data sets (ATAC, CTCF) show that
 
 [[file:figure-linear-model-test-initial-best.png]]
 
-- How does the best linear model compare to the best test AUM after
-  running gradient descent on just the predicted values? (without
-  linear model)
 - Do we see any improvement on other test folds / data sets?
 
 ** 16 June 2020
