@@ -53,23 +53,24 @@ works_with_R <- function(Rvers,...){
   }
 }
 options(repos=c(
-          "http://www.bioconductor.org/packages/release/bioc",
-          "http://r-forge.r-project.org",
-          "http://cloud.r-project.org",
-          "http://cran.r-project.org"))
+  "http://www.bioconductor.org/packages/release/bioc",
+  ##"http://r-forge.r-project.org",
+  "http://cloud.r-project.org",
+  "http://cran.r-project.org"))
 works_with_R(
-  "3.6.1",
-  data.table="1.12.2",
-  directlabels="2018.5.22",
-  future="1.14.0",
-  RJSONIO="1.3.1.1",
-  R.utils="2.8.0",
-  ##"tdhock/penaltyLearning@c7738b140bad89159e5f084a903427ec35015902",
-  penaltyLearning="1.0",
+  "4.0.2",
+  data.table="1.13.0",
+  directlabels="2020.6.17",
+  future="1.18.0",
+  future.apply="1.6.0",
+  RJSONIO="1.3.1.4",
+  R.utils="2.10.1",
+  "tdhock/penaltyLearning@78a60a2d50f113db177c55883ac9ebcd646f4374",
+  ##penaltyLearning="1.0",
   jointseg="1.0.2",
-  gridExtra="1.0",
+  gridExtra="2.3",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
-  ggplot2="1.0")
+  ggplot2="3.3.2")
 ## requireGitHub::requireGitHub_package(
 ##   "great-northern-diver",
 ##   "loon/R",

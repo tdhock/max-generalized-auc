@@ -18,6 +18,12 @@ e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
   in AUM=0. Do we end up at one of these?
 
 
+** 2 Sept 2020
+
+[[file:figure-linear-model-test-analyze.R]] makes
+
+[[file:figure-linear-model-test-analyze.png]]
+
 ** 25 Aug 2020
 
 Some R scripts for interactive experimentation with grad desc algo for
