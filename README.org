@@ -1,9 +1,9 @@
 ** Result figures
 
-- [[http://jan.ucc.nau.edu/~th798/viz/2019-08-19-curveAlignment-aub-deriv/][Aligning two error curves]].
+- [[http://ml.nau.edu/viz/2019-08-19-curveAlignment-aub-deriv/][Aligning two error curves]].
 - [[http://members.cbio.mines-paristech.fr/~thocking/figure-neuroblastomaProcessed-complex/][8 error curves with 2 different alignments]].
-- [[http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1]].
-- [[http://jan.ucc.nau.edu/~th798/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
+- [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
+- [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
 ** TODOs
 
@@ -11,7 +11,7 @@ Does greedy AUM minimization result in global AUM minimization?
 Conjecture, no it depends on the order in which problems are
 processed -- TODO find counter-example.
 
-e.g. in http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/
+e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 - For small margin sizes there is only one prediction combination that results in
   AUM=0. Do we end up at this combination by greedy minimization?
 - For large margin sizes there are several prediction combinations that results
@@ -85,13 +85,13 @@ AUM=0) and shows that there are no counter-examples for the converse.
 
 [[file:figure-curveAlignment.R]] computes derivative of area under
 min(fp,fn), updated viz:
-[[http://jan.ucc.nau.edu/~th798/viz/2019-08-19-curveAlignment-aub-deriv/]]
+[[http://ml.nau.edu/viz/2019-08-19-curveAlignment-aub-deriv/]]
 
 ** 16 Aug 2019
 
 [[file:figure-neuroblastomaProcessed-combinations-interactive.R]] makes
 
-[[http://jan.ucc.nau.edu/~th798/viz/2019-08-16-generalized-roc/]]
+[[http://ml.nau.edu/viz/2019-08-16-generalized-roc/]]
 
 ** 6 June 2019
 
