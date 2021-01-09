@@ -19,6 +19,12 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 
 ** 8 Jan 2021
 
+[[file:figure-fn-not-monotonic.R]] makes
+
+[[file:figure-fn-not-monotonic.png]]
+
+[[file:figure-fn-not-monotonic-error.png]]
+
 [[file:figure-more-than-one.R]] makes
 
 [[file:figure-more-than-one-less-aum.png]] 
