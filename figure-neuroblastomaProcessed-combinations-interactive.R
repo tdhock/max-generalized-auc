@@ -3,8 +3,10 @@ source("packages.R")
 nb.comb <- readRDS("neuroblastomaProcessed.combinations.rds")
 
 roc.dt <- nb.comb$auc[, data.table(
-  roc[[1]]
+  roc[[1]][[1]]
 ), by=.(size, combo.i)]
+perfect <- roc.dt[FPR==0 & TPR==1]
+nb.comb$auc[!perfect, on=.(size, combo.i)]
 
 one.combo <- roc.dt[combo.i==256]
 ggplot()+

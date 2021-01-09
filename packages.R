@@ -65,8 +65,8 @@ works_with_R(
   future.apply="1.6.0",
   RJSONIO="1.3.1.4",
   R.utils="2.10.1",
-  "tdhock/penaltyLearning@78a60a2d50f113db177c55883ac9ebcd646f4374",
-  ##penaltyLearning="1.0",
+  ##"tdhock/penaltyLearning@78a60a2d50f113db177c55883ac9ebcd646f4374",
+  penaltyLearning="1.0",
   jointseg="1.0.2",
   gridExtra="2.3",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
