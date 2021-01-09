@@ -169,16 +169,22 @@ for(m in names(profile.list)){
       data=p.fp.fn)+
     scale_color_manual(leg, values=err.colors)+
     scale_size_manual(leg, values=err.sizes)+
-    scale_y_continuous("")+
-    scale_x_continuous("Threshold added to predicted values", limits=c(0, 10))
+    scale_y_continuous("Label Errors")+
+    scale_x_continuous(
+      "Threshold added to predicted values",
+      limits=c(0, 10),
+      breaks=seq(0, 10, by=2))
   g.list <- list(auc=g, aum=g.aum)
   for(plot.type in names(g.list)){
     out.png <- sprintf(
       "figure-more-than-one-%s-%s.png",
       m, plot.type)
-    h <- 2.5
-    png(out.png, width=if(plot.type=="auc")h else 4, height=h, units="in", res=200)
+    png(
+      out.png,
+      width=if(plot.type=="auc")2.5 else 4.5,
+      height=if(plot.type=="auc")2.5 else 2, units="in", res=200)
     print(g.list[[plot.type]])
     dev.off()
   }
 }
+
