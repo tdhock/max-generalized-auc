@@ -16,21 +16,17 @@ profile <- function(..., possible.fp, possible.fn, errors, labels){
 }
 profile.list <- list(
   less=profile(
-    d(-Inf, 30, 0),
-    ##d(1, 30, 3),
+    d(-Inf, 0, 30),
     d(2, 3, 3),
-    ##d(3, 3, 30),
-    d(4, 0, 30)),
+    d(4, 30, 0)),
   more=profile(
-    d(-Inf, 30, 0),
-    ##d(1, 30, 5),
-    d(2, 5, 8),
-    d(5, 5, 25),
-    d(6, 30, 25),
-    d(7, 30, 8),
-    d(8, 8, 8),
-    ##d(9, 8, 30),
-    d(10, 0, 30)))
+    d(-Inf, 0, 30),
+    d(2, 8, 8),
+    d(5, 30, 8),
+    d(7, 30, 25),
+    d(8, 5, 25),
+    d(9, 5, 8),
+    d(10, 30, 0)))
 pred.dt <- data.table(problem=1, pred.log.lambda=0)
 roc.dt.list <- list()
 auc.dt.list <- list()

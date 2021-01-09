@@ -46,25 +46,27 @@ gg <- ggplot()+
   ##theme(panel.spacing=grid::unit(0, "lines"))+
   ylab("")+
   geom_vline(aes(
-    xintercept=(min.log.lambda+max.log.lambda)/2),
+    xintercept=-(min.log.lambda+max.log.lambda)/2),
     color="grey50",
     data=err.list$model.errors[segments %in% some.segs])+
   geom_segment(aes(
-    min.log.lambda, value,
+    -min.log.lambda, value,
     color=variable, size=variable,
-    xend=max.log.lambda, yend=value),
+    xend=-max.log.lambda, yend=value),
     data=data.table(panel="Label errors", err.tall))+
   geom_blank(aes(
     x, y),
     data=data.table(x=0, y=c(-0.4,1.4)))+
   geom_segment(aes(
-    min.log.lambda, segments,
-    xend=max.log.lambda, yend=segments),
+    -min.log.lambda, segments,
+    xend=-max.log.lambda, yend=segments),
     size=1,
     data=data.table(panel="Segments", err.list$model.errors))+
   scale_color_manual(lab, values=err.colors)+
   scale_size_manual(lab, values=err.sizes)+
-  scale_x_continuous("Predicted log(penalty)")
+  scale_x_continuous(
+    "Predicted value, f(x) = -log(penalty)",
+    limits=c(-2, 4))
 png("figure-fn-not-monotonic-error.png", 5, 3, units="in", res=200)
 print(gg)
 dev.off()
