@@ -17,6 +17,8 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 - For large margin sizes there are several prediction combinations that results
   in AUM=0. Do we end up at one of these?
 
+
+
 ** 8 Jan 2021
 
 [[file:figure-fn-not-monotonic.R]] makes
@@ -81,6 +83,9 @@ Initial results on two data sets (ATAC, CTCF) show that
 - Do we see any improvement on other test folds / data sets?
 
 ** 16 June 2020
+
+[[file:figure-compare-hinge-loss-data.R]] makes
+[[file:figure-compare-hinge-loss-data.csv]]
 
 [[file:figure-compare-hinge-loss.R]] makes
 

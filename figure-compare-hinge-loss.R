@@ -35,10 +35,10 @@ gg <- ggplot()+
   scale_fill_gradient(
     "Relative\nvalues",
     low="white",
-    high="violet")+
+    high="blue")+
   coord_equal()+
   xlab("Real-valued prediction for positive label")+
   ylab("Real-valued prediction\nfor negative label")
-png("figure-compare-hinge-loss.png", width=6, height=2, res=100, units="in")
+png("figure-compare-hinge-loss.png", width=6, height=2, res=200, units="in")
 print(gg)
 dev.off()
