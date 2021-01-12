@@ -78,7 +78,7 @@ poly.dt <- roc.dt[, {
   zero <- rep(0, nrow(left))
   i <- 1:nrow(left)
   m <- left$model
-  area <- ifelse(left$FPR < right$FPR, "positive", "negative")
+  area <- ifelse(left$FPR < right$FPR, "negative", "positive")
   data.table(
     FPR=c(left$FPR, right$FPR, right$FPR, left$FPR),
     TPR=c(left$TPR, right$TPR, zero,  zero),
