@@ -17,7 +17,9 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 - For large margin sizes there are several prediction combinations that results
   in AUM=0. Do we end up at one of these?
 
-
+** 13 Jan 2021
+[[file:figure-binary-class.R]] makes a figure showing what fp/fn curves
+look like for binary class.
 ** 12 Jan 2021
 [[file:figure-aum-convexity.R]] makes
 
