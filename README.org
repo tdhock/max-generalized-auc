@@ -19,7 +19,10 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 
 ** 13 Jan 2021
 [[file:figure-binary-class.R]] makes a figure showing what fp/fn curves
-look like for binary class.
+look like for binary class,
+
+[[file:figure-binary-class.png]]
+
 ** 12 Jan 2021
 [[file:figure-aum-convexity.R]] makes
 

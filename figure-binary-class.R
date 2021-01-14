@@ -1,5 +1,4 @@
-library(data.table)
-library(ggplot2)
+source("packages.R")
 
 d <- function(min.log.lambda, fp, fn){
   data.table(min.log.lambda, fp, fn)
@@ -34,18 +33,25 @@ err.colors <- c(
 profile.tall <- data.table::melt(
   profile.wide,
   measure=c("fp", "fn"))
-ggplot()+
-  facet_grid(label ~ ., labeller=label_both)+
-  theme_bw()+
-  theme(panel.spacing=grid::unit(0, "lines"))+
+leg <- "Error type"
+gg <- ggplot()+
+  facet_grid(. ~ label, labeller=label_both)+
+  ## theme_bw()+
+  ## theme(panel.spacing=grid::unit(0, "lines"))+
   geom_segment(aes(
     min.log.lambda, value,
     color=variable, size=variable,
     xend=max.log.lambda, yend=value),
     data=profile.tall)+
-  scale_color_manual(values=err.colors)+
-  scale_size_manual(values=err.sizes)+
-  scale_x_continuous("Predicted value f(x)")
-
-
-
+  scale_y_continuous(
+    "Label errors",
+    breaks=c(0,1),
+    limits=c(-0.2, 1.2))+
+  scale_color_manual(leg, values=err.colors)+
+  scale_size_manual(leg, values=err.sizes)+
+  scale_x_continuous(
+    "Predicted value f(x)",
+    limits=c(-1.8, 1.8))
+png("figure-binary-class.png", width=4, height=2, res=200, units="in")
+print(gg)
+dev.off()
