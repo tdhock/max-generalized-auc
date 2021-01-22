@@ -47,6 +47,7 @@ getROC <- function(p){
 step.number <- 1
 step.size <- 1
 roc.list <- getROC(pred.dt)
+iterations.dt.list <- list()
 improvement <- Inf
 while(1e-6 < improvement){
   ## these depend on predictions:
@@ -68,6 +69,11 @@ while(1e-6 < improvement){
     step.list$aum,
     roc.list$auc,
     step.list$auc))
+  iterations.dt.list[[paste(step.number)]] <- data.table(
+    step.number,
+    aum=roc.list$aum,
+    auc=roc.list$auc,
+    min.errors=roc.list$thresholds[threshold=="min.error", errors])
   improvement <- roc.list$aum-step.list$aum
   pred.dt <- step.dt
   roc.list <- step.list
@@ -83,6 +89,8 @@ mid.pred <- test.fold.segs[pred.dt, .(
     max.log.lambda > pred.log.lambda)]
 mid.pred[, pred.log.lambda := ifelse(
   is.finite(mid.log.lambda), improved.pred, mid.log.lambda)]
+
+iterations.dt <- do.call(rbind, iterations.dt.list)
 
 pred.list <- list(
   initial=initial.pred,
@@ -102,6 +110,7 @@ for(pred.name in names(pred.list)){
 }
 
 out.list <- list(
+  iterations=iterations.dt,
   roc=do.call(rbind, out.roc.list),
   auc=do.call(rbind, out.auc.list))
 

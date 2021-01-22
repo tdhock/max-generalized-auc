@@ -18,11 +18,25 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
   in AUM=0. Do we end up at one of these?
 
 ** 21 Jan 2021
+[[file:figure-aum-train-both.R]] makes 
+
+[[file:figure-aum-train-both.png]]
+
+[[file:figure-aum-train-data.R]] makes [[file:figure-aum-train-data.rds]]
+
+[[file:figure-aum-train.R]] makes
+
+[[file:figure-aum-train-iterations.png]]
+
+[[file:figure-aum-train.png]]
+
 [[file:figure-aum-optimized-data.R]] makes [[file:figure-aum-optimized-data.rds]]
 
 [[file:figure-aum-optimized.R]] reads those data and makes
 
 [[file:figure-aum-optimized.png]]
+
+[[file:figure-aum-optimized-iterations.png]]
 
 This shows N=54 predicted values with min error, then predicted values
 optimized via aum gradient descent.

@@ -1,15 +1,14 @@
 source("packages.R")
-result.list <- readRDS("figure-aum-optimized-data.rds")
+result.list <- readRDS("figure-aum-train-data.rds")
+
 iterations.tall <- melt(result.list$iterations, id="step.number")
-iterations.tall[, Variable := sub("min.errors", "label errors", variable)]
 gg <- ggplot()+
   geom_line(aes(
     step.number, value),
     data=iterations.tall)+
-  facet_grid(Variable ~ ., scales="free")+
-  ylab("")+
-  xlab("Iteration of gradient descent algorithm")
-png("figure-aum-optimized-iterations.png", width=3, height=3, units="in", res=200)
+  facet_grid(variable ~ ., scales="free")+
+  ylab("")
+png("figure-aum-train-iterations.png", width=3, height=3, units="in", res=200)
 print(gg)
 dev.off()
 
@@ -38,6 +37,6 @@ gg <- ggplot()+
     data=result.list$auc)+
   coord_equal()+
   guides(color="none")
-png("figure-aum-optimized.png", width=3, height=3, units="in", res=200)
+png("figure-aum-train.png", width=3, height=3, units="in", res=200)
 print(gg)
 dev.off()
