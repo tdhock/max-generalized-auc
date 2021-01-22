@@ -4,13 +4,15 @@ abbrev.vec <- c(
   "linear model weights"="train")
 both.list <- list()
 for(optimization.variable in names(abbrev.vec)){
-  fname.rds <- paste0("figure-aum-", abbrev.vec[[optimization.variable]], "-data.rds")
+  fname.rds <- paste0(
+    "figure-aum-", abbrev.vec[[optimization.variable]], "-data.rds")
   result.list <- readRDS(fname.rds)
   for(data.type in c("roc", "auc")){
     dt <- result.list[[data.type]]
     dt[, model := sub("improved", "optimized", pred.name)]
     both.list[[data.type]][[optimization.variable]] <- data.table(
-      optimization.variable, dt)
+      optimization.variable=factor(optimization.variable, names(abbrev.vec)),
+      dt)
   }
 }
 for(data.type in names(both.list)){
