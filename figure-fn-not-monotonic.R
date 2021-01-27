@@ -67,7 +67,7 @@ gg <- ggplot()+
   scale_x_continuous(
     "Predicted value, f(x) = -log(penalty)",
     limits=c(-2, 4))
-png("figure-fn-not-monotonic-error.png", 5, 3, units="in", res=200)
+png("figure-fn-not-monotonic-error.png", 3.3, 2, units="in", res=200)
 print(gg)
 dev.off()
 
@@ -128,8 +128,9 @@ gg <- ggplot()+
     (min+max)/2, -0.5,
     label=status,
     color=status),
+    size=3,
     data=show.labels)+
   theme(legend.position="none")
-png("figure-fn-not-monotonic.png", 6, 4, units="in", res=200)
+png("figure-fn-not-monotonic.png", 5, 3.8, units="in", res=200)
 print(gg)
 dev.off()

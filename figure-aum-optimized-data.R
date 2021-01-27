@@ -9,6 +9,16 @@ addMeta <- function(dt){
 errors.dt <- addMeta(fread("../feature-learning-benchmark/labeled_problems_errors.csv"))
 possible.dt <- addMeta(fread("../feature-learning-benchmark/labeled_problems_possible_errors.csv"))
 
+fold.counts <- possible.dt[, list(
+  examples=.N,
+  labels=sum(labels)
+), by=.(set.name, fold)]
+fold.counts[, list(
+  folds=.N,
+  min.examples=min(examples),
+  max.examples=max(examples)
+)]
+
 test.fold.info <- folds.dt[set.name=="H3K4me3_XJ_immune" & fold==4]
 test.fold.errors <- errors.dt[test.fold.info, on=.(set.name, fold, problem)]
 test.fold.errors[, min.log.lambda := min.log.penalty]
