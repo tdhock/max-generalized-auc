@@ -36,7 +36,7 @@ err.sizes <- c(
 err.colors <- c(
   fp="red",
   fn="deepskyblue",
-  correct="grey")
+  correct="grey50")
 err.colors[c("false positive", "false negative")] <- err.colors[c("fp", "fn")]
 lab <- "Error type"
 some.segs <- c(2:4, 15)
