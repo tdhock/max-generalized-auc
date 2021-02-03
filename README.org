@@ -17,6 +17,28 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 - For large margin sizes there are several prediction combinations that results
   in AUM=0. Do we end up at one of these?
 
+** 3 Jan 2021
+
+[[file:figure-test-fold-monotonic.R]] makes
+
+#+BEGIN_SRC 
+> meta.dt[, .(data.name, test.fold, features, n.train, mean.breaks)]
+                  data.name test.fold features n.train mean.breaks
+1:          ATAC_JV_adipose         4       29     341    6.665689
+2: H3K27ac-H3K4me3_TDHAM_BP         2       26    1865    4.145845
+3:        H3K4me3_XJ_immune         2       28     216    5.902778
+4:        H3K4me3_XJ_immune         4       28     216    6.134259
+5:               systematic         1      117    3322    1.010235
+> (meta.stats <- meta.tall[, .(
++   min=min(value),
++   max=max(value)
++ ), by=variable])
+      variable        min         max
+1:    features  26.000000  117.000000
+2:     n.train 216.000000 3322.000000
+3: mean.breaks   1.010235    6.665689
+#+END_SRC
+
 ** 21 Jan 2021
 [[file:figure-aum-train-both.R]] makes 
 
