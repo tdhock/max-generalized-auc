@@ -8,8 +8,13 @@ e <- function(label, profile.id, chromosome){
 select.dt <- rbind(
   e("positive", 4, 2),
   e("negative", 513, 3))
-some.err <- neuroblastomaProcessed$errors[select.dt, on=list(
-  profile.id, chromosome)]
+some.err <- neuroblastomaProcessed$errors[select.dt, .(
+  fp, fn, possible.fp, possible.fn,
+  min.log.lambda=-max.log.lambda,
+  max.log.lambda=-min.log.lambda,
+  errors, labels,
+  label
+), on=list(profile.id, chromosome)]
 err.sizes <- c(
   fp=3,
   fn=2)
@@ -36,24 +41,42 @@ gg <- ggplot()+
     limits=c(-0.2, 1.2))+
   scale_color_manual(leg,values=err.colors)+
   scale_size_manual(leg,values=err.sizes)+
-  scale_x_continuous("Predicted value f(x)")
+  scale_x_continuous(
+    "Predicted value f(x)",
+    breaks=seq(-2, 6, by=2))+
+  coord_cartesian(xlim=c(-3, 5))
 png("figure-aum-convexity-profiles.png", 3.5, 2, units="in", res=200)
 print(gg)
 dev.off()
 
-pred.wide <- data.table(
-  pred.diff=seq(4.5, 6.5, by=0.01))
-pred.wide[, positive := pred.diff]
-pred.wide[, negative := 0]
+dmin <- 4.5
+dmax <- 6.5
+some.err[, fp.diff := c(NA, diff(fp))]
+some.err[, fn.diff := c(NA, diff(fn))]
+pred.dt <- some.err[fp.diff != 0 | fn.diff != 0, list(
+  plist=list(min.log.lambda)
+), by=label]
+plist <- with(pred.dt, structure(plist, names=label))
+grid.dt <- data.table(do.call(expand.grid, plist))
+grid.dt[, pred.diff := negative-positive]
+border.pred <- grid.dt[
+  dmin < pred.diff & pred.diff < dmax]
+grid.pred <- data.table(
+  pred.diff=seq(dmin, dmax, by=0.02))
+grid.pred[, positive := 0]
+grid.pred[, negative := pred.diff]
+both.pred <- rbind(
+  border.pred[, .(positive, negative, pred.diff, differentiable=FALSE)],
+  grid.pred[, .(positive, negative, pred.diff, differentiable=TRUE)])
 pred.tall <- melt(
-  pred.wide,
+  both.pred,
   measure.vars=select.dt$label,
   variable.name="label",
   value.name="pred.log.lambda")[select.dt, nomatch=0L, on="label"]
 metrics.wide <- pred.tall[order(pred.diff)][, {
   L <- penaltyLearning::ROChange(some.err, .SD, "label")
   with(L, data.table(aum, auc, roc=list(roc)))
-}, by=list(pred.diff)]
+}, by=list(pred.diff, differentiable)]
 metrics.tall <- melt(
   metrics.wide,
   measure.vars=c("aum", "auc")
@@ -61,12 +84,17 @@ metrics.tall <- melt(
 
 gg <- ggplot()+
   facet_grid(variable ~ ., scales="free", space="free")+
+  scale_fill_manual(values=c(
+    "TRUE"="black",
+    "FALSE"="orange"))+
   geom_point(aes(
-    pred.diff, value),
-    data=metrics.tall)+
-  xlab("Difference in predicted values, f(positive) - f(negative)")+
+    pred.diff, value, fill=differentiable),
+    size=1,
+    shape=21,
+    data=metrics.tall[order(-differentiable)])+
+  xlab("Difference in predicted values, f(negative) - f(positive)")+
   scale_y_continuous("", breaks=seq(0, 2, by=0.5))
-png("figure-aum-convexity.png", 4, 2, units="in", res=200)
+png("figure-aum-convexity.png", 5, 2, units="in", res=200)
 print(gg)
 dev.off()
 
