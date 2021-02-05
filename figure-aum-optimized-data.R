@@ -46,6 +46,12 @@ initial.pred <- test.fold.targets[order(width==Inf, -width), data.table(
 )]
 initial.pred[!is.finite(pred.log.lambda), pred.log.lambda := 0]
 
+test.fold.breaks <- test.fold.errors[, .(breaks=.N-1), by=prob.dir]
+test.fold.breaks[, .(
+  mean.breaks=mean(breaks),
+  examples=.N
+)]
+
 ## initialization:
 pred.dt <- data.table(initial.pred)
 getROC <- function(p){
