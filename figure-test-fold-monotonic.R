@@ -38,6 +38,10 @@ for(data.i in 1:nrow(data.dt)){
   folds.csv <- file.path(set.path, "cv", data.row$cv.type, "folds.csv")
   fold.dt <- data.table::fread(folds.csv)
   inputs.csv <- file.path(set.path, "inputs.csv")
+  if(!file.exists(inputs.csv)){
+    inputs.csv.xz <- paste0(inputs.csv, ".xz")
+    system(paste("unxz", inputs.csv.xz))
+  }
   inputs.dt <- data.table::fread(inputs.csv)
   inputs.mat <- as.matrix(inputs.dt[, -1, with=FALSE])
   keep <- apply(is.finite(inputs.mat), 2, all)
@@ -52,19 +56,26 @@ for(data.i in 1:nrow(data.dt)){
   err.tall <- data.table::melt(
     err.train,
     measure=c("fp", "fn"),
-    id="sequenceID")
+    id=c("sequenceID", "min.log.lambda"))
   err.tall[, diff := c(NA, diff(value)), by=.(sequenceID, variable)]
-  break.dt <- err.tall[!is.na(diff) & diff != 0, .(
+  some.diff <- err.tall[!is.na(diff) & diff != 0]
+  wide.diff <- data.table::dcast(some.diff, sequenceID + min.log.lambda ~ variable)
+  (wide.count <- wide.diff[, .(
     count=.N
-  ), by=sequenceID][order(count)]
+  ), by=sequenceID][order(count)])
+  (break.dt <- some.diff[, .(
+    count=.N
+  ), by=sequenceID][order(count)])
   meta.dt.list[[data.i]] <- data.table(
     data.row,
     features=sum(keep),
     n.train=nrow(train.seqs),
+    mean.wide=mean(wide.count$count),
     mean.breaks=mean(break.dt$count))
 }
 (meta.dt <- do.call(rbind, meta.dt.list))
-meta.dt[, .(data.name, test.fold, features, n.train, mean.breaks)]
+
+meta.dt[, .(data.name, test.fold, features, n.train, mean.breaks, mean.wide)]
 meta.tall <- data.table::melt(
   meta.dt,
   measure=c("features", "n.train", "mean.breaks"))
