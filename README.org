@@ -17,6 +17,13 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 - For large margin sizes there are several prediction combinations that results
   in AUM=0. Do we end up at one of these?
 
+** 10 Mar 2021
+[[file:figure-DNA-Sonar-subtrain-valid-data.R]] makes 
+
+[[file:figure-DNA-Sonar-subtrain-valid-data.csv.gz]]
+
+[[file:figure-DNA-Sonar-subtrain-valid.R]] analyzes those data.
+
 ** 9 Mar 2021
 
 [[file:figure-binary-test-auc-data.R]] makes [[file:figure-binary-test-auc-data.rds]]

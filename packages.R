@@ -59,7 +59,7 @@ options(repos=c(
   "http://cran.r-project.org"))
 works_with_R(
   "4.0.2",
-  data.table="1.13.0",
+  data.table="1.14.0",
   directlabels="2020.6.17",
   future="1.18.0",
   future.apply="1.6.0",
@@ -67,6 +67,7 @@ works_with_R(
   R.utils="2.10.1",
   "tdhock/penaltyLearning@4e14a0b0e022d919884277d68b8e47bd158459f3",
   ##penaltyLearning="1.0",
+  "tdhock/aum@04b9a8d0cbe7624baf36ad96249a565f0022cfd3",
   jointseg="1.0.2",
   gridExtra="2.3",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"

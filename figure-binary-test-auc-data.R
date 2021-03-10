@@ -34,8 +34,22 @@ AUM <- function(pred.vec, diff.dt){
     print(d[non.diff, ])
   }
   with(L, list(gradient=derivative_mat[,1], loss=aum))
-}  
+}
 loss.list <- list(
+  logistic=function(pred.vec, output.vec=subtrain.output.vec, ...){
+    Logistic(pred.vec, output.vec, 1/length(pred.vec))
+  },
+  logistic.weighted=
+    function(pred.vec, output.vec=subtrain.output.vec,
+             obs.weights=subtrain.obs.weights, ...){
+      Logistic(pred.vec, output.vec, obs.weights)
+    },
+  aum.count=function(pred.vec, diff.count.dt=subtrain.diff.count.dt, ...){
+    AUM(pred.vec, diff.count.dt)
+  },
+  aum.rate=function(pred.vec, diff.rate.dt=subtrain.diff.rate.dt, ...){
+    AUM(pred.vec, diff.rate.dt)
+  },
   squared.hinge.all.pairs=function(pred.vec, pairs.dt=subtrain.pairs.dt, margin=1, ...){
     pairs.dt[, diff := pred.vec[positive]-pred.vec[negative]-margin]
     pairs.dt[, diff.clipped := ifelse(diff<0, diff, 0)]
@@ -54,20 +68,6 @@ loss.list <- list(
     list(
       gradient=grad.dt$gradient/N.pairs,
       loss=sum(pairs.dt$diff.clipped^2)/N.pairs)
-  },
-  logistic=function(pred.vec, output.vec=subtrain.output.vec, ...){
-    Logistic(pred.vec, output.vec, 1/length(pred.vec))
-  },
-  logistic.weighted=
-    function(pred.vec, output.vec=subtrain.output.vec,
-             obs.weights=subtrain.obs.weights, ...){
-      Logistic(pred.vec, output.vec, obs.weights)
-    },
-  aum.count=function(pred.vec, diff.count.dt=subtrain.diff.count.dt, ...){
-    AUM(pred.vec, diff.count.dt)
-  },
-  aum.rate=function(pred.vec, diff.rate.dt=subtrain.diff.rate.dt, ...){
-    AUM(pred.vec, diff.rate.dt)
   }
 )
 OneFold <- function(data.name, fold.i){
@@ -183,10 +183,10 @@ OneFold <- function(data.name, fold.i){
 n.folds <- 3
 unique.folds <- 1:n.folds
 combo.df <- expand.grid(data.name=names(data.list), fold.i=unique.folds)
-future::plan("multicore")
+future::plan("multisession")
 result.list <- future.apply::future_lapply(1:nrow(combo.df), function(combo.i){
   combo.row <- combo.df[combo.i,]
   do.call(OneFold, combo.row)
-})
+}, future.globals=ls())
 
 saveRDS(result.list, "figure-binary-test-auc-data.rds")
