@@ -39,10 +39,10 @@ AUM <- function(pred.vec, diff.dt){
     cat(sprintf("%d non-diff points\n", sum(non.diff)))
     print(d[non.diff, ])
   }
-  with(L, list(gradient=data.table::fcase(
-    derivative_mat[,1] == 0 | derivative_mat[,2] == 0, 0,
-    default=(derivative_mat[,1]+derivative_mat[,2])/2
-  ), loss=aum))
+  ## ifelse( derivative_mat[,1] == 0 | derivative_mat[,2] == 0, 0, ??
+  with(L, list(
+    gradient=(derivative_mat[,1]+derivative_mat[,2])/2,
+    loss=aum))
 }
 loss.list <- list(
   logistic=function(pred.vec, output.vec=subtrain.output.vec, ...){
