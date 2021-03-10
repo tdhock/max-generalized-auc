@@ -9,10 +9,9 @@ data.list <- list(
   DNA=list(
     input.mat=ifelse(as.matrix(DNA[,1:180])==0, 0, 1),
     output.vec=ifelse(DNA$Class=="n", -1, 1)))
-
 PairsDT <- function(output.vec){
   is.positive <- output.vec == 1
-  data.table(expand.grid(
+  data.table::data.table(expand.grid(
     positive=which(is.positive),
     negative=which(!is.positive)))
 }
@@ -30,10 +29,20 @@ AUM <- function(pred.vec, diff.dt){
   d <- L$derivative_mat
   non.diff <- abs(d[,1] - d[,2]) > 1e-6
   if(any(non.diff)){
+    ## Some non-differentiable points that were actually observed!
+    ## data=DNA fold=1 loss=aum.rate step=0.001000
+    ##              [,1]         [,2]
+    ## [1,] -0.001956947 -0.001175589
+    ## data=DNA fold=1 loss=aum.rate step=1000.000000
+    ##               [,1] [,2]
+    ## [1,] -0.0006463963    0
     cat(sprintf("%d non-diff points\n", sum(non.diff)))
     print(d[non.diff, ])
   }
-  with(L, list(gradient=derivative_mat[,1], loss=aum))
+  with(L, list(gradient=data.table::fcase(
+    derivative_mat[,1] == 0 | derivative_mat[,2] == 0, 0,
+    default=(derivative_mat[,1]+derivative_mat[,2])/2
+  ), loss=aum))
 }
 loss.list <- list(
   logistic=function(pred.vec, output.vec=subtrain.output.vec, ...){
@@ -137,7 +146,7 @@ OneFold <- function(data.name, fold.i){
             set.loss[["pred"]],
             set.data[["output.vec"]])
           auc <- WeightedROC::WeightedAUC(roc.df)
-          out.dt <- data.table(
+          out.dt <- data.table::data.table(
             step.size, iteration, set.name,
             auc,
             loss.value=set.loss$loss)
@@ -174,7 +183,7 @@ OneFold <- function(data.name, fold.i){
       valid.loss[which.max(auc), .(step.size, iteration, select="max.auc")],
       valid.loss[which.min(loss.value), .(step.size, iteration, select="min.loss")])
     pred.loss <- test.loss[selected, on=.(step.size, iteration)]
-    out.loss.list[[paste(data.name, fold.i, loss.name)]] <- data.table(
+    out.loss.list[[paste(data.name, fold.i, loss.name)]] <- data.table::data.table(
       data.name, fold.i, loss.name, pred.loss)
   }#for(loss.name
   do.call(rbind, out.loss.list)
