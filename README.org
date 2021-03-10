@@ -17,6 +17,14 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 - For large margin sizes there are several prediction combinations that results
   in AUM=0. Do we end up at one of these?
 
+** 9 Mar 2021
+
+[[file:figure-binary-test-auc-data.R]] makes [[file:figure-binary-test-auc-data.rds]]
+
+[[file:figure-binary-test-auc.R]] makes 
+
+[[file:figure-binary-test-auc.png]]
+
 ** 3 Jan 2021
 
 [[file:figure-test-fold-monotonic.R]] makes
