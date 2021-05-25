@@ -9,10 +9,9 @@ data.list <- list(
   DNA=list(
     input.mat=ifelse(as.matrix(DNA[,1:180])==0, 0, 1),
     output.vec=ifelse(DNA$Class=="n", -1, 1)))
-
 PairsDT <- function(output.vec){
   is.positive <- output.vec == 1
-  data.table(expand.grid(
+  data.table::data.table(expand.grid(
     positive=which(is.positive),
     negative=which(!is.positive)))
 }
@@ -30,12 +29,36 @@ AUM <- function(pred.vec, diff.dt){
   d <- L$derivative_mat
   non.diff <- abs(d[,1] - d[,2]) > 1e-6
   if(any(non.diff)){
+    ## Some non-differentiable points that were actually observed!
+    ## data=DNA fold=1 loss=aum.rate step=0.001000
+    ##              [,1]         [,2]
+    ## [1,] -0.001956947 -0.001175589
+    ## data=DNA fold=1 loss=aum.rate step=1000.000000
+    ##               [,1] [,2]
+    ## [1,] -0.0006463963    0
     cat(sprintf("%d non-diff points\n", sum(non.diff)))
     print(d[non.diff, ])
   }
-  with(L, list(gradient=derivative_mat[,1], loss=aum))
-}  
+  ## ifelse( derivative_mat[,1] == 0 | derivative_mat[,2] == 0, 0, ??
+  with(L, list(
+    gradient=(derivative_mat[,1]+derivative_mat[,2])/2,
+    loss=aum))
+}
 loss.list <- list(
+  logistic=function(pred.vec, output.vec=subtrain.output.vec, ...){
+    Logistic(pred.vec, output.vec, 1/length(pred.vec))
+  },
+  logistic.weighted=
+    function(pred.vec, output.vec=subtrain.output.vec,
+             obs.weights=subtrain.obs.weights, ...){
+      Logistic(pred.vec, output.vec, obs.weights)
+    },
+  aum.count=function(pred.vec, diff.count.dt=subtrain.diff.count.dt, ...){
+    AUM(pred.vec, diff.count.dt)
+  },
+  aum.rate=function(pred.vec, diff.rate.dt=subtrain.diff.rate.dt, ...){
+    AUM(pred.vec, diff.rate.dt)
+  },
   squared.hinge.all.pairs=function(pred.vec, pairs.dt=subtrain.pairs.dt, margin=1, ...){
     pairs.dt[, diff := pred.vec[positive]-pred.vec[negative]-margin]
     pairs.dt[, diff.clipped := ifelse(diff<0, diff, 0)]
@@ -54,20 +77,6 @@ loss.list <- list(
     list(
       gradient=grad.dt$gradient/N.pairs,
       loss=sum(pairs.dt$diff.clipped^2)/N.pairs)
-  },
-  logistic=function(pred.vec, output.vec=subtrain.output.vec, ...){
-    Logistic(pred.vec, output.vec, 1/length(pred.vec))
-  },
-  logistic.weighted=
-    function(pred.vec, output.vec=subtrain.output.vec,
-             obs.weights=subtrain.obs.weights, ...){
-      Logistic(pred.vec, output.vec, obs.weights)
-    },
-  aum.count=function(pred.vec, diff.count.dt=subtrain.diff.count.dt, ...){
-    AUM(pred.vec, diff.count.dt)
-  },
-  aum.rate=function(pred.vec, diff.rate.dt=subtrain.diff.rate.dt, ...){
-    AUM(pred.vec, diff.rate.dt)
   }
 )
 OneFold <- function(data.name, fold.i){
@@ -137,7 +146,7 @@ OneFold <- function(data.name, fold.i){
             set.loss[["pred"]],
             set.data[["output.vec"]])
           auc <- WeightedROC::WeightedAUC(roc.df)
-          out.dt <- data.table(
+          out.dt <- data.table::data.table(
             step.size, iteration, set.name,
             auc,
             loss.value=set.loss$loss)
@@ -174,7 +183,7 @@ OneFold <- function(data.name, fold.i){
       valid.loss[which.max(auc), .(step.size, iteration, select="max.auc")],
       valid.loss[which.min(loss.value), .(step.size, iteration, select="min.loss")])
     pred.loss <- test.loss[selected, on=.(step.size, iteration)]
-    out.loss.list[[paste(data.name, fold.i, loss.name)]] <- data.table(
+    out.loss.list[[paste(data.name, fold.i, loss.name)]] <- data.table::data.table(
       data.name, fold.i, loss.name, pred.loss)
   }#for(loss.name
   do.call(rbind, out.loss.list)
@@ -183,10 +192,10 @@ OneFold <- function(data.name, fold.i){
 n.folds <- 3
 unique.folds <- 1:n.folds
 combo.df <- expand.grid(data.name=names(data.list), fold.i=unique.folds)
-future::plan("multicore")
+future::plan("multisession")
 result.list <- future.apply::future_lapply(1:nrow(combo.df), function(combo.i){
   combo.row <- combo.df[combo.i,]
   do.call(OneFold, combo.row)
-})
+}, future.globals=ls())
 
 saveRDS(result.list, "figure-binary-test-auc-data.rds")

@@ -1,3 +1,5 @@
+figure-*/
+*.gz
 .Rhistory
 figure-neuroblastomaProcessed-complex
 Rplots.pdf

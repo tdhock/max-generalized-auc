@@ -27,6 +27,13 @@ This figure shows that cv.glmnet does fine with 5% positive labels,
 but stops learning when we get down to 1% positive labels. This
 suggests that we should try 1% for comparing aum.rate and aum.count.
 
+** 10 Mar 2021
+[[file:figure-DNA-Sonar-subtrain-valid-data.R]] makes 
+
+[[file:figure-DNA-Sonar-subtrain-valid-data.csv.gz]]
+
+[[file:figure-DNA-Sonar-subtrain-valid.R]] analyzes those data.
+
 ** 9 Mar 2021
 
 [[file:figure-binary-test-auc-data.R]] makes [[file:figure-binary-test-auc-data.rds]]
