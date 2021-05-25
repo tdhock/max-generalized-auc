@@ -69,6 +69,7 @@ works_with_R(
   ##penaltyLearning="1.0",
   jointseg="1.0.2",
   gridExtra="2.3",
+  readmnist="1.0",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
   ggplot2="3.3.2")
 ## requireGitHub::requireGitHub_package(

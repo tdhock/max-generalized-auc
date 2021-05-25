@@ -17,6 +17,16 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 - For large margin sizes there are several prediction combinations that results
   in AUM=0. Do we end up at one of these?
 
+** 25 May 2021
+
+[[file:figure-logistic-weights.R]] makes
+
+[[file:figure-logistic-weights.png]]
+
+This figure shows that cv.glmnet does fine with 5% positive labels,
+but stops learning when we get down to 1% positive labels. This
+suggests that we should try 1% for comparing aum.rate and aum.count.
+
 ** 9 Mar 2021
 
 [[file:figure-binary-test-auc-data.R]] makes [[file:figure-binary-test-auc-data.rds]]
