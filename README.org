@@ -25,7 +25,14 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 
 [[file:figure-unbalanced-grad-desc-aum.png]]
 
+The figure above shows that the AUM variant which uses total number of
+errors (count) is more accurate than the AUM variant which uses the
+normalized error (rate).
+
 [[file:figure-unbalanced-grad-desc.png]]
+
+The figure above shows that the AUM is at least as accurate as
+squared.hinge.all.pairs, whereas logistic.weighted is less accurate.
 
 ** 25 May 2021
 
