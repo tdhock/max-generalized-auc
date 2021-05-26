@@ -86,6 +86,23 @@ on a test set of 50% positive
 and 50% negative labels")
 gg
 
+aum.values.auc.wide <- dcast(
+  result.tall[variable=="auc" & grepl("aum", model)],
+  percent.positive.labels + seed ~ model, value.var = "value")
+gg <- ggplot()+
+  geom_abline(aes(
+    slope=slope, intercept=intercept),
+    data=data.table(slope=1, intercept=0),
+    color="grey")+
+  ggtitle("(a) Comparing AUM variants")+
+  geom_point(aes(
+    aum.rate, aum.count),
+    shape=1,
+    data=aum.values.auc.wide)+
+  facet_grid(. ~ percent.positive.labels, labeller=label_both)+
+  coord_equal()
+gg
+
 aum.stats.auc <- aum.stats[variable=="auc"]
 gg <- ggplot()+
   ggtitle("(a) Comparing AUM variants")+
