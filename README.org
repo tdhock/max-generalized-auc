@@ -17,6 +17,16 @@ e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
 - For large margin sizes there are several prediction combinations that results
   in AUM=0. Do we end up at one of these?
 
+** 26 May 2021
+
+[[file:figure-unbalanced-grad-desc-data.R]] makes [[file:figure-unbalanced-grad-desc-data.rds]]
+
+[[file:figure-unbalanced-grad-desc.R]] reads that and makes
+
+[[file:figure-unbalanced-grad-desc-aum.png]]
+
+[[file:figure-unbalanced-grad-desc.png]]
+
 ** 25 May 2021
 
 [[file:figure-logistic-weights.R]] makes
@@ -28,6 +38,7 @@ but stops learning when we get down to 1% positive labels. This
 suggests that we should try 1% for comparing aum.rate and aum.count.
 
 ** 10 Mar 2021
+   
 [[file:figure-DNA-Sonar-subtrain-valid-data.R]] makes 
 
 [[file:figure-DNA-Sonar-subtrain-valid-data.csv.gz]]
