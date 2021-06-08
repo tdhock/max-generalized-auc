@@ -67,7 +67,7 @@ works_with_R(
   R.utils="2.10.1",
   "tdhock/penaltyLearning@4e14a0b0e022d919884277d68b8e47bd158459f3",
   ##penaltyLearning="1.0",
-  "tdhock/aum@04b9a8d0cbe7624baf36ad96249a565f0022cfd3",
+  "tdhock/aum@ef6c5b851345bc67808f1ceee25b2ac74a03b07b",
   jointseg="1.0.2",
   gridExtra="2.3",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
