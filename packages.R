@@ -70,7 +70,6 @@ works_with_R(
   "tdhock/aum@04b9a8d0cbe7624baf36ad96249a565f0022cfd3",
   jointseg="1.0.2",
   gridExtra="2.3",
-  readmnist="1.0",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
   ggplot2="3.3.2")
 ## requireGitHub::requireGitHub_package(
