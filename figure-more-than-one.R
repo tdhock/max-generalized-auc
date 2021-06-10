@@ -103,20 +103,21 @@ ggplot()+
     data=auc.dt)
 
 err.sizes <- c(
-  fp=3,
-  fn=2,
-  "min(fp,fn)"=1)
+  FP=3,
+  FN=2,
+  "min(FP,FN)"=1)
 err.colors <- c(
-  fp="red",
-  fn="deepskyblue",
-  "min(fp,fn)"="black")
+  FP="red",
+  FN="deepskyblue",
+  "min(FP,FN)"="black")
 for(m in names(profile.list)){
   p.roc <- roc.dt[model==m]
   p.auc <- auc.dt[model==m]
   p.poly <- poly.dt[model==m]
   p.fp.fn <- fp.fn.dt[model==m]
-  p.fp.fn[, Variable := ifelse(variable=="min.fp.fn", "min(fp,fn)", paste(variable))]
-  p.rect <- p.fp.fn[Variable=="min(fp,fn)"]
+  p.fp.fn[, Variable := ifelse(
+    variable=="min.fp.fn", "min(FP,FN)", toupper(paste(variable)))]
+  p.rect <- p.fp.fn[Variable=="min(FP,FN)"]
   p.best <- p.roc[errors==min(errors)]
   best.color <- "green"
   g <- ggplot()+
@@ -137,7 +138,7 @@ for(m in names(profile.list)){
     scale_y_continuous("True Positive Rate")+
     scale_x_continuous("False Positive Rate")+
     geom_text(aes(
-      0.5, 0.5, label=sprintf("auc=%.2f", auc)),
+      0.5, 0.5, label=sprintf("AUC=%.2f", auc)),
       data=p.auc)+
     theme(legend.position="none")
   ##if(all(p.poly$area=="positive"))g <- g+theme(legend.position="none")
@@ -156,7 +157,7 @@ for(m in names(profile.list)){
       fill="grey",
       data=p.rect)+
     geom_text(aes(
-      3, 11, label=sprintf("aum=%.0f", aum)),
+      3, 11, label=sprintf("AUM=%.0f", aum)),
       data=p.auc)+
     geom_segment(aes(
       min.thresh, value,
