@@ -22,7 +22,8 @@ gg <- ggplot()+
     breaks=c(10, 100, 1000, timing.stats[, max(N)]))+
   scale_y_log10(paste0("Computation time in seconds,
 median line, min/max band
-over ",timing.stats[1, times], " timings"))
+over ",timing.stats[1, times], " timings"))+
+  ggtitle("Changepoint detection")
 dl <- directlabels::direct.label(gg, "right.polygons")
 png("figure-aum-grad-speed-random.png", width=4, height=3, res=200, units="in")
 print(dl)
