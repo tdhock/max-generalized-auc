@@ -23,6 +23,10 @@ Updated [[file:figure-aum-convexity.R]] new figures
 
 [[file:figure-aum-convexity-emph.png]]
 
+Updated [[file:figure-aum-grad-speed.R]] new figure
+
+[[file:figure-aum-grad-speed-random.png]]
+
 ** 7 June 2021
 
 [[file:figure-aum-grad-speed-binary.R]] makes
