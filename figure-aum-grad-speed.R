@@ -7,7 +7,16 @@ timing.stats <- timing.dt[, .(
   times=.N
 ), by=.(N, pred.type, algorithm)]
 some.stats <- timing.stats[pred.type=="pred.rnorm"]
-some.stats[, Algorithm := gsub("[.]", "\n", algorithm)]
+dput(RColorBrewer::brewer.pal(Inf, "Set1"))
+algo.colors <- c(
+  AUM="black",
+  sort="#E41A1C",
+  "squared\nhinge\neach\nexample"="#377EB8",
+  "squared\nhinge\nall\npairs"="#4DAF4A",
+  logistic="#984EA3", "#FF7F00", "#FFFF33", 
+  "#A65628", "#F781BF", "#999999")
+some.stats[, Algorithm := ifelse(
+  algorithm=="aum", "AUM", gsub("[.]", "\n", algorithm))]
 gg <- ggplot()+
   geom_ribbon(aes(
     N, ymin=min, ymax=max, fill=Algorithm),
@@ -16,6 +25,8 @@ gg <- ggplot()+
   geom_line(aes(
     N, median, color=Algorithm),
     data=some.stats)+
+  scale_color_manual(values=algo.colors)+
+  scale_fill_manual(values=algo.colors)+
   scale_x_log10(
     "Number of predicted values",
     limits=c(10, 12000),
