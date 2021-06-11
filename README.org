@@ -7,6 +7,8 @@
 - Figure 4: optimizing AUM maximizes AUC. [[file:figure-aum-optimized-iterations.png][Left PNG]], [[file:figure-aum-optimized.R][R code]]
   (iterations); [[file:figure-aum-train-both.png][Right PNG]], [[file:figure-aum-train-both.R][R code]] (ROC curves).
 - Figure 5: TODO Jon.
+- Figure 6: binary classification test AUC. [[file:figure-unbalanced-grad-desc.R][R code]].
+- Figure 7: speed comparison. TODO binary, [[file:figure-aum-grad-speed.R][R code for changepoint]].
 
 ** Interactive figures
 
