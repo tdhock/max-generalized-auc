@@ -16,14 +16,18 @@ some.err <- neuroblastomaProcessed$errors[select.dt, .(
   label
 ), on=list(profile.id, chromosome)]
 err.sizes <- c(
-  fp=3,
-  fn=2)
+  "min(FP,FN)"=1,
+  FP=3,
+  FN=2)
 err.colors <- c(
-  fp="red",
-  fn="deepskyblue")
+  "min(FP,FN)"="black",
+  FP="red",
+  FN="deepskyblue")
 some.err.tall <- melt(
   some.err,
-  measure.vars=names(err.colors))
+  measure.vars=c("fp","fn"),
+  variable.name="var.lower")
+some.err.tall[, variable := toupper(var.lower)]
 leg <- "Error type"
 some.err.tall[, Label := paste0("\n", label)]
 gg <- ggplot()+
@@ -77,11 +81,62 @@ metrics.wide <- pred.tall[order(pred.diff)][, {
   L <- penaltyLearning::ROChange(some.err, .SD, "label")
   with(L, data.table(aum, auc, roc=list(roc)))
 }, by=list(pred.diff, differentiable)]
+metrics.wide[auc==max(auc)] #max auc => aum>0.
+
+pred.diff.vec <- c(4.5, 5, 5.14)
+show.roc.dt.list <- list()
+for(pdiff in pred.diff.vec){
+  pdiff.metrics <- metrics.wide[pred.diff==pdiff]
+  pdiff.roc <- pdiff.metrics[["roc"]][[1]]
+  show.roc.dt.list[[paste(pdiff)]] <- data.table(
+    pred.diff=pdiff,
+    pdiff.metrics[, .(AUC=auc, AUM=round(aum,3))],
+    pdiff.roc)
+}
+(show.roc.dt <- do.call(rbind, show.roc.dt.list))
+show.roc.dt[, min.fp.fn := pmin(fp, fn)]
+show.roc.tall <- melt(
+  show.roc.dt,
+  measure=c("fp","fn","min.fp.fn"),
+  variable.name="lower.var")
+show.roc.tall[, variable := ifelse(
+  lower.var=="min.fp.fn", "min(FP,FN)", toupper(lower.var))]
+gg <- ggplot()+
+  theme_bw()+
+  theme(panel.grid.minor=element_blank())+
+  facet_grid(pred.diff + AUC + AUM ~ ., labeller=label_both)+
+  geom_rect(aes(
+    xmin=min.thresh, xmax=max.thresh,
+    ymin=0, ymax=min.fp.fn),
+    fill="grey",
+    color=NA,
+    alpha=0.5,
+    show.roc.dt)+
+  geom_segment(aes(
+    min.thresh, value,
+    xend=max.thresh, yend=value,
+    color=variable, size=variable),
+    data=show.roc.tall)+
+  scale_y_continuous(
+    "Label errors",
+    breaks=c(0,1))+
+  scale_color_manual(leg,values=err.colors)+
+  scale_size_manual(leg,values=err.sizes)+
+  geom_blank(aes(
+    x, y),
+    data=data.table(x=0, y=c(-0.4,1.4)))+
+  scale_x_continuous(
+    "Threshold added to predicted values")
+png("figure-aum-convexity-thresholds.png", 5, 3.5, units="in", res=200)
+print(gg)
+dev.off()
+
 metrics.tall <- melt(
   metrics.wide,
-  measure.vars=c("aum", "auc")
+  measure.vars=c("aum", "auc"),
+  variable.name="var.lower"
 )
-
+metrics.tall[, variable := toupper(var.lower)]
 gg <- ggplot()+
   facet_grid(variable ~ ., scales="free", space="free")+
   scale_fill_manual(values=c(
@@ -94,6 +149,17 @@ gg <- ggplot()+
     data=metrics.tall[order(-differentiable)])+
   xlab("Difference in predicted values, f(negative) - f(positive)")+
   scale_y_continuous("", breaks=seq(0, 2, by=0.5))
+
+gg.emph <- gg+
+  theme_bw()+
+  geom_vline(aes(
+    xintercept=pred.diff),
+    color="grey",
+    data=data.table(pred.diff=pred.diff.vec))
+png("figure-aum-convexity-emph.png", 5, 2, units="in", res=200)
+print(gg)
+dev.off()
+
 png("figure-aum-convexity.png", 5, 2, units="in", res=200)
 print(gg)
 dev.off()

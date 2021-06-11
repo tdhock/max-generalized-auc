@@ -1,21 +1,23 @@
-** Result figures
+** Figures from paper
+
+- Figure 2: synthetic example with AUC greater than one. [[file:figure-more-than-one-more-aum.png][Left PNG]] (AUM), [[file:figure-more-than-one-more-auc.png][right PNG (AUC)]], [[file:figure-more-than-one.R][R code]].
+- Figure 3: real data example with AUC greater than one. [[file:figure-aum-convexity-profiles.png][left PNG]] (error functions),
+  [[file:figure-aum-convexity.png][right PNG (AUM/AUC functions)]], [[file:figure-aum-convexity.R][R code]].
+
+** Interactive figures
 
 - [[http://ml.nau.edu/viz/2019-08-19-curveAlignment-aub-deriv/][Aligning two error curves]].
 - [[http://members.cbio.mines-paristech.fr/~thocking/figure-neuroblastomaProcessed-complex/][8 error curves with 2 different alignments]].
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
-** TODOs
+** 11 June 2021
 
-Does greedy AUM minimization result in global AUM minimization?
-Conjecture, no it depends on the order in which problems are
-processed -- TODO find counter-example.
+Updated [[file:figure-aum-convexity.R]] new figures
 
-e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
-- For small margin sizes there is only one prediction combination that results in
-  AUM=0. Do we end up at this combination by greedy minimization?
-- For large margin sizes there are several prediction combinations that results
-  in AUM=0. Do we end up at one of these?
+[[file:figure-aum-convexity-thresholds.png]]
+
+[[file:figure-aum-convexity-emph.png]]
 
 ** 7 June 2021
 
