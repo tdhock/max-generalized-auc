@@ -55,14 +55,20 @@ dev.off()
 
 dmin <- 4.5
 dmax <- 6.5
-some.err[, fp.diff := c(NA, diff(fp))]
-some.err[, fn.diff := c(NA, diff(fn))]
-pred.dt <- some.err[fp.diff != 0 | fn.diff != 0, list(
-  plist=list(min.log.lambda)
-), by=label]
-plist <- with(pred.dt, structure(plist, names=label))
-grid.dt <- data.table(do.call(expand.grid, plist))
-grid.dt[, pred.diff := negative-positive]
+some.err[, fp.diff := c(NA, diff(fp)), by=label]
+some.err[, fn.diff := c(NA, diff(fn)), by=label]
+some.diff <- some.err[fp.diff != 0 | fn.diff != 0, .(
+  id=1, label, fp.diff, fn.diff, pred.log.lambda=min.log.lambda)]
+some.diff[, fp.cum := cumsum(fp.diff), by=label]
+some.diff[, fn.cum := rev(cumsum(rev(-fn.diff))), by=label]
+dlist <- split(some.diff, some.diff[["label"]])
+grid.dt <- with(dlist, positive[negative, on="id", allow.cartesian=TRUE])
+grid.dt[, negative := i.pred.log.lambda]
+grid.dt[, positive := pred.log.lambda]
+grid.dt[, pred.diff := negative - positive]
+grid.sorted <- grid.dt[order(pred.diff), .(
+  pred.diff, fn=fn.cum, fp=i.fp.cum)]
+grid.sorted[, min.fp.fn := pmin(fp,fn)]
 border.pred <- grid.dt[
   dmin < pred.diff & pred.diff < dmax]
 grid.pred <- data.table(
@@ -157,7 +163,7 @@ gg.emph <- gg+
     color="grey",
     data=data.table(pred.diff=pred.diff.vec))
 png("figure-aum-convexity-emph.png", 5, 2, units="in", res=200)
-print(gg)
+print(gg.emph)
 dev.off()
 
 png("figure-aum-convexity.png", 5, 2, units="in", res=200)

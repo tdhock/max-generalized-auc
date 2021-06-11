@@ -3,6 +3,8 @@
 - Figure 2: synthetic example with AUC greater than one. [[file:figure-more-than-one-more-aum.png][Left PNG]] (AUM), [[file:figure-more-than-one-more-auc.png][right PNG (AUC)]], [[file:figure-more-than-one.R][R code]].
 - Figure 3: real data example with AUC greater than one. [[file:figure-aum-convexity-profiles.png][left PNG]] (error functions),
   [[file:figure-aum-convexity.png][right PNG (AUM/AUC functions)]], [[file:figure-aum-convexity.R][R code]].
+- Figure 4: optimizing AUM maximizes AUC. [[file:figure-aum-optimized-iterations.png][Left PNG]], [[file:figure-aum-optimized.R][R code]]
+  (iterations); [[file:figure-aum-train-both.png][Right PNG]], [[file:figure-aum-train-both.R][R code]] (ROC curves).
 
 ** Interactive figures
 
