@@ -17,7 +17,7 @@ result.stats <- result.tall[, .(
   q25=quantile(value, 0.25),
   min=min(value),
   seeds=.N
-), by=.(variable, prop.pos, `percent\npositive\nlabels`=percent.positive.labels, model)]
+), by=.(variable, prop.pos, `percent\npositive\nlabels`=percent.positive.labels, model=sub("aum", "AUM", model))]
 
 glmnet.stats <- result.stats[grepl("glmnet", model)]
 gg <- ggplot()+
@@ -63,7 +63,7 @@ on a test set of 50% positive
 and 50% negative labels")
 gg
 
-aum.stats <- result.stats[grepl("aum", model)]
+aum.stats <- result.stats[grepl("AUM", model)]
 gg <- ggplot()+
   ggtitle(paste0(
     "AUM gradient descent with early stopping run on data sets
@@ -84,23 +84,6 @@ with same number of observations, N=",
   ylab("Accuracy or AUC of predictions
 on a test set of 50% positive
 and 50% negative labels")
-gg
-
-aum.values.auc.wide <- dcast(
-  result.tall[variable=="auc" & grepl("aum", model)],
-  percent.positive.labels + seed ~ model, value.var = "value")
-gg <- ggplot()+
-  geom_abline(aes(
-    slope=slope, intercept=intercept),
-    data=data.table(slope=1, intercept=0),
-    color="grey")+
-  ggtitle("(a) Comparing AUM variants")+
-  geom_point(aes(
-    aum.rate, aum.count),
-    shape=1,
-    data=aum.values.auc.wide)+
-  facet_grid(. ~ percent.positive.labels, labeller=label_both)+
-  coord_equal()
 gg
 
 aum.stats.auc <- aum.stats[variable=="auc"]
@@ -124,7 +107,7 @@ png("figure-unbalanced-grad-desc-aum.png", width=5, height=2.5, units="in", res=
 print(gg)
 dev.off()
 
-levs <- c("aum.count", "squared.hinge.all.pairs", "logistic.weighted")
+levs <- c("AUM.count", "squared.hinge.all.pairs", "logistic.weighted")
 compare.stats <- result.stats[model %in% levs]
 compare.stats[, model.fac := factor(model, levs)]
 gg <- ggplot()+
