@@ -117,7 +117,7 @@ err.tall[, mysegs(
   col=err.colors[paste(variable)])]
 diff.dt[, text(x, y, sprintf(
   "$(v=%.3f,\\Delta\\text{FP}=%d,\\Delta\\text{FN}=%d)$",
-  -pred.log.lambda, diff.fp, diff.fn),
+  -pred.log.lambda, -diff.fp, -diff.fn),
   cex=1, pos=pos, offset=-0.5)]
 leg.dt <- data.table(
   variable=c("fp","fn"),
