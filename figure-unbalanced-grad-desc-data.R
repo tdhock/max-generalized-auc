@@ -57,8 +57,7 @@ for(set in c("train", "test")){
 
 train.set.list <- list(
   full=list(X=zip.X.list[["train"]], y=zip.y.list[["train"]]))
-some.props <- c(0.01, 0.05)
-prop.pos.vec <- sort(unique(c(some.props, 1-some.props, 0.5)))
+prop.pos.vec <- some.props <- c(0.01, 0.05, 0.5)
 ##want p/(p + n) = 0.05 => 0.05*(p+n) = p => 0.05p + 0.05n = p => 0.05n = 0.95p => p = 0.05 / 0.95n
 min.prop.pos <- min(prop.pos.vec)
 min.n.pos <- as.integer(min.prop.pos/(1-min.prop.pos) * y.tab["0", "train"])

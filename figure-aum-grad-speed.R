@@ -6,11 +6,11 @@ timing.stats <- timing.dt[, .(
   min=min(seconds),
   times=.N
 ), by=.(N, pred.type, algorithm)]
-some.stats <- timing.stats[pred.type=="pred.rnorm"]
+some.stats <- timing.stats[pred.type=="pred.rnorm" & algorithm != "sort"]
 dput(RColorBrewer::brewer.pal(Inf, "Set1"))
 algo.colors <- c(
   AUM="black",
-  sort="#E41A1C",
+  ##sort="#E41A1C",
   "squared\nhinge\neach\nexample"="#377EB8",
   "squared\nhinge\nall\npairs"="#4DAF4A",
   logistic="#984EA3", "#FF7F00", "#FFFF33", 
