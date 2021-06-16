@@ -104,10 +104,11 @@ gg <- ggplot()+
 gg
 
 aum.stats.auc <- aum.stats[variable=="auc"]
+x.lab <- "Test AUC, median and quartiles over 10 random train sets"
 gg <- ggplot()+
   ggtitle("(a) Comparing AUM variants")+
   scale_x_continuous(
-    "Test AUC, median and quartiles over 10 folds",
+    x.lab,
     limits=c(0.985, 1))+
   ylab("Loss function")+
   geom_point(aes(
@@ -151,7 +152,7 @@ compare.stats.auc <- compare.stats[variable=="auc"]
 gg <- ggplot()+
   ggtitle("(b) AUM compared to baselines")+
   scale_x_continuous(
-    "Test AUC, median and quartiles over 10 folds",
+    x.lab,
     limits=c(0.990, 1))+
   ylab("Loss function")+
   geom_point(aes(
