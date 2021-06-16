@@ -71,6 +71,31 @@ png("figure-fn-not-monotonic-error.png", 3.3, 2, units="in", res=200)
 print(gg)
 dev.off()
 
+standAlone <- TRUE
+suffix <- if(standAlone)"-standAlone" else ""
+no.ext <- paste0("figure-fn-not-monotonic-error", suffix)
+f.tex <- paste0(no.ext, ".tex")
+tikz(f.tex, width=3, height=3, standAlone = standAlone)
+left.lines <- 4
+other.lines <- 1
+ax.label.offset <- 1.5
+par(mar=c(0,left.lines,other.lines,other.lines), cex.axis=1.5)
+layout(rbind(rep(1,3),rep(2,2)))
+xrange <- c(-2, 4)
+expand <- 0.3
+plot(xrange, c(-expand,1+expand), type="n", yaxt="n", xaxt="n",ylab="")
+axis(2,c(0,1),las=1)
+mtext("Label errors", 2, left.lines-ax.label.offset)
+bottom.lines <- 4
+par(mar=c(bottom.lines,left.lines,0,other.lines))
+plot(xrange, range(err.tall[["segments"]]), type="n", yaxt="n", xaxt="n",ylab="",xlab="")
+axis(2,c(1,10,20),las=1)
+mtext("FOO", 2, left.lines-ax.label.offset)
+axis(1)
+mtext("Predicted value, $f(\\mathbf x_i) = -\\log \\hat \\lambda_i$", 1,bottom.lines-ax.label.offset)
+dev.off()
+if(standAlone)system(paste("pdflatex", no.ext))
+
 some.segs.dt <- data.table(segments=some.segs)
 show.labels <- err.list$label.errors[some.segs.dt, on="segments"]
 show.segs <- segs.dt[show.labels, on="segments"]

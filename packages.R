@@ -58,11 +58,11 @@ options(repos=c(
   "http://cloud.r-project.org",
   "http://cran.r-project.org"))
 works_with_R(
-  "4.0.2",
+  "4.1.0",
   data.table="1.14.0",
-  directlabels="2020.6.17",
-  future="1.18.0",
-  future.apply="1.6.0",
+  directlabels="2021.1.13",
+  future="1.21.0",
+  future.apply="1.7.0",
   RJSONIO="1.3.1.4",
   R.utils="2.10.1",
   "tdhock/penaltyLearning@4e14a0b0e022d919884277d68b8e47bd158459f3",
@@ -70,8 +70,10 @@ works_with_R(
   "tdhock/aum@ef6c5b851345bc67808f1ceee25b2ac74a03b07b",
   jointseg="1.0.2",
   gridExtra="2.3",
+  neuroblastoma="1.0",
+  tikzDevice="0.12.3.1",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
-  ggplot2="3.3.2")
+  ggplot2="3.3.3")
 ## requireGitHub::requireGitHub_package(
 ##   "great-northern-diver",
 ##   "loon/R",
