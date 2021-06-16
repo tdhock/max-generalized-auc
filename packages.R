@@ -79,3 +79,7 @@ works_with_R(
 ##   "loon/R",
 ##   "33442bae2ba2dca66050c36081079f9fb45a9358",
 ##   "loon")
+options(
+  tikzDocumentDeclaration=paste(
+    "\\documentclass[12pt]{article}\\usepackage{amsmath,amssymb}"),
+  tikzMetricsDictionary="tikzMetrics")
