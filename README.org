@@ -23,6 +23,12 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 16 June 2021
+
+[[file:figure-unbalanced-grad-desc.R]] updated to make new figure (useful for slides probly)
+
+[[file:figure-unbalanced-grad-desc-logistic.png]]
+
 ** 11 June 2021
 
 Updated [[file:figure-aum-convexity.R]] new figures

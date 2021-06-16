@@ -1,6 +1,7 @@
 source("packages.R")
 
 data.list <- readRDS("figure-unbalanced-grad-desc-data.rds")
+x.lab <- "Test AUC, median and quartiles over 10 random train sets"
 
 result.tall <- melt(data.list[["result"]], measure.vars=c("accuracy", "auc"))
 result.tall[, percent.positive.labels := factor(prop.pos*100)]
@@ -63,6 +64,30 @@ on a test set of 50% positive
 and 50% negative labels")
 gg
 
+log.glm.stats <- result.stats[variable=="auc" & grepl("logistic|glmnet", model)]
+log.glm.stats[, regularization := ifelse(
+  grepl("logistic", model), "early stopping", "L2 norm")]
+log.glm.stats[, weights := ifelse(
+  grepl("weighted|balanced", model), "balanced", "identity")]
+x.lo <- 0.984
+gg <- ggplot()+
+  ggtitle("Comparing logistic regression models (control experiment)")+
+  scale_x_continuous(
+    x.lab)+
+  coord_cartesian(xlim=c(x.lo, 1))+
+  geom_point(aes(
+    ifelse(median<x.lo, -Inf, median), weights),
+    shape=1,
+    data=log.glm.stats)+
+  geom_segment(aes(
+    q25, weights,
+    xend=q75, yend=weights),
+    data=log.glm.stats)+
+  facet_grid(`percent\npositive\nlabels` ~ regularization, labeller=label_both, scales="free")
+png("figure-unbalanced-grad-desc-logistic.png", width=6, height=3, res=200, units="in")
+print(gg)
+dev.off()
+
 aum.stats <- result.stats[grepl("AUM", model)]
 gg <- ggplot()+
   ggtitle(paste0(
@@ -87,7 +112,6 @@ and 50% negative labels")
 gg
 
 aum.stats.auc <- aum.stats[variable=="auc"]
-x.lab <- "Test AUC, median and quartiles over 10 random train sets"
 gg <- ggplot()+
   ggtitle("(a) Comparing AUM variants")+
   scale_x_continuous(
