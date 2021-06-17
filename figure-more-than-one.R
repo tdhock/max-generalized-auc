@@ -120,11 +120,11 @@ for(m in names(profile.list)){
   p.rect <- p.fp.fn[Variable=="min(FP,FN)"]
   p.best <- p.roc[errors==min(errors)]
   best.color <- "green"
+  p.roc[, q := .I]
+  p.roc[, hjust := 0]
+  p.roc[, vjust := 1.2]
+  p.roc[q==6, `:=`(hjust=1, vjust=-0.4)]
   g <- ggplot()+
-    ## geom_point(aes(
-    ##   FPR, TPR),
-    ##   color=best.color,
-    ##   data=p.best)+
     theme_bw()+
     scale_fill_manual(values=c(positive="black", negative="red"))+
     geom_polygon(aes(
@@ -134,9 +134,16 @@ for(m in names(profile.list)){
     geom_path(aes(
       FPR, TPR),
       data=p.roc)+
-    coord_equal()+
-    scale_y_continuous("True Positive Rate")+
-    scale_x_continuous("False Positive Rate")+
+    geom_text(aes(
+      FPR+0.01, TPR, label=paste0("q=",q), hjust=hjust, vjust=vjust),
+      size=3,
+      data=p.roc)+
+    geom_point(aes(
+      FPR, TPR),
+      data=p.roc)+
+    coord_equal(xlim=c(0,1.1), ylim=c(-0.05, 1))+
+    scale_y_continuous("True Positive Rate", breaks=c(0,0.5,1))+
+    scale_x_continuous("False Positive Rate", breaks=c(0,0.5,1))+
     geom_text(aes(
       0.5, 0.5, label=sprintf("AUC=%.2f", auc)),
       data=p.auc)+
@@ -145,32 +152,39 @@ for(m in names(profile.list)){
   leg <- "Error type"
   g.aum <- ggplot()+
     theme_bw()+
-    theme(panel.spacing=grid::unit(0, "lines"))+
-    ## geom_vline(aes(
-    ##   xintercept=(min.thresh+max.thresh)/2),
-    ##   color=best.color,
-    ##   data=p.best)+
+    theme(
+      panel.grid.minor=element_blank(),
+      panel.spacing=grid::unit(0, "lines"))+
     geom_rect(aes(
       xmin=min.thresh, xmax=max.thresh,
       ymin=0, ymax=value),
       color="grey",
+      alpha=0.75,
       fill="grey",
       data=p.rect)+
     geom_text(aes(
-      3, 11, label=sprintf("AUM=%.0f", aum)),
+      6, 4, label=sprintf("AUM=%.0f", aum)),
       data=p.auc)+
     geom_segment(aes(
       min.thresh, value,
       color=Variable, size=Variable,
       xend=max.thresh, yend=value),
       data=p.fp.fn)+
+    geom_text(aes(
+      ifelse(
+        min.thresh == -Inf, max.thresh-1, ifelse(
+          max.thresh == Inf, min.thresh+1, (min.thresh+max.thresh)/2)),
+      -4, label=paste0("q=",q)),
+      vjust=0,
+      size=2.5,
+      data=p.roc)+
     scale_color_manual(leg, values=err.colors)+
     scale_size_manual(leg, values=err.sizes)+
     scale_y_continuous("Label Errors")+
     scale_x_continuous(
       "Threshold added to predicted values",
-      limits=c(0, 10),
-      breaks=seq(0, 10, by=2))
+      limits=c(0, 12),
+      breaks=p.roc[["min.thresh"]])
   g.list <- list(auc=g, aum=g.aum)
   for(plot.type in names(g.list)){
     out.png <- sprintf(
