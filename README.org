@@ -28,6 +28,16 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 
 [[file:figure-aum-grad-speed-binary-cpp-data.R]] makes binary classification timing data, [[file:figure-aum-grad-speed-binary-cpp-data.csv]]
 
+[[file:figure-aum-grad-speed-binary-cpp.R]] makes
+
+[[file:figure-aum-grad-speed-binary-cpp-algos.png]]
+
+[[file:figure-aum-grad-speed-binary-cpp.png]]
+
+[[file:figure-aum-grad-speed-binary.R]] updated to make
+
+[[file:figure-aum-grad-speed-both.png]]
+
 ** 16 June 2021
 
 [[file:figure-unbalanced-grad-desc.R]] updated to make new figure (useful for slides probly)
