@@ -14,8 +14,7 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 - Figure 5: TODO Jon.
 - Figure 6: binary classification test AUC. [[file:figure-unbalanced-grad-desc-aum.png][Left PNG]] (Comparing AUM
   variants), [[file:figure-unbalanced-grad-desc.png][Right PNG]] (AUM compared to baselines), [[file:figure-aum-grad-speed-random.png][Right PNG]], [[file:figure-unbalanced-grad-desc.R][R code]].
-- Figure 7: speed comparison. [[file:figure-aum-grad-speed-binary-cpp-algos.png][Left PNG]], [[file:figure-aum-grad-speed-binary-cpp.R][R code for binary
-  classification]]; [[file:figure-aum-grad-speed.png][Right PNG]], [[file:figure-aum-grad-speed.R][R code for changepoint detection]].
+- Figure 7: speed comparison. [[file:figure-aum-grad-speed-both.png][PNG]], [[file:figure-aum-grad-speed.R][R code]].
 
 ** Interactive figures
 
@@ -34,7 +33,7 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 
 [[file:figure-aum-grad-speed-binary-cpp.png]]
 
-[[file:figure-aum-grad-speed-binary.R]] updated to make
+[[file:figure-aum-grad-speed.R]] updated to make
 
 [[file:figure-aum-grad-speed-both.png]]
 

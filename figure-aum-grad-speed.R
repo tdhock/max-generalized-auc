@@ -19,14 +19,6 @@ csv.file.dt <- rbind(
   f("Changepoint detection","figure-aum-grad-speed-data.csv","pred.type","pred.rnorm"),
   f("Binary classification","figure-aum-grad-speed-binary-cpp-data.csv","prediction.order","unsorted"))
 
-##use case:
-##one.window <- row_fun(start_dates, end_dates, r0, dist_param=150, m=0.1, imm_frac=0)
-##one.window(mdy("1-1-20"),  mdy("1-31-20"), r0=3.0)
-
-csv.file.dt <- tibble::tribble(
-  ~Problem, ~file.csv, ~col.name, ~col.value,
-  "Changepoint detection","figure-aum-grad-speed-data.csv","pred.type","pred.rnorm",
-  "Binary classification","figure-aum-grad-speed-binary-cpp-data.csv","prediction.order","unsorted")
 problem.dt.list <- list()
 for(file.i in 1:nrow(csv.file.dt)){
   csv.file.row <- csv.file.dt[file.i,]
@@ -44,6 +36,12 @@ for(file.i in 1:nrow(csv.file.dt)){
 }
 (problem.dt <- do.call(rbind, problem.dt.list))
 
+algo.colors <- c(
+  "Squared Hinge\nAll Pairs"="#A6CEE3",
+  "Squared\nHinge\nEach\nExample"="#1F78B4",
+  "Logistic"="#B2DF8A", #"#33A02C","#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928"
+  "AUM"="black"
+)
 problem.stats <- problem.dt[, .(
   max=max(seconds),
   median=median(seconds),
@@ -82,20 +80,11 @@ dl <- ggplot()+
     breaks=breaks,
     labels=sprintf("%.e", breaks))+
   scale_y_log10(paste0("Computation time in seconds,
-median line, min/max band over ",timing.stats[1, times], " timings"),
+median line, min/max band over ",problem.stats[1, times], " timings"),
 breaks=10^seq(-6, 0))
 png("figure-aum-grad-speed-both.png", width=7, height=3.2, res=200, units="in")
 print(dl)
 dev.off()
-
-
-algo.colors <- c(
-  "Squared Hinge\nAll Pairs"="#A6CEE3",
-  "Squared\nHinge\nEach\nExample"="#1F78B4",
-  "Logistic"="#B2DF8A", #"#33A02C","#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928"
-  "AUM"="black"
-)
-
 
 timing.dt <- data.table::fread("figure-aum-grad-speed-data.csv")
 timing.stats <- timing.dt[, .(
