@@ -1,4 +1,15 @@
 source("packages.R")
+
+csv.file.vec <- c(
+  "Changepoint detection"="figure-aum-grad-speed-data.csv",
+  "Binary classification"="figure-aum-grad-speed-binary-cpp-data.csv")
+for(Problem in names(csv.file.vec)){
+  csv.file <- csv.file.vec[[Problem]]
+  timing.dt <- data.table::fread(csv.file)
+  print(timing.dt)
+}
+
+
 timing.dt <- data.table::fread("figure-aum-grad-speed-data.csv")
 timing.stats <- timing.dt[, .(
   max=max(seconds),
@@ -7,16 +18,16 @@ timing.stats <- timing.dt[, .(
   times=.N
 ), by=.(N, pred.type, algorithm)]
 some.stats <- timing.stats[pred.type=="pred.rnorm" & algorithm != "sort"]
-dput(RColorBrewer::brewer.pal(Inf, "Set1"))
+some.stats[, Algorithm := c(
+  "squared.hinge.each.example"="Squared\nHinge\nEach\nExample",
+  aum="AUM")[algorithm]
+  ]
 algo.colors <- c(
-  AUM="black",
-  ##sort="#E41A1C",
-  "squared\nhinge\neach\nexample"="#377EB8",
-  "squared\nhinge\nall\npairs"="#4DAF4A",
-  logistic="#984EA3", "#FF7F00", "#FFFF33", 
-  "#A65628", "#F781BF", "#999999")
-some.stats[, Algorithm := ifelse(
-  algorithm=="aum", "AUM", gsub("[.]", "\n", algorithm))]
+  "Squared Hinge\nAll Pairs"="#A6CEE3",
+  "Squared\nHinge\nEach\nExample"="#1F78B4",
+  "Logistic"="#B2DF8A", #"#33A02C","#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928"
+  "AUM"="black"
+)
 gg <- ggplot()+
   geom_ribbon(aes(
     N, ymin=min, ymax=max, fill=Algorithm),
@@ -32,11 +43,10 @@ gg <- ggplot()+
     limits=c(10, 12000),
     breaks=c(10, 100, 1000, timing.stats[, max(N)]))+
   scale_y_log10(paste0("Computation time in seconds,
-median line, min/max band
-over ",timing.stats[1, times], " timings"))+
+median line, min/max band over ",timing.stats[1, times], " timings"))+
   ggtitle("Changepoint detection")
 dl <- directlabels::direct.label(gg, "right.polygons")
-png("figure-aum-grad-speed-random.png", width=4, height=3, res=200, units="in")
+png("figure-aum-grad-speed-random.png", width=5, height=4, res=200, units="in")
 print(dl)
 dev.off()
 gg <- ggplot()+

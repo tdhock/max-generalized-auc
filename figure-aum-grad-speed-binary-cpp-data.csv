@@ -1,0 +1,561 @@
+N,prediction.order,seconds,algorithm
+10,sorted,0.0049678,Squared Hinge All Pairs
+10,sorted,0.00451032,Squared Hinge All Pairs
+10,sorted,0.00449488,Squared Hinge All Pairs
+10,sorted,6.86e-05,AUM
+10,sorted,2.312e-05,Logistic
+10,sorted,1.324e-05,Logistic
+10,sorted,3.196e-05,AUM
+10,sorted,0.00450516,Squared Hinge All Pairs
+10,sorted,2.74e-05,Logistic
+10,sorted,1.304e-05,Logistic
+10,sorted,4.784e-05,AUM
+10,sorted,1.4e-05,Logistic
+10,sorted,0.0044886,Squared Hinge All Pairs
+10,sorted,5.708e-05,AUM
+10,sorted,1.988e-05,Logistic
+10,sorted,3.172e-05,AUM
+10,sorted,0.0044538,Squared Hinge All Pairs
+10,sorted,5.812e-05,AUM
+10,sorted,3.276e-05,AUM
+10,sorted,0.00449456,Squared Hinge All Pairs
+10,sorted,8.184e-05,AUM
+10,sorted,0.00448976,Squared Hinge All Pairs
+10,sorted,0.00458028,Squared Hinge All Pairs
+10,sorted,6.488e-05,AUM
+10,sorted,0.00500416,Squared Hinge All Pairs
+10,sorted,3.292e-05,Logistic
+10,sorted,1.292e-05,Logistic
+10,sorted,1.232e-05,Logistic
+10,sorted,1.232e-05,Logistic
+10,sorted,5.536e-05,AUM
+10,unsorted,0.00497684,Squared Hinge All Pairs
+10,unsorted,3.22e-05,Logistic
+10,unsorted,5.532e-05,AUM
+10,unsorted,0.00462108,Squared Hinge All Pairs
+10,unsorted,2.728e-05,Logistic
+10,unsorted,0.00446848,Squared Hinge All Pairs
+10,unsorted,0.00446448,Squared Hinge All Pairs
+10,unsorted,2.932e-05,Logistic
+10,unsorted,5.34e-05,AUM
+10,unsorted,3.12e-05,AUM
+10,unsorted,3.08e-05,AUM
+10,unsorted,1.292e-05,Logistic
+10,unsorted,3.048e-05,AUM
+10,unsorted,0.00450576,Squared Hinge All Pairs
+10,unsorted,5.684e-05,AUM
+10,unsorted,0.00444732,Squared Hinge All Pairs
+10,unsorted,0.0044654,Squared Hinge All Pairs
+10,unsorted,2.908e-05,Logistic
+10,unsorted,1.272e-05,Logistic
+10,unsorted,0.0044474,Squared Hinge All Pairs
+10,unsorted,2.776e-05,Logistic
+10,unsorted,1.264e-05,Logistic
+10,unsorted,5.36e-05,AUM
+10,unsorted,1.276e-05,Logistic
+10,unsorted,3.144e-05,AUM
+10,unsorted,3.104e-05,AUM
+10,unsorted,0.00445568,Squared Hinge All Pairs
+10,unsorted,5.532e-05,AUM
+10,unsorted,0.0044578,Squared Hinge All Pairs
+10,unsorted,2.66e-05,Logistic
+31,sorted,8.72e-05,Logistic
+31,sorted,1.592e-05,Logistic
+31,sorted,0.00520364,Squared Hinge All Pairs
+31,sorted,0.00481052,Squared Hinge All Pairs
+31,sorted,3.448e-05,Logistic
+31,sorted,0.0048058,Squared Hinge All Pairs
+31,sorted,3.416e-05,Logistic
+31,sorted,0.00478136,Squared Hinge All Pairs
+31,sorted,6.96e-05,AUM
+31,sorted,3.76e-05,AUM
+31,sorted,2.312e-05,Logistic
+31,sorted,3.656e-05,AUM
+31,sorted,1.508e-05,Logistic
+31,sorted,0.00481232,Squared Hinge All Pairs
+31,sorted,0.0047486,Squared Hinge All Pairs
+31,sorted,3.376e-05,Logistic
+31,sorted,5.756e-05,AUM
+31,sorted,3.668e-05,AUM
+31,sorted,3.556e-05,AUM
+31,sorted,3.484e-05,AUM
+31,sorted,1.532e-05,Logistic
+31,sorted,0.00475492,Squared Hinge All Pairs
+31,sorted,6.212e-05,AUM
+31,sorted,3.732e-05,AUM
+31,sorted,0.00485728,Squared Hinge All Pairs
+31,sorted,3.232e-05,Logistic
+31,sorted,7.876e-05,AUM
+31,sorted,0.00475216,Squared Hinge All Pairs
+31,sorted,0.00475512,Squared Hinge All Pairs
+31,sorted,3.404e-05,Logistic
+31,unsorted,0.00014276,AUM
+31,unsorted,3.856e-05,AUM
+31,unsorted,2.764e-05,Logistic
+31,unsorted,3.576e-05,AUM
+31,unsorted,3.656e-05,AUM
+31,unsorted,3.54e-05,AUM
+31,unsorted,3.548e-05,AUM
+31,unsorted,3.524e-05,AUM
+31,unsorted,3.548e-05,AUM
+31,unsorted,0.00518212,Squared Hinge All Pairs
+31,unsorted,3.108e-05,Logistic
+31,unsorted,0.0048126,Squared Hinge All Pairs
+31,unsorted,6.54e-05,AUM
+31,unsorted,2.228e-05,Logistic
+31,unsorted,0.00482972,Squared Hinge All Pairs
+31,unsorted,6.316e-05,AUM
+31,unsorted,2.228e-05,Logistic
+31,unsorted,0.00480472,Squared Hinge All Pairs
+31,unsorted,3e-05,Logistic
+31,unsorted,0.00478416,Squared Hinge All Pairs
+31,unsorted,3.024e-05,Logistic
+31,unsorted,0.00473824,Squared Hinge All Pairs
+31,unsorted,2.868e-05,Logistic
+31,unsorted,0.00471208,Squared Hinge All Pairs
+31,unsorted,0.0047854,Squared Hinge All Pairs
+31,unsorted,0.00476712,Squared Hinge All Pairs
+31,unsorted,3.388e-05,Logistic
+31,unsorted,1.424e-05,Logistic
+31,unsorted,0.00476328,Squared Hinge All Pairs
+31,unsorted,3.192e-05,Logistic
+100,sorted,0.00676648,Squared Hinge All Pairs
+100,sorted,0.00633888,Squared Hinge All Pairs
+100,sorted,0.00624172,Squared Hinge All Pairs
+100,sorted,8.8e-05,AUM
+100,sorted,0.00635284,Squared Hinge All Pairs
+100,sorted,8.144e-05,AUM
+100,sorted,3.716e-05,Logistic
+100,sorted,4.824e-05,AUM
+100,sorted,2.012e-05,Logistic
+100,sorted,0.0063642,Squared Hinge All Pairs
+100,sorted,4.272e-05,Logistic
+100,sorted,0.00631212,Squared Hinge All Pairs
+100,sorted,8.328e-05,AUM
+100,sorted,0.00614368,Squared Hinge All Pairs
+100,sorted,7.98e-05,AUM
+100,sorted,4.712e-05,AUM
+100,sorted,3.328e-05,Logistic
+100,sorted,4.584e-05,AUM
+100,sorted,0.00622544,Squared Hinge All Pairs
+100,sorted,7.888e-05,AUM
+100,sorted,3.276e-05,Logistic
+100,sorted,1.896e-05,Logistic
+100,sorted,1.896e-05,Logistic
+100,sorted,0.00617164,Squared Hinge All Pairs
+100,sorted,4.168e-05,Logistic
+100,sorted,6.904e-05,AUM
+100,sorted,4.628e-05,AUM
+100,sorted,2.024e-05,Logistic
+100,sorted,1.928e-05,Logistic
+100,sorted,0.00614504,Squared Hinge All Pairs
+100,unsorted,0.00665292,Squared Hinge All Pairs
+100,unsorted,8.736e-05,AUM
+100,unsorted,5.096e-05,AUM
+100,unsorted,0.00631412,Squared Hinge All Pairs
+100,unsorted,4.5e-05,Logistic
+100,unsorted,0.00620412,Squared Hinge All Pairs
+100,unsorted,8.524e-05,AUM
+100,unsorted,3.2e-05,Logistic
+100,unsorted,0.0062558,Squared Hinge All Pairs
+100,unsorted,8.236e-05,AUM
+100,unsorted,5.124e-05,AUM
+100,unsorted,0.0062004,Squared Hinge All Pairs
+100,unsorted,0.00622848,Squared Hinge All Pairs
+100,unsorted,0.006178,Squared Hinge All Pairs
+100,unsorted,4.448e-05,Logistic
+100,unsorted,1.9e-05,Logistic
+100,unsorted,7.588e-05,AUM
+100,unsorted,1.976e-05,Logistic
+100,unsorted,1.9e-05,Logistic
+100,unsorted,0.00623144,Squared Hinge All Pairs
+100,unsorted,0.00622092,Squared Hinge All Pairs
+100,unsorted,4.364e-05,Logistic
+100,unsorted,7.472e-05,AUM
+100,unsorted,1.956e-05,Logistic
+100,unsorted,0.0062046,Squared Hinge All Pairs
+100,unsorted,4.192e-05,Logistic
+100,unsorted,1.88e-05,Logistic
+100,unsorted,7.304e-05,AUM
+100,unsorted,4.916e-05,AUM
+100,unsorted,5.84e-05,AUM
+316,sorted,0.00018644,AUM
+316,sorted,0.01542764,Squared Hinge All Pairs
+316,sorted,0.00011896,AUM
+316,sorted,7.704e-05,AUM
+316,sorted,0.0152198,Squared Hinge All Pairs
+316,sorted,0.00011732,AUM
+316,sorted,5.168e-05,Logistic
+316,sorted,7.58e-05,AUM
+316,sorted,0.0151388,Squared Hinge All Pairs
+316,sorted,6.22e-05,Logistic
+316,sorted,3.336e-05,Logistic
+316,sorted,3.248e-05,Logistic
+316,sorted,0.00010236,AUM
+316,sorted,0.01537,Squared Hinge All Pairs
+316,sorted,0.00012332,AUM
+316,sorted,4.976e-05,Logistic
+316,sorted,7.584e-05,AUM
+316,sorted,3.296e-05,Logistic
+316,sorted,7.332e-05,AUM
+316,sorted,3.272e-05,Logistic
+316,sorted,0.01588636,Squared Hinge All Pairs
+316,sorted,7.704e-05,Logistic
+316,sorted,0.00011964,AUM
+316,sorted,0.0152204,Squared Hinge All Pairs
+316,sorted,0.01512416,Squared Hinge All Pairs
+316,sorted,0.01679728,Squared Hinge All Pairs
+316,sorted,6.12e-05,Logistic
+316,sorted,0.01856844,Squared Hinge All Pairs
+316,sorted,6.204e-05,Logistic
+316,sorted,0.02440576,Squared Hinge All Pairs
+316,unsorted,0.015569,Squared Hinge All Pairs
+316,unsorted,0.0155094,Squared Hinge All Pairs
+316,unsorted,0.00013824,AUM
+316,unsorted,9.128e-05,AUM
+316,unsorted,5.036e-05,Logistic
+316,unsorted,3.296e-05,Logistic
+316,unsorted,0.01529552,Squared Hinge All Pairs
+316,unsorted,6.088e-05,Logistic
+316,unsorted,0.00012052,AUM
+316,unsorted,3.364e-05,Logistic
+316,unsorted,9.004e-05,AUM
+316,unsorted,3.284e-05,Logistic
+316,unsorted,3.212e-05,Logistic
+316,unsorted,0.01672836,Squared Hinge All Pairs
+316,unsorted,6.104e-05,Logistic
+316,unsorted,0.00012116,AUM
+316,unsorted,3.332e-05,Logistic
+316,unsorted,9.032e-05,AUM
+316,unsorted,8.8e-05,AUM
+316,unsorted,0.0158442,Squared Hinge All Pairs
+316,unsorted,0.01521352,Squared Hinge All Pairs
+316,unsorted,6.192e-05,Logistic
+316,unsorted,0.00011872,AUM
+316,unsorted,8.904e-05,AUM
+316,unsorted,0.0151846,Squared Hinge All Pairs
+316,unsorted,0.01517088,Squared Hinge All Pairs
+316,unsorted,6.172e-05,Logistic
+316,unsorted,0.0152352,Squared Hinge All Pairs
+316,unsorted,0.00013348,AUM
+316,unsorted,0.02479196,Squared Hinge All Pairs
+1000,sorted,0.00017484,Logistic
+1000,sorted,0.00021932,AUM
+1000,sorted,0.09815888,Squared Hinge All Pairs
+1000,sorted,0.00010744,Logistic
+1000,sorted,0.22834928,Squared Hinge All Pairs
+1000,sorted,0.00010652,Logistic
+1000,sorted,0.10414148,Squared Hinge All Pairs
+1000,sorted,0.00023704,AUM
+1000,sorted,0.10584556,Squared Hinge All Pairs
+1000,sorted,0.00021332,AUM
+1000,sorted,0.10319188,Squared Hinge All Pairs
+1000,sorted,0.00010684,Logistic
+1000,sorted,0.00019804,AUM
+1000,sorted,7.772e-05,Logistic
+1000,sorted,7.732e-05,Logistic
+1000,sorted,7.572e-05,Logistic
+1000,sorted,0.11125356,Squared Hinge All Pairs
+1000,sorted,0.0001068,Logistic
+1000,sorted,0.21795368,Squared Hinge All Pairs
+1000,sorted,0.09945028,Squared Hinge All Pairs
+1000,sorted,0.00023128,AUM
+1000,sorted,0.1015676,Squared Hinge All Pairs
+1000,sorted,0.0002622,AUM
+1000,sorted,9.284e-05,Logistic
+1000,sorted,0.00016628,AUM
+1000,sorted,0.22229728,Squared Hinge All Pairs
+1000,sorted,0.00021268,AUM
+1000,sorted,0.00016352,AUM
+1000,sorted,9.276e-05,Logistic
+1000,sorted,0.00016272,AUM
+1000,unsorted,0.00023924,Logistic
+1000,unsorted,7.8e-05,Logistic
+1000,unsorted,0.00028328,AUM
+1000,unsorted,0.00022496,AUM
+1000,unsorted,7.728e-05,Logistic
+1000,unsorted,0.10286508,Squared Hinge All Pairs
+1000,unsorted,0.109948,Squared Hinge All Pairs
+1000,unsorted,0.00027688,AUM
+1000,unsorted,0.2211646,Squared Hinge All Pairs
+1000,unsorted,0.10177764,Squared Hinge All Pairs
+1000,unsorted,0.10099008,Squared Hinge All Pairs
+1000,unsorted,0.00024872,AUM
+1000,unsorted,0.0002556,AUM
+1000,unsorted,0.00019556,AUM
+1000,unsorted,0.22469584,Squared Hinge All Pairs
+1000,unsorted,0.00010532,Logistic
+1000,unsorted,0.09558512,Squared Hinge All Pairs
+1000,unsorted,0.10856032,Squared Hinge All Pairs
+1000,unsorted,0.00010912,Logistic
+1000,unsorted,7.64e-05,Logistic
+1000,unsorted,7.552e-05,Logistic
+1000,unsorted,0.00023636,AUM
+1000,unsorted,0.10211692,Squared Hinge All Pairs
+1000,unsorted,0.00027788,AUM
+1000,unsorted,0.0001982,AUM
+1000,unsorted,0.000194,AUM
+1000,unsorted,9.232e-05,Logistic
+1000,unsorted,7.576e-05,Logistic
+1000,unsorted,0.22764208,Squared Hinge All Pairs
+1000,unsorted,0.0001126,Logistic
+3162,sorted,0.00037788,Logistic
+3162,sorted,1.77609248,Squared Hinge All Pairs
+3162,sorted,0.0005112,AUM
+3162,sorted,1.24671188,Squared Hinge All Pairs
+3162,sorted,0.00025296,Logistic
+3162,sorted,0.00021496,Logistic
+3162,sorted,0.00021428,Logistic
+3162,sorted,0.00021524,Logistic
+3162,sorted,0.0005088,AUM
+3162,sorted,1.19067716,Squared Hinge All Pairs
+3162,sorted,0.00024824,Logistic
+3162,sorted,1.03595616,Squared Hinge All Pairs
+3162,sorted,1.04733356,Squared Hinge All Pairs
+3162,sorted,0.00052384,AUM
+3162,sorted,1.05703604,Squared Hinge All Pairs
+3162,sorted,0.00051896,AUM
+3162,sorted,0.00046576,AUM
+3162,sorted,0.00023128,Logistic
+3162,sorted,0.0002142,Logistic
+3162,sorted,1.12753944,Squared Hinge All Pairs
+3162,sorted,0.00052656,AUM
+3162,sorted,1.17756224,Squared Hinge All Pairs
+3162,sorted,0.0002686,Logistic
+3162,sorted,0.0005078,AUM
+3162,sorted,0.00046912,AUM
+3162,sorted,0.00046172,AUM
+3162,sorted,1.1229338,Squared Hinge All Pairs
+3162,sorted,0.00024916,Logistic
+3162,sorted,0.00049852,AUM
+3162,sorted,1.02244708,Squared Hinge All Pairs
+3162,unsorted,0.000769,AUM
+3162,unsorted,0.00024048,Logistic
+3162,unsorted,0.00066476,AUM
+3162,unsorted,1.0761464,Squared Hinge All Pairs
+3162,unsorted,1.03812036,Squared Hinge All Pairs
+3162,unsorted,0.0002486,Logistic
+3162,unsorted,1.0782866,Squared Hinge All Pairs
+3162,unsorted,1.02826388,Squared Hinge All Pairs
+3162,unsorted,0.00024872,Logistic
+3162,unsorted,0.00072232,AUM
+3162,unsorted,0.0007118,AUM
+3162,unsorted,0.00069388,AUM
+3162,unsorted,1.0441154,Squared Hinge All Pairs
+3162,unsorted,1.00066176,Squared Hinge All Pairs
+3162,unsorted,0.0002556,Logistic
+3162,unsorted,1.05888516,Squared Hinge All Pairs
+3162,unsorted,0.00075696,AUM
+3162,unsorted,0.00023248,Logistic
+3162,unsorted,0.00068952,AUM
+3162,unsorted,0.00021476,Logistic
+3162,unsorted,0.00021416,Logistic
+3162,unsorted,0.00021408,Logistic
+3162,unsorted,0.0006886,AUM
+3162,unsorted,0.00073528,AUM
+3162,unsorted,0.97551724,Squared Hinge All Pairs
+3162,unsorted,1.03274704,Squared Hinge All Pairs
+3162,unsorted,0.0002536,Logistic
+3162,unsorted,1.00451788,Squared Hinge All Pairs
+3162,unsorted,0.00024808,Logistic
+3162,unsorted,0.0006878,AUM
+10000,sorted,0.00085088,Logistic
+10000,sorted,0.00153192,AUM
+10000,sorted,0.00065912,Logistic
+10000,sorted,0.00144236,AUM
+10000,sorted,0.000657,Logistic
+10000,sorted,0.00152064,AUM
+10000,sorted,0.00149936,AUM
+10000,sorted,0.00070764,Logistic
+10000,sorted,0.00066372,Logistic
+10000,sorted,0.00071148,Logistic
+10000,sorted,0.00066752,Logistic
+10000,sorted,0.00181584,AUM
+10000,sorted,0.00066936,Logistic
+10000,sorted,0.0015378,AUM
+10000,sorted,0.0015102,AUM
+10000,sorted,0.00151924,AUM
+10000,sorted,0.00072736,Logistic
+10000,sorted,0.00066636,Logistic
+10000,sorted,0.00159244,AUM
+10000,sorted,0.0015974,AUM
+10000,unsorted,0.00249452,AUM
+10000,unsorted,0.00067372,Logistic
+10000,unsorted,0.0024014,AUM
+10000,unsorted,0.0024614,AUM
+10000,unsorted,0.0006734,Logistic
+10000,unsorted,0.00249392,AUM
+10000,unsorted,0.00066788,Logistic
+10000,unsorted,0.00253308,AUM
+10000,unsorted,0.00249204,AUM
+10000,unsorted,0.00067036,Logistic
+10000,unsorted,0.00065816,Logistic
+10000,unsorted,0.00070332,Logistic
+10000,unsorted,0.0027026,AUM
+10000,unsorted,0.00071916,Logistic
+10000,unsorted,0.000667,Logistic
+10000,unsorted,0.00256864,AUM
+10000,unsorted,0.00068016,Logistic
+10000,unsorted,0.00067864,Logistic
+10000,unsorted,0.00256128,AUM
+10000,unsorted,0.00247548,AUM
+31622,sorted,0.00495752,AUM
+31622,sorted,0.00214384,Logistic
+31622,sorted,0.00207768,Logistic
+31622,sorted,0.00505336,AUM
+31622,sorted,0.00217332,Logistic
+31622,sorted,0.00491424,AUM
+31622,sorted,0.00214728,Logistic
+31622,sorted,0.00498644,AUM
+31622,sorted,0.00216316,Logistic
+31622,sorted,0.00211412,Logistic
+31622,sorted,0.005303,AUM
+31622,sorted,0.00228752,Logistic
+31622,sorted,0.00571792,AUM
+31622,sorted,0.0021884,Logistic
+31622,sorted,0.00430252,AUM
+31622,sorted,0.00530808,AUM
+31622,sorted,0.00223896,Logistic
+31622,sorted,0.00207328,Logistic
+31622,sorted,0.00499788,AUM
+31622,sorted,0.00511136,AUM
+31622,unsorted,0.00220256,Logistic
+31622,unsorted,0.00860696,AUM
+31622,unsorted,0.00879796,AUM
+31622,unsorted,0.00878192,AUM
+31622,unsorted,0.00225264,Logistic
+31622,unsorted,0.00907592,AUM
+31622,unsorted,0.00221568,Logistic
+31622,unsorted,0.00897872,AUM
+31622,unsorted,0.00219956,Logistic
+31622,unsorted,0.00205428,Logistic
+31622,unsorted,0.00875816,AUM
+31622,unsorted,0.00221912,Logistic
+31622,unsorted,0.00902172,AUM
+31622,unsorted,0.0021848,Logistic
+31622,unsorted,0.00206412,Logistic
+31622,unsorted,0.00879448,AUM
+31622,unsorted,0.00220812,Logistic
+31622,unsorted,0.00876392,AUM
+31622,unsorted,0.00882812,AUM
+31622,unsorted,0.0021772,Logistic
+100000,sorted,0.01789156,AUM
+100000,sorted,0.01918864,AUM
+100000,sorted,0.01873568,AUM
+100000,sorted,0.0067254,Logistic
+100000,sorted,0.01797204,AUM
+100000,sorted,0.00667444,Logistic
+100000,sorted,0.0064308,Logistic
+100000,sorted,0.01812416,AUM
+100000,sorted,0.01813028,AUM
+100000,sorted,0.0176464,AUM
+100000,sorted,0.01822332,AUM
+100000,sorted,0.00664856,Logistic
+100000,sorted,0.00646848,Logistic
+100000,sorted,0.0183266,AUM
+100000,sorted,0.00662932,Logistic
+100000,sorted,0.0170748,AUM
+100000,sorted,0.00662332,Logistic
+100000,sorted,0.00644028,Logistic
+100000,sorted,0.00640412,Logistic
+100000,sorted,0.00648624,Logistic
+100000,unsorted,0.006682,Logistic
+100000,unsorted,0.00643872,Logistic
+100000,unsorted,0.03454344,AUM
+100000,unsorted,0.00664056,Logistic
+100000,unsorted,0.00642464,Logistic
+100000,unsorted,0.0359238,AUM
+100000,unsorted,0.0354972,AUM
+100000,unsorted,0.0358128,AUM
+100000,unsorted,0.00671592,Logistic
+100000,unsorted,0.03414024,AUM
+100000,unsorted,0.0352706,AUM
+100000,unsorted,0.00660616,Logistic
+100000,unsorted,0.03800112,AUM
+100000,unsorted,0.00665204,Logistic
+100000,unsorted,0.00642816,Logistic
+100000,unsorted,0.03648132,AUM
+100000,unsorted,0.03695232,AUM
+100000,unsorted,0.00673304,Logistic
+100000,unsorted,0.00659316,Logistic
+100000,unsorted,0.03540352,AUM
+316227,sorted,0.06095484,AUM
+316227,sorted,0.06143284,AUM
+316227,sorted,0.02133184,Logistic
+316227,sorted,0.0576004,AUM
+316227,sorted,0.0628538,AUM
+316227,sorted,0.0606254,AUM
+316227,sorted,0.02095604,Logistic
+316227,sorted,0.02100968,Logistic
+316227,sorted,0.02074064,Logistic
+316227,sorted,0.02079428,Logistic
+316227,sorted,0.06238236,AUM
+316227,sorted,0.05818784,AUM
+316227,sorted,0.05698356,AUM
+316227,sorted,0.06322928,AUM
+316227,sorted,0.02274988,Logistic
+316227,sorted,0.02268808,Logistic
+316227,sorted,0.06575108,AUM
+316227,sorted,0.0226388,Logistic
+316227,sorted,0.02289268,Logistic
+316227,sorted,0.0230418,Logistic
+316227,unsorted,0.02097952,Logistic
+316227,unsorted,0.16202532,AUM
+316227,unsorted,0.02091196,Logistic
+316227,unsorted,0.02083936,Logistic
+316227,unsorted,0.02076576,Logistic
+316227,unsorted,0.16217696,AUM
+316227,unsorted,0.02082148,Logistic
+316227,unsorted,0.02088592,Logistic
+316227,unsorted,0.1607598,AUM
+316227,unsorted,0.15999284,AUM
+316227,unsorted,0.02086068,Logistic
+316227,unsorted,0.02087308,Logistic
+316227,unsorted,0.15755164,AUM
+316227,unsorted,0.1547386,AUM
+316227,unsorted,0.02094204,Logistic
+316227,unsorted,0.02112964,Logistic
+316227,unsorted,0.18695552,AUM
+316227,unsorted,0.162952,AUM
+316227,unsorted,0.16985968,AUM
+316227,unsorted,0.16824696,AUM
+1000000,sorted,0.06687236,Logistic
+1000000,sorted,0.18612004,AUM
+1000000,sorted,0.06629192,Logistic
+1000000,sorted,0.06577316,Logistic
+1000000,sorted,0.19001376,AUM
+1000000,sorted,0.20034208,AUM
+1000000,sorted,0.06879548,Logistic
+1000000,sorted,0.07229492,Logistic
+1000000,sorted,0.20941796,AUM
+1000000,sorted,0.19947536,AUM
+1000000,sorted,0.06583828,Logistic
+1000000,sorted,0.06575256,Logistic
+1000000,sorted,0.06660476,Logistic
+1000000,sorted,0.22256732,AUM
+1000000,sorted,0.0712266,Logistic
+1000000,sorted,0.19155672,AUM
+1000000,sorted,0.06596828,Logistic
+1000000,sorted,0.19332632,AUM
+1000000,sorted,0.20946288,AUM
+1000000,sorted,0.20147324,AUM
+1000000,unsorted,0.6233502,AUM
+1000000,unsorted,0.0662382,Logistic
+1000000,unsorted,0.6216162,AUM
+1000000,unsorted,0.06564844,Logistic
+1000000,unsorted,0.61868672,AUM
+1000000,unsorted,0.06559452,Logistic
+1000000,unsorted,0.06628236,Logistic
+1000000,unsorted,0.63872948,AUM
+1000000,unsorted,0.06714548,Logistic
+1000000,unsorted,0.06575896,Logistic
+1000000,unsorted,0.61651652,AUM
+1000000,unsorted,0.6183808,AUM
+1000000,unsorted,0.06645776,Logistic
+1000000,unsorted,0.07082672,Logistic
+1000000,unsorted,0.62081884,AUM
+1000000,unsorted,0.06588012,Logistic
+1000000,unsorted,0.6131396,AUM
+1000000,unsorted,0.62417696,AUM
+1000000,unsorted,0.63027312,AUM
+1000000,unsorted,0.06560156,Logistic
