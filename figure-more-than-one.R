@@ -229,6 +229,10 @@ for(m in names(profile.list)){
       data=p.auc)+
     theme(legend.position="none")
   limits.vec <- c(0, 12)
+  type.breaks <- c(
+    FP="$\\text{FPT}_{\\mathbf{\\hat{y}}}(t)$",
+    FN="$\\text{FNT}_{\\mathbf{\\hat{y}}}(t)$",
+    "min(FP,FN)"="$M_{\\mathbf{\\hat{y}}}(t)$")
   g.aum <- ggplot()+
     geom_vline(aes(
       xintercept=max.thresh),
@@ -263,10 +267,10 @@ for(m in names(profile.list)){
       vjust=-0.5,
       size=3,
       data=p.roc)+
-    scale_color_manual(leg, values=err.colors)+
-    scale_size_manual(leg, values=err.sizes)+
+    scale_color_manual(leg, values=err.colors, breaks=names(type.breaks), labels=type.breaks)+
+    scale_size_manual(leg, values=err.sizes, breaks=names(type.breaks), labels=type.breaks)+
     scale_x_continuous(
-      "Threshold added to predicted values",
+      "Threshold $t$ added to predicted values",
       breaks=seq(0, 12, by=2),
       limits=limits.vec)+
     geom_text(aes(
@@ -287,16 +291,10 @@ for(m in names(profile.list)){
       data=p.roc[, data.table(
         q=c(0, .I),
         thresh=c(-Inf, max.thresh))])+
-    ## theme(axis.text.x = element_text(angle = 30, hjust = 1))+
-    ## p.roc[, scale_x_continuous(
-    ##   "Threshold added to predicted values",
-    ##   limits=limits.vec,
-    ##   labels=sprintf(
-    ##     "$\\tau(\\mathbf{\\hat{y}})_{%d}=%s$",
-    ##     c(0,.N, 1:(.N-1)),
-    ##     paste(c("-\\infty","\\infty",min.thresh[-1]))),
-    ##   breaks=c(limits.vec, min.thresh[-1]))]+
-    scale_y_continuous("Label Errors", limits=c(NA, 31))
+    scale_y_continuous(
+      "Total label errors over all
+$n$ labeled training examples",
+      limits=c(NA, 31))
   g.list <- list(auc=g, aum=g.aum)
   for(plot.type in names(g.list)){
     f.tex <- sprintf(
