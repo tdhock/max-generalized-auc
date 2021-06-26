@@ -6,7 +6,8 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 
 - Figure 1: Example changepoint data with non-monotonic FP. [[file:figure-fn-not-monotonic.png][Left PNG]]
   (data), [[file:figure-fn-not-monotonic-error.png][Right PNG]] (error), [[file:figure-fn-not-monotonic.R][R code]].
-- Figure 2: synthetic example with AUC greater than one. [[file:figure-more-than-one-more-aum.png][Left PNG]] (AUM), [[file:figure-more-than-one-more-auc.png][right PNG (AUC)]], [[file:figure-more-than-one.R][R code]].
+- Figure 2: synthetic example with AUC greater than one. [[file:figure-more-than-one-more-aum.png][Left PNG]]
+  (AUM), [[file:figure-more-than-one-more-auc.png][right PNG (AUC)]], [[file:figure-more-than-one.R][R code]].
 - Figure 3: real data example with AUC greater than one. [[file:figure-aum-convexity-profiles.png][left PNG]] (error functions),
   [[file:figure-aum-convexity.png][right PNG (AUM/AUC functions)]], [[file:figure-aum-convexity.R][R code]].
 - Figure 4: optimizing AUM maximizes AUC. [[file:figure-aum-optimized-iterations.png][Left PNG]], [[file:figure-aum-optimized.R][R code]]
@@ -15,6 +16,8 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 - Figure 6: binary classification test AUC. [[file:figure-unbalanced-grad-desc-aum.png][Left PNG]] (Comparing AUM
   variants), [[file:figure-unbalanced-grad-desc.png][Right PNG]] (AUM compared to baselines), [[file:figure-aum-grad-speed-random.png][Right PNG]], [[file:figure-unbalanced-grad-desc.R][R code]].
 - Figure 7: speed comparison. [[file:figure-aum-grad-speed-both.png][PNG]], [[file:figure-aum-grad-speed.R][R code]].
+- Figure showing 2d loss functions.
+- Figure showing 1d loss functions.
 
 ** Interactive figures
 

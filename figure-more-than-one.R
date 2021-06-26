@@ -196,6 +196,115 @@ for(m in names(profile.list)){
       height=if(plot.type=="auc")2.5 else 2, units="in", res=200)
     print(g.list[[plot.type]])
     dev.off()
+    f.tex <- sub("png", "tex", out.png)
+    tikz(f.tex, width=3, height=3, standAlone = TRUE)
+    print(g.list[[plot.type]])
+    dev.off()
+    system(paste("pdflatex", f.tex))
+  }
+  g <- ggplot()+
+    theme_bw()+
+    scale_fill_manual(values=c(positive="black", negative="red"))+
+    geom_polygon(aes(
+      FPR, TPR, group=paste(seg, model), fill=area),
+      alpha=0.2,
+      data=p.poly)+
+    geom_path(aes(
+      FPR, TPR),
+      data=p.roc)+
+    geom_text(aes(
+      FPR+0.01, TPR, label=sprintf("q=%d",q), hjust=hjust, vjust=vjust),
+      size=3,
+      data=p.roc)+
+    geom_point(aes(
+      FPR, TPR),
+      size=0.5,
+      data=p.roc)+
+    coord_equal(
+      xlim=c(0,1.1), ylim=c(-0.05, 1))+
+    scale_y_continuous("True Positive Rate", breaks=c(0,0.5,1))+
+    scale_x_continuous("False Positive Rate", breaks=c(0,0.5,1))+
+    geom_text(aes(
+      0.5, 0.5, label=sprintf("AUC=%.2f", auc)),
+      data=p.auc)+
+    theme(legend.position="none")
+  limits.vec <- c(0, 12)
+  g.aum <- ggplot()+
+    geom_vline(aes(
+      xintercept=max.thresh),
+      data=p.roc,
+      color="grey")+
+    theme_bw()+
+    theme(
+      panel.grid.minor=element_blank(),
+      panel.spacing=grid::unit(0, "lines"))+
+    coord_cartesian(expand=FALSE)+
+    geom_rect(aes(
+      xmin=min.thresh, xmax=max.thresh,
+      ymin=0, ymax=value),
+      color="grey",
+      alpha=0.75,
+      fill="grey",
+      data=p.rect)+
+    geom_text(aes(
+      6, 4, label=sprintf("AUM=%.0f", aum)),
+      data=p.auc)+
+    geom_segment(aes(
+      min.thresh, value,
+      color=Variable, size=Variable,
+      xend=max.thresh, yend=value),
+      data=p.fp.fn)+
+    geom_text(aes(
+      ifelse(
+        min.thresh == -Inf, max.thresh-1, ifelse(
+          max.thresh == Inf, min.thresh+1, (min.thresh+max.thresh)/2)),
+      -2.5, label=sprintf("q=%d",q)),
+      vjust=-0.5,
+      size=3,
+      data=p.roc)+
+    scale_color_manual(leg, values=err.colors)+
+    scale_size_manual(leg, values=err.sizes)+
+    scale_x_continuous(
+      "Threshold added to predicted values",
+      breaks=seq(0, 12, by=2),
+      limits=limits.vec)+
+    geom_text(aes(
+      thresh, 15,
+      vjust=fcase(
+        thresh %in% c(7,Inf), -0.5,
+        default=1.2),
+      label=sprintf(
+        "$\\tau(\\mathbf{\\hat{y}})_{%d}=%s$",
+        q, ifelse(
+          is.finite(thresh),
+          paste(thresh),
+          paste(
+            ifelse(thresh<0, "-", ""),
+            "\\infty"))
+      )),
+      angle=90,
+      data=p.roc[, data.table(
+        q=c(0, .I),
+        thresh=c(-Inf, max.thresh))])+
+    ## theme(axis.text.x = element_text(angle = 30, hjust = 1))+
+    ## p.roc[, scale_x_continuous(
+    ##   "Threshold added to predicted values",
+    ##   limits=limits.vec,
+    ##   labels=sprintf(
+    ##     "$\\tau(\\mathbf{\\hat{y}})_{%d}=%s$",
+    ##     c(0,.N, 1:(.N-1)),
+    ##     paste(c("-\\infty","\\infty",min.thresh[-1]))),
+    ##   breaks=c(limits.vec, min.thresh[-1]))]+
+    scale_y_continuous("Label Errors", limits=c(NA, 31))
+  g.list <- list(auc=g, aum=g.aum)
+  for(plot.type in names(g.list)){
+    f.tex <- sprintf(
+      "figure-more-than-one-%s-%s.tex",
+      m, plot.type)
+    tikz(f.tex, width=if(plot.type=="aum")5 else 3, height=3, standAlone = TRUE)
+    print(g.list[[plot.type]])
+    dev.off()
+    system(paste("pdflatex", f.tex))
   }
 }
 
