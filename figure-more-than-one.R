@@ -258,7 +258,8 @@ for(m in names(profile.list)){
       ifelse(
         min.thresh == -Inf, max.thresh-1, ifelse(
           max.thresh == Inf, min.thresh+1, (min.thresh+max.thresh)/2)),
-      -2.5, label=sprintf("q=%d",q)),
+      ifelse(q %% 2, -5, -2.5),
+      label=sprintf("q=%d",q)),
       vjust=-0.5,
       size=3,
       data=p.roc)+
@@ -301,7 +302,8 @@ for(m in names(profile.list)){
     f.tex <- sprintf(
       "figure-more-than-one-%s-%s.tex",
       m, plot.type)
-    tikz(f.tex, width=if(plot.type=="aum")5 else 3, height=3, standAlone = TRUE)
+    s <- 0.8
+    tikz(f.tex, width=if(plot.type=="aum")5*s else 3*s, height=3*s, standAlone = TRUE)
     print(g.list[[plot.type]])
     dev.off()
     system(paste("pdflatex", f.tex))
