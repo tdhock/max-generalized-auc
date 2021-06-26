@@ -149,9 +149,10 @@ metrics.tall <- melt(
 metrics.tall[, variable := toupper(var.lower)]
 gg <- ggplot()+
   theme(panel.spacing=grid::unit(1, "lines"))+
+  theme(text=element_text(size = 15))+
   ##theme(legend.position=c(0.8, 0.15))+
   theme(legend.position="bottom")+
-  facet_grid(variable ~ ., scales="free", space="free")+
+  facet_grid(variable ~ ., scales="free")+
   scale_fill_manual(values=c(
     "TRUE"="black",
     "FALSE"="orange"))+
@@ -160,7 +161,7 @@ gg <- ggplot()+
     size=1,
     shape=21,
     data=metrics.tall[order(-differentiable)])+
-  xlab("Difference in predicted values, f(negative) - f(positive)")+
+  xlab("Prediction difference, f(negative) - f(positive)")+
   coord_cartesian(xlim=c(4,7))+
   scale_y_continuous("", breaks=seq(0, 3, by=1))
 gg
@@ -175,7 +176,7 @@ png("figure-aum-convexity-emph.png", 5, 3, units="in", res=200)
 print(gg.emph)
 dev.off()
 
-png("figure-aum-convexity.png", 4, 2.5, units="in", res=200)
+png("figure-aum-convexity.png", 4.2, 3, units="in", res=200)
 print(gg)
 dev.off()
 
