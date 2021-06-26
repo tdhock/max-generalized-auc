@@ -65,7 +65,7 @@ ggplot()+
     data=fp.fn.dt)+
   scale_color_manual(values=err.colors)+
   scale_size_manual(values=err.sizes)+
-  scale_x_continuous("prediction threshold")
+  scale_x_continuous("Constant added to predictions")
 
 ggplot()+
   geom_path(aes(
@@ -182,7 +182,7 @@ for(m in names(profile.list)){
     scale_size_manual(leg, values=err.sizes)+
     scale_y_continuous("Label Errors")+
     scale_x_continuous(
-      "Threshold added to predicted values",
+      "Constant added to predicted values",
       limits=c(0, 12),
       breaks=p.roc[["min.thresh"]])
   g.list <- list(auc=g, aum=g.aum)
@@ -230,9 +230,9 @@ for(m in names(profile.list)){
     theme(legend.position="none")
   limits.vec <- c(0, 12)
   type.breaks <- c(
-    FP="$\\text{FPT}_{\\mathbf{\\hat{y}}}(t)$",
-    FN="$\\text{FNT}_{\\mathbf{\\hat{y}}}(t)$",
-    "min(FP,FN)"="$M_{\\mathbf{\\hat{y}}}(t)$")
+    FP="$\\text{FPT}_{\\mathbf{\\hat{y}}}(c)$",
+    FN="$\\text{FNT}_{\\mathbf{\\hat{y}}}(c)$",
+    "min(FP,FN)"="$M_{\\mathbf{\\hat{y}}}(c)$")
   g.aum <- ggplot()+
     geom_vline(aes(
       xintercept=max.thresh),
@@ -270,7 +270,7 @@ for(m in names(profile.list)){
     scale_color_manual(leg, values=err.colors, breaks=names(type.breaks), labels=type.breaks)+
     scale_size_manual(leg, values=err.sizes, breaks=names(type.breaks), labels=type.breaks)+
     scale_x_continuous(
-      "Threshold $t$ added to predicted values",
+      "Constant $c$ added to predicted values",
       breaks=seq(0, 12, by=2),
       limits=limits.vec)+
     geom_text(aes(

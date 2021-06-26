@@ -148,9 +148,9 @@ metrics.tall <- melt(
 )
 metrics.tall[, variable := toupper(var.lower)]
 gg <- ggplot()+
-  theme(
-    panel.spacing=grid::unit(1, "lines"),
-    legend.position=c(0.8, 0.15))+
+  theme(panel.spacing=grid::unit(1, "lines"))+
+  ##theme(legend.position=c(0.8, 0.15))+
+  theme(legend.position="bottom")+
   facet_grid(variable ~ ., scales="free", space="free")+
   scale_fill_manual(values=c(
     "TRUE"="black",
@@ -175,7 +175,7 @@ png("figure-aum-convexity-emph.png", 5, 3, units="in", res=200)
 print(gg.emph)
 dev.off()
 
-png("figure-aum-convexity.png", 5, 3, units="in", res=200)
+png("figure-aum-convexity.png", 4, 2.5, units="in", res=200)
 print(gg)
 dev.off()
 
