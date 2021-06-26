@@ -99,6 +99,11 @@ diff.dt[, pos := c(4,4,4,4)]
 plot(xrange, range(err.tall[["segments"]]), type="n", yaxt="n", xaxt="n",ylab="",xlab="")
 vline.dt[, abline(v=x, col=model.color)]
 vline.dt[, text(x, 19, segments, pos=2, offset=0.2, col=model.color)]
+mysegs <- function(x0, x1, y, ...)segments(
+  ifelse(x0==-Inf, xrange[1]-xsize, x0), y,
+  ifelse(x1==Inf, xrange[2]+xsize, x1), y,
+  lend=1,
+  ...)
 err.list$model.errors[, mysegs(-max.log.lambda, -min.log.lambda, segments, lwd=3)]
 axis(2,c(1,10,20),las=1)
 mtext("Segments", 2, left.lines-ax.label.offset)
@@ -106,11 +111,6 @@ bottom.lines <- 4
 par(mar=c(bottom.lines,left.lines,0,other.lines))
 plot(xrange, c(min(diff.dt[["y"]]), 1.4), type="n", yaxt="n", xaxt="n",xlab="",ylab="")
 axis(2,c(0,1),las=1)
-mysegs <- function(x0, x1, y, ...)segments(
-  ifelse(x0==-Inf, xrange[1]-xsize, x0), y,
-  ifelse(x1==Inf, xrange[2]+xsize, x1), y,
-  lend=1,
-  ...)
 err.tall[, mysegs(
   -max.log.lambda, -min.log.lambda, value,
   lwd=err.sizes[paste(variable)]*4,
