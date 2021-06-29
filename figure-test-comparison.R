@@ -14,8 +14,6 @@ data.dir.vec <- c(file.path("ATAC_JV_adipose/cv/equal_labels/testFolds/4"),
 
 testFold.vec <- sapply(data.dir.vec, function(x){file.path(nb.data.dir, x)})
 
-aum.list <- list()
-auc.list <- list()
 test.aum.dt.list <- list()
 
 if(!file.exists("figure-test-comparison.csv"))
@@ -114,11 +112,6 @@ if(!file.exists("figure-test-comparison.csv"))
     
     selected.aum.dt <- do.call(rbind, selected.aum.dt.list)
     
-    # selected.dt <-
-    #   test.post.cv.dt[, .(aum = last(aum),
-    #                       type = "selected"), 
-    #                   by = seed]
-    
     #Create the data.table containing the initial aum/auc for
     #the dataset
     initial.dt <-
@@ -135,13 +128,6 @@ if(!file.exists("figure-test-comparison.csv"))
     test.aum.dt.list[[curr.index]] <- test.aum.dt %>% mutate(data.name = data.name, 
                                                              cv.type = cv.type,
                                                              test.fold = test.fold)
-    # aum.list[[curr.index]] <- (ggplot(data = test.aum.dt) +
-    #         geom_point(aes(x = aum, y = type, color = seed)) +
-    #         ggtitle(plot.title))
-    # 
-    # auc.list[[curr.index]] <- (ggplot(data = test.aum.dt) +
-    #         geom_point(aes(x = auc, y = type, color = seed)) +
-    #         ggtitle(c(data.name, cv.type, test.fold)))
   }
   
   test.aum.dt.combined <- do.call(rbind, test.aum.dt.list) %>%
@@ -152,9 +138,6 @@ if(!file.exists("figure-test-comparison.csv"))
   test.aum.dt.combined <- data.table::fread("figure-test-comparison.csv")
 }
 
-
-
-
 png("figure-test-auc-comparison.png", width = 26, height = 3, res = 200, units = "in")
 
 
@@ -164,33 +147,10 @@ ggplot(data = test.aum.dt.combined) +
   facet_grid(.~data.name + new.test.fold, scales = "free") +
   theme(panel.spacing=grid::unit(1, "cm"), text = element_text(size=25))
 
-# ggsave(
-#   "figure-test-auc-comparison.png",
-# ggplot(data = test.aum.dt.combined) +
-#   geom_point(aes(x = `Test AUC`, y = algorithm, color = seed)) +
-#   #ggtitle(c(data.name, cv.type, test.fold)) +
-#   facet_grid(.~data.name + test.fold, scales = "free") +
-#   theme(panel.spacing=grid::unit(1, "cm"), text = element_text(size=25)),
-# width = 26,
-# height = 3,
-# dpi = 1800
-# )
-
 dev.off()
 
 png("figure-test-aum-comparison.png", width = 26, height = 3, res = 200, units = "in")
 
-# ggsave(
-#   "figure-test-aum-comparison.png",
-# ggplot(data = test.aum.dt.combined) +
-#   geom_point(aes(x = `Test AUM`, y = algorithm, color = seed)) +
-#   #ggtitle(c(data.name, cv.type, test.fold)) +
-#   facet_grid(.~data.name + test.fold, scales = "free") +
-#   theme(panel.spacing=grid::unit(1, "cm"), text = element_text(size=25)),
-# width = 26,
-# height = 3,
-# dpi = 1800
-# )
 
 ggplot(data = test.aum.dt.combined) +
   geom_point(aes(x = `Test AUM`, y = algorithm), size = 5) +
@@ -200,4 +160,3 @@ ggplot(data = test.aum.dt.combined) +
 
 dev.off()
 
-#grid.arrange(aum.list[[1]], aum.list[[2]], ncol = 2)
