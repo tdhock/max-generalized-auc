@@ -71,6 +71,7 @@ works_with_R(
   gridExtra="2.3",
   neuroblastoma="1.0",
   tikzDevice="0.12.3.1",
+  microbenchmark="1.4.7",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
   ggplot2="3.3.3")
 ## requireGitHub::requireGitHub_package(
