@@ -1,3 +1,5 @@
+tikzMetrics
+figure-fn-not-monotonic-error-standAlone.tex
 figure-*/
 *.gz
 .Rhistory
@@ -6,3 +8,5 @@ Rplots.pdf
 library
 *~
 README.html
+*.aux
+*.log

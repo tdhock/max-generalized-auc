@@ -65,7 +65,7 @@ ggplot()+
     data=fp.fn.dt)+
   scale_color_manual(values=err.colors)+
   scale_size_manual(values=err.sizes)+
-  scale_x_continuous("prediction threshold")
+  scale_x_continuous("Constant added to predictions")
 
 ggplot()+
   geom_path(aes(
@@ -103,27 +103,28 @@ ggplot()+
     data=auc.dt)
 
 err.sizes <- c(
-  fp=3,
-  fn=2,
-  "min(fp,fn)"=1)
+  FP=3,
+  FN=2,
+  "min(FP,FN)"=1)
 err.colors <- c(
-  fp="red",
-  fn="deepskyblue",
-  "min(fp,fn)"="black")
+  FP="red",
+  FN="deepskyblue",
+  "min(FP,FN)"="black")
 for(m in names(profile.list)){
   p.roc <- roc.dt[model==m]
   p.auc <- auc.dt[model==m]
   p.poly <- poly.dt[model==m]
   p.fp.fn <- fp.fn.dt[model==m]
-  p.fp.fn[, Variable := ifelse(variable=="min.fp.fn", "min(fp,fn)", paste(variable))]
-  p.rect <- p.fp.fn[Variable=="min(fp,fn)"]
+  p.fp.fn[, Variable := ifelse(
+    variable=="min.fp.fn", "min(FP,FN)", toupper(paste(variable)))]
+  p.rect <- p.fp.fn[Variable=="min(FP,FN)"]
   p.best <- p.roc[errors==min(errors)]
   best.color <- "green"
+  p.roc[, q := .I]
+  p.roc[, hjust := 0]
+  p.roc[, vjust := 1.2]
+  p.roc[q==6, `:=`(hjust=1, vjust=-0.4)]
   g <- ggplot()+
-    ## geom_point(aes(
-    ##   FPR, TPR),
-    ##   color=best.color,
-    ##   data=p.best)+
     theme_bw()+
     scale_fill_manual(values=c(positive="black", negative="red"))+
     geom_polygon(aes(
@@ -133,43 +134,57 @@ for(m in names(profile.list)){
     geom_path(aes(
       FPR, TPR),
       data=p.roc)+
-    coord_equal()+
-    scale_y_continuous("True Positive Rate")+
-    scale_x_continuous("False Positive Rate")+
     geom_text(aes(
-      0.5, 0.5, label=sprintf("auc=%.2f", auc)),
+      FPR+0.01, TPR, label=paste0("q=",q), hjust=hjust, vjust=vjust),
+      size=3,
+      data=p.roc)+
+    geom_point(aes(
+      FPR, TPR),
+      data=p.roc)+
+    coord_equal(xlim=c(0,1.1), ylim=c(-0.05, 1))+
+    scale_y_continuous("True Positive Rate", breaks=c(0,0.5,1))+
+    scale_x_continuous("False Positive Rate", breaks=c(0,0.5,1))+
+    geom_text(aes(
+      0.5, 0.5, label=sprintf("AUC=%.2f", auc)),
       data=p.auc)+
     theme(legend.position="none")
   ##if(all(p.poly$area=="positive"))g <- g+theme(legend.position="none")
   leg <- "Error type"
   g.aum <- ggplot()+
     theme_bw()+
-    theme(panel.spacing=grid::unit(0, "lines"))+
-    ## geom_vline(aes(
-    ##   xintercept=(min.thresh+max.thresh)/2),
-    ##   color=best.color,
-    ##   data=p.best)+
+    theme(
+      panel.grid.minor=element_blank(),
+      panel.spacing=grid::unit(0, "lines"))+
     geom_rect(aes(
       xmin=min.thresh, xmax=max.thresh,
       ymin=0, ymax=value),
       color="grey",
+      alpha=0.75,
       fill="grey",
       data=p.rect)+
     geom_text(aes(
-      3, 11, label=sprintf("aum=%.0f", aum)),
+      6, 4, label=sprintf("AUM=%.0f", aum)),
       data=p.auc)+
     geom_segment(aes(
       min.thresh, value,
       color=Variable, size=Variable,
       xend=max.thresh, yend=value),
       data=p.fp.fn)+
+    geom_text(aes(
+      ifelse(
+        min.thresh == -Inf, max.thresh-1, ifelse(
+          max.thresh == Inf, min.thresh+1, (min.thresh+max.thresh)/2)),
+      -4, label=paste0("q=",q)),
+      vjust=0,
+      size=2.5,
+      data=p.roc)+
     scale_color_manual(leg, values=err.colors)+
     scale_size_manual(leg, values=err.sizes)+
     scale_y_continuous("Label Errors")+
     scale_x_continuous(
-      "Threshold added to predicted values",
-      limits=c(0, 10),
-      breaks=seq(0, 10, by=2))
+      "Constant added to predicted values",
+      limits=c(0, 12),
+      breaks=p.roc[["min.thresh"]])
   g.list <- list(auc=g, aum=g.aum)
   for(plot.type in names(g.list)){
     out.png <- sprintf(
@@ -181,6 +196,115 @@ for(m in names(profile.list)){
       height=if(plot.type=="auc")2.5 else 2, units="in", res=200)
     print(g.list[[plot.type]])
     dev.off()
+    f.tex <- sub("png", "tex", out.png)
+    tikz(f.tex, width=3, height=3, standAlone = TRUE)
+    print(g.list[[plot.type]])
+    dev.off()
+    system(paste("pdflatex", f.tex))
+  }
+  g <- ggplot()+
+    theme_bw()+
+    scale_fill_manual(values=c(positive="black", negative="red"))+
+    geom_polygon(aes(
+      FPR, TPR, group=paste(seg, model), fill=area),
+      alpha=0.2,
+      data=p.poly)+
+    geom_path(aes(
+      FPR, TPR),
+      data=p.roc)+
+    geom_text(aes(
+      FPR+0.01, TPR, label=sprintf("q=%d",q), hjust=hjust, vjust=vjust),
+      size=3,
+      data=p.roc)+
+    geom_point(aes(
+      FPR, TPR),
+      size=0.5,
+      data=p.roc)+
+    coord_equal(
+      xlim=c(0,1.1), ylim=c(-0.05, 1))+
+    scale_y_continuous("True Positive Rate", breaks=c(0,0.5,1))+
+    scale_x_continuous("False Positive Rate", breaks=c(0,0.5,1))+
+    geom_text(aes(
+      0.5, 0.5, label=sprintf("AUC=%.2f", auc)),
+      data=p.auc)+
+    theme(legend.position="none")
+  limits.vec <- c(0, 12)
+  type.breaks <- c(
+    FP="$\\text{FPT}_{\\mathbf{\\hat{y}}}(c)$",
+    FN="$\\text{FNT}_{\\mathbf{\\hat{y}}}(c)$",
+    "min(FP,FN)"="$M_{\\mathbf{\\hat{y}}}(c)$")
+  g.aum <- ggplot()+
+    geom_vline(aes(
+      xintercept=max.thresh),
+      data=p.roc,
+      color="grey")+
+    theme_bw()+
+    theme(
+      panel.grid.minor=element_blank(),
+      panel.spacing=grid::unit(0, "lines"))+
+    coord_cartesian(expand=FALSE)+
+    geom_rect(aes(
+      xmin=min.thresh, xmax=max.thresh,
+      ymin=0, ymax=value),
+      color="grey",
+      alpha=0.75,
+      fill="grey",
+      data=p.rect)+
+    geom_text(aes(
+      6, 4, label=sprintf("AUM=%.0f", aum)),
+      data=p.auc)+
+    geom_segment(aes(
+      min.thresh, value,
+      color=Variable, size=Variable,
+      xend=max.thresh, yend=value),
+      data=p.fp.fn)+
+    geom_text(aes(
+      ifelse(
+        min.thresh == -Inf, max.thresh-1, ifelse(
+          max.thresh == Inf, min.thresh+1, (min.thresh+max.thresh)/2)),
+      ifelse(q %% 2, -5, -2.5),
+      label=sprintf("q=%d",q)),
+      vjust=-0.5,
+      size=3,
+      data=p.roc)+
+    scale_color_manual(leg, values=err.colors, breaks=names(type.breaks), labels=type.breaks)+
+    scale_size_manual(leg, values=err.sizes, breaks=names(type.breaks), labels=type.breaks)+
+    scale_x_continuous(
+      "Constant $c$ added to predicted values",
+      breaks=seq(0, 12, by=2),
+      limits=limits.vec)+
+    geom_text(aes(
+      thresh, 15,
+      vjust=fcase(
+        thresh %in% c(7,Inf), -0.5,
+        default=1.2),
+      label=sprintf(
+        "$\\tau(\\mathbf{\\hat{y}})_{%d}=%s$",
+        q, ifelse(
+          is.finite(thresh),
+          paste(thresh),
+          paste(
+            ifelse(thresh<0, "-", ""),
+            "\\infty"))
+      )),
+      angle=90,
+      data=p.roc[, data.table(
+        q=c(0, .I),
+        thresh=c(-Inf, max.thresh))])+
+    scale_y_continuous(
+      "Total label errors over all
+$n$ labeled training examples",
+      limits=c(NA, 31))
+  g.list <- list(auc=g, aum=g.aum)
+  for(plot.type in names(g.list)){
+    f.tex <- sprintf(
+      "figure-more-than-one-%s-%s.tex",
+      m, plot.type)
+    s <- 0.8
+    tikz(f.tex, width=if(plot.type=="aum")5*s else 3*s, height=3*s, standAlone = TRUE)
+    print(g.list[[plot.type]])
+    dev.off()
+    system(paste("pdflatex", f.tex))
   }
 }
 

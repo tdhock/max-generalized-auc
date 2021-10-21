@@ -1,7 +1,8 @@
 source("packages.R")
 result.list <- readRDS("figure-aum-optimized-data.rds")
 iterations.tall <- melt(result.list$iterations, id="step.number")
-iterations.tall[, Variable := sub("min.errors", "label errors", variable)]
+iterations.tall[, Variable := ifelse(
+  variable=="min.errors", "label errors", toupper(variable))]
 gg <- ggplot()+
   geom_line(aes(
     step.number, value),

@@ -38,7 +38,7 @@ gg <- ggplot()+
   geom_label(aes(
     x, y, color=model,
     label=sprintf(
-      "%s aum=%.2f\nerrors=%d auc=%.2f",
+      "%s AUM=%.2f\nerrors=%d AUC=%.2f",
       model, aum, errors, auc)),
     size=3,
     hjust=0,

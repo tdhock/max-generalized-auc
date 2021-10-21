@@ -1,23 +1,114 @@
-** Result figures
+** Figures from paper
+
+Before running some of the scripts you will need to clone the data
+repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
+[[https://github.com/tdhock/neuroblastoma-data]].
+
+- Figure 1: Example changepoint data with non-monotonic FP. [[file:figure-fn-not-monotonic.png][Left PNG]]
+  (data), [[file:figure-fn-not-monotonic-error.png][Right PNG]] (error), [[file:figure-fn-not-monotonic.R][R code]].
+- Figure 2: synthetic example with AUC greater than one. [[file:figure-more-than-one-more-aum.png][Left PNG]]
+  (AUM), [[file:figure-more-than-one-more-auc.png][right PNG (AUC)]], [[file:figure-more-than-one.R][R code]].
+- Figure 3: real data example with AUC greater than one. [[file:figure-aum-convexity-profiles.png][left PNG]] (error functions),
+  [[file:figure-aum-convexity.png][right PNG (AUM/AUC functions)]], [[file:figure-aum-convexity.R][R code]].
+- Figure 4: optimizing AUM maximizes AUC. [[file:figure-aum-optimized-iterations.png][Left PNG]], [[file:figure-aum-optimized.R][R code]]
+  (iterations); [[file:figure-aum-train-both.png][Right PNG]], [[file:figure-aum-train-both.R][R code]] (ROC curves).
+- Figure 5: Test AUM/AUC comparison across multiple seeds and datasets[[file:figure-test-auc-comparison.png][Top PNG]], [[file:figure-test-aum-comparison.png][Bottom PNG]], [[file:figure-test-comparison.R][R code]]
+- Figure 6: binary classification test AUC. [[file:figure-unbalanced-grad-desc-aum.png][Left PNG]] (Comparing AUM
+  variants), [[file:figure-unbalanced-grad-desc.png][Right PNG]] (AUM compared to baselines), [[file:figure-aum-grad-speed-random.png][Right PNG]], [[file:figure-unbalanced-grad-desc.R][R code]].
+- Figure 7: speed comparison. [[file:figure-aum-grad-speed-both.png][PNG]], [[file:figure-aum-grad-speed.R][R code]].
+- Figure showing 2d loss functions.
+- Figure showing 1d loss functions.
+
+** Interactive figures
 
 - [[http://ml.nau.edu/viz/2019-08-19-curveAlignment-aub-deriv/][Aligning two error curves]].
 - [[http://ml.nau.edu/viz/2019-06-06-neuroblastomaProcessed-complex/][8 error curves with 2 different alignments]].
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
-** TODOs
+** 24 June 2021
 
-Does greedy AUM minimization result in global AUM minimization?
-Conjecture, no it depends on the order in which problems are
-processed -- TODO find counter-example.
+[[file:figure-aum-grad-speed-binary-cpp-data.R]] makes binary classification timing data, [[file:figure-aum-grad-speed-binary-cpp-data.csv]]
 
-e.g. in http://ml.nau.edu/viz/2019-08-16-generalized-roc/
-- For small margin sizes there is only one prediction combination that results in
-  AUM=0. Do we end up at this combination by greedy minimization?
-- For large margin sizes there are several prediction combinations that results
-  in AUM=0. Do we end up at one of these?
+[[file:figure-aum-grad-speed-binary-cpp.R]] makes
+
+[[file:figure-aum-grad-speed-binary-cpp-algos.png]]
+
+[[file:figure-aum-grad-speed-binary-cpp.png]]
+
+[[file:figure-aum-grad-speed.R]] updated to make
+
+[[file:figure-aum-grad-speed-both.png]]
+
+** 16 June 2021
+
+[[file:figure-unbalanced-grad-desc.R]] updated to make new figure (useful for slides probly)
+
+[[file:figure-unbalanced-grad-desc-logistic.png]]
+
+** 11 June 2021
+
+Updated [[file:figure-aum-convexity.R]] new figures
+
+[[file:figure-aum-convexity-thresholds.png]]
+
+[[file:figure-aum-convexity-emph.png]]
+
+Updated [[file:figure-aum-grad-speed.R]] new figure
+
+[[file:figure-aum-grad-speed-random.png]]
+
+** 7 June 2021
+
+[[file:figure-aum-grad-speed-binary.R]] makes
+
+[[file:figure-aum-grad-speed-binary.png]]
+
+figure above shows time differences between sorted (linear) and
+unsorted (log-linear) predictions.
+
+figure below shows differences between algos (aum comparable to
+logistic, whether or not predictions are sorted).
+
+[[file:figure-aum-grad-speed-binary-algos.png]]
+
+** 31 May 2021
+
+[[file:figure-aum-grad-speed-data.R]] makes [[file:figure-aum-grad-speed-data.csv]]
+
+[[file:figure-aum-grad-speed.R]] reads that and makes
+
+[[file:figure-aum-grad-speed.png]]
+
+** 26 May 2021
+
+[[file:figure-unbalanced-grad-desc-data.R]] makes [[file:figure-unbalanced-grad-desc-data.rds]]
+
+[[file:figure-unbalanced-grad-desc.R]] reads that and makes
+
+[[file:figure-unbalanced-grad-desc-aum.png]]
+
+The figure above shows that the AUM variant which uses total number of
+errors (count) is more accurate than the AUM variant which uses the
+normalized error (rate).
+
+[[file:figure-unbalanced-grad-desc.png]]
+
+The figure above shows that the AUM is at least as accurate as
+squared.hinge.all.pairs, whereas logistic.weighted is less accurate.
+
+** 25 May 2021
+
+[[file:figure-logistic-weights.R]] makes
+
+[[file:figure-logistic-weights.png]]
+
+This figure shows that cv.glmnet does fine with 5% positive labels,
+but stops learning when we get down to 1% positive labels. This
+suggests that we should try 1% for comparing aum.rate and aum.count.
 
 ** 10 Mar 2021
+   
 [[file:figure-DNA-Sonar-subtrain-valid-data.R]] makes 
 
 [[file:figure-DNA-Sonar-subtrain-valid-data.csv.gz]]
