@@ -1,7 +1,79 @@
-source("packages.R")
+### Write down what package versions work with your R code, and
+### attempt to download and load those packages. The first argument is
+### the version of R that you used, e.g. "3.0.2" and then the rest of
+### the arguments are package versions. For
+### CRAN/Bioconductor/R-Forge/etc packages, write
+### e.g. RColorBrewer="1.0.5" and if RColorBrewer is not installed
+### then we use install.packages to get the most recent version, and
+### warn if the installed version is not the indicated version. For
+### GitHub packages, write "user/repo@commit"
+### e.g. "tdhock/animint@f877163cd181f390de3ef9a38bb8bdd0396d08a4" and
+### we use install_github to get it, if necessary.
+works_with_R <- function(Rvers,...){
+  local.lib <- file.path(getwd(), "library")
+  dir.create(local.lib, showWarnings=FALSE, recursive=TRUE)
+  .libPaths(c(local.lib, .libPaths()))
+  pkg_ok_have <- function(pkg,ok,have){
+    stopifnot(is.character(ok))
+    if(!as.character(have) %in% ok){
+      warning("works with ",pkg," version ",
+              paste(ok,collapse=" or "),
+              ", have ",have)
+    }
+  }
+  pkg_ok_have("R",Rvers,getRversion())
+  pkg.vers <- list(...)
+  for(pkg.i in seq_along(pkg.vers)){
+    vers <- pkg.vers[[pkg.i]]
+    pkg <- if(is.null(names(pkg.vers))){
+      ""
+    }else{
+      names(pkg.vers)[[pkg.i]]
+    }
+    if(pkg == ""){# Then it is from GitHub.
+      ## suppressWarnings is quieter than quiet.
+      if(!suppressWarnings(require(requireGitHub))){
+        ## If requireGitHub is not available, then install it using
+        ## devtools.
+        if(!suppressWarnings(require(devtools))){
+          install.packages("devtools")
+          require(devtools)
+        }
+        install_github("tdhock/requireGitHub")
+        require(requireGitHub)
+      }
+      print(search())
+      requireGitHub(vers)
+    }else{# it is from a CRAN-like repos.
+      if(!suppressWarnings(require(pkg, character.only=TRUE))){
+        install.packages(pkg)
+      }
+      pkg_ok_have(pkg, vers, packageVersion(pkg))
+      library(pkg, character.only=TRUE)
+    }
+  }
+}
+options(repos=c(
+  "http://www.bioconductor.org/packages/release/bioc",
+  ##"http://r-forge.r-project.org",
+  "http://cloud.r-project.org",
+  "http://cran.r-project.org"))
+works_with_R(
+  "4.1.0",
+  data.table="1.14.0",
+  future="1.21.0",
+  future.apply="1.7.0",
+  RJSONIO="1.3.1.4",
+  R.utils="2.10.1",
+  "tdhock/penaltyLearning@4e14a0b0e022d919884277d68b8e47bd158459f3",
+  jointseg="1.0.2",
+  gridExtra="2.3",
+  neuroblastoma="1.0",
+  tikzDevice="0.12.3.1",
+  microbenchmark="1.4.7",
+  animint2="1.0")
 
 data(neuroblastomaProcessed, package="penaltyLearning")
-
 counts <- neuroblastomaProcessed$errors[, {
   diff.tab <- table(factor(diff(errors), c("-1", "0", "1")))
   L <- as.list(diff.tab)
@@ -108,18 +180,11 @@ ggplot()+
   geom_text(aes(
     FPR, TPR, label=row.i),
     data=roc.dt)
-roc.dt[, .(interval, row.i, min.thresh, max.thresh, fp, fn)]
-roc.dt[, min.fp.fn := ifelse(fp<fn, fp, fn)]
-roc.dt[, width.thresh := max.thresh-min.thresh]
-roc.dt[!(width.thresh==Inf & min.fp.fn==0), list(
-  aub=sum(min.fp.fn*width.thresh)
-), by=list(interval)]
-## AUB=0 for good curve / predictions in infinite interval, AUB=2.58
-## for bad cruve / predictions in finite interval.
 
 roc.tall <- melt(
   roc.dt,
-  measure.vars=names(err.colors))
+  measure.vars=names(err.colors)
+)[order(interval, variable, -min.thresh)]
 vert.dt <- roc.tall[, {
   data.table(
     thresh=min.thresh[-.N],
@@ -180,6 +245,9 @@ thresh.dt <- roc.dt[, {
   data.table(thresh=seq(
     floor(min(max.thresh)), ceiling(max(min.thresh)), by=0.04))
 }]
+min.thresh <- -2.1
+max.thresh <- 2
+thresh.dt <- data.table(thresh=seq(min.thresh, max.thresh, by=0.04))
 thresh.pred <- data.table(id=1, thresh.dt)[data.table(
   id=1, segs.min.err), on=list(id), allow.cartesian=TRUE]
 thresh.pred[, pred.plus.thresh := pred.log.lambda+thresh]
@@ -242,6 +310,14 @@ animint(
     theme(panel.margin=grid::unit(0, "lines"))+
     theme_animint(width=400)+
     facet_grid(panel ~ .)+
+    geom_point(aes(
+      pred.plus.thresh, errors,
+      key=interval,
+      fill=value.fac),
+      color=roc.color,
+      size=4,
+      showSelected=c("interval", "thresh"),
+      data=show.pred)+
     scale_fill_manual(
       "Prediction",
       values=c(correct="white", error="black"))+
@@ -251,7 +327,7 @@ animint(
       fill=roc.color,
       color=NA,
       alpha=0.2,
-      showSelected="thresh",
+      showSelected=c("interval", "thresh"),
       data=show.pred)+
     geom_vline(aes(
       xintercept=pred.plus.thresh,
@@ -265,14 +341,6 @@ animint(
       xend=max.log.lambda, yend=value,
       color=status, size=status),
       data=segs.err.tall)+
-    geom_point(aes(
-      pred.plus.thresh, errors,
-      key=interval,
-      fill=value.fac),
-      color=roc.color,
-      size=4,
-      showSelected=c("interval", "thresh"),
-      data=show.pred)+
     scale_y_continuous(
       "errors",
       breaks=c(0,1),
@@ -285,6 +353,7 @@ animint(
       err.leg,
       values=structure(err.sizes[names(vstat)], names=vstat)),
   thresholds=ggplot()+
+    coord_cartesian(xlim=c(min.thresh, max.thresh))+
     ggtitle("Total label error curves, select threshold")+
     scale_color_manual(
       err.leg,
@@ -299,11 +368,13 @@ animint(
       min.thresh, value,
       xend=max.thresh, yend=value,
       size=status, color=status),
+      showSelected="interval",
       data=roc.tall)+
     geom_segment(aes(
       thresh, value,
       xend=thresh, yend=next.value,
       color=status),
+      showSelected="interval",
       data=vert.dt)+
     geom_tallrect(aes(
       xmin=thresh-tail.size, xmax=thresh, key=1),
@@ -325,20 +396,18 @@ animint(
     facet_grid(. ~ interval)+
     geom_text(aes(
       0.2, 0.7, label=sprintf("AUC=%.2f", auc)),
+      showSelected="interval",
       data=auc.dt)+
-    ## geom_path(aes(
-    ##   FPR, TPR),
-    ##   alpha=0.2,
-    ##   data=roc.dt)+
     geom_segment(aes(
       from.FPR, from.TPR,
       xend=to.FPR, yend=to.TPR),
       data=roc.segs,
+      showSelected="interval",
       alpha=0.2)+
     geom_path(aes(
       FPR, TPR, key=1),
       color=roc.color,
-      showSelected="thresh",
+      showSelected=c("thresh", "interval"),
       size=3,
       data=roc.tails)+
     coord_equal()+
@@ -353,10 +422,11 @@ animint(
       clickSelects="thresh",
       size=4,
       alpha=0.7,
+      showSelected="interval",
       data=roc.u)+
     geom_point(aes(
       FPR, TPR, key=1, label=row.i),
-      showSelected="thresh",
+      showSelected=c("interval", "thresh"),
       color=roc.color,
       size=4,
       data=roc.points),
@@ -382,7 +452,7 @@ animint(
       key=paste(min, max),
       linetype=status),
       data=show.label.errors,
-      showSelected=c("thresh"),
+      showSelected=c("thresh", "interval"),
       fill=NA,
       size=2,
       color="black")+
@@ -395,6 +465,6 @@ animint(
     geom_vline(aes(
       xintercept=change.pos/1e6, key=change.pos),
       data=show.changes,
-      showSelected="thresh",
+      showSelected=c("thresh", "interval"),
       color="green"),
   out.dir="figure-neuroblastomaProcessed-complex")
