@@ -1,8 +1,80 @@
-source("packages.R")
+### Write down what package versions work with your R code, and
+### attempt to download and load those packages. The first argument is
+### the version of R that you used, e.g. "3.0.2" and then the rest of
+### the arguments are package versions. For
+### CRAN/Bioconductor/R-Forge/etc packages, write
+### e.g. RColorBrewer="1.0.5" and if RColorBrewer is not installed
+### then we use install.packages to get the most recent version, and
+### warn if the installed version is not the indicated version. For
+### GitHub packages, write "user/repo@commit"
+### e.g. "tdhock/animint@f877163cd181f390de3ef9a38bb8bdd0396d08a4" and
+### we use install_github to get it, if necessary.
+works_with_R <- function(Rvers,...){
+  local.lib <- file.path(getwd(), "library")
+  dir.create(local.lib, showWarnings=FALSE, recursive=TRUE)
+  .libPaths(c(local.lib, .libPaths()))
+  pkg_ok_have <- function(pkg,ok,have){
+    stopifnot(is.character(ok))
+    if(!as.character(have) %in% ok){
+      warning("works with ",pkg," version ",
+              paste(ok,collapse=" or "),
+              ", have ",have)
+    }
+  }
+  pkg_ok_have("R",Rvers,getRversion())
+  pkg.vers <- list(...)
+  for(pkg.i in seq_along(pkg.vers)){
+    vers <- pkg.vers[[pkg.i]]
+    pkg <- if(is.null(names(pkg.vers))){
+      ""
+    }else{
+      names(pkg.vers)[[pkg.i]]
+    }
+    if(pkg == ""){# Then it is from GitHub.
+      ## suppressWarnings is quieter than quiet.
+      if(!suppressWarnings(require(requireGitHub))){
+        ## If requireGitHub is not available, then install it using
+        ## devtools.
+        if(!suppressWarnings(require(devtools))){
+          install.packages("devtools")
+          require(devtools)
+        }
+        install_github("tdhock/requireGitHub")
+        require(requireGitHub)
+      }
+      print(search())
+      requireGitHub(vers)
+    }else{# it is from a CRAN-like repos.
+      if(!suppressWarnings(require(pkg, character.only=TRUE))){
+        install.packages(pkg)
+      }
+      pkg_ok_have(pkg, vers, packageVersion(pkg))
+      library(pkg, character.only=TRUE)
+    }
+  }
+}
+options(repos=c(
+  "http://www.bioconductor.org/packages/release/bioc",
+  ##"http://r-forge.r-project.org",
+  "http://cloud.r-project.org",
+  "http://cran.r-project.org"))
+works_with_R(
+  "4.1.0",
+  data.table="1.14.0",
+  future="1.21.0",
+  future.apply="1.7.0",
+  RJSONIO="1.3.1.4",
+  R.utils="2.10.1",
+  "tdhock/penaltyLearning@4e14a0b0e022d919884277d68b8e47bd158459f3",
+  jointseg="1.0.2",
+  gridExtra="2.3",
+  neuroblastoma="1.0",
+  tikzDevice="0.12.3.1",
+  microbenchmark="1.4.7",
+  animint2="1.0")
 
 curveAlignment <- readRDS("curveAlignment.rds")
-
-auc.dt.list <- list()
+AUC.dt.list <- list()
 roc.dt.list <- list()
 err.dt.list <- list()
 roc.segs.list <- list()
@@ -80,21 +152,21 @@ for(offset in seq(-5, 5, by=off.by)){
   bad <- min.positive[width.thresh==Inf]
   if(nrow(bad)){
     print(bad)
-    stop("infinite aub")
+    stop("infinite AUM")
   }
-  aub <- min.positive[, {
+  AUM <- min.positive[, {
     sum(min.fp.fn*width.thresh)
   }]
-  auc.dt.list[[paste(offset)]] <- with(roc, data.table(
-    auc, aub, offset,
-    aub.deriv=offset.deriv$deriv,
+  AUC.dt.list[[paste(offset)]] <- with(roc, data.table(
+    AUC=auc, AUM, offset,
+    AUM.deriv=offset.deriv$deriv,
     min.errors=off.min$errors[1],
     n.min=nrow(off.min),
     thresholds[threshold=="min.error"]))
   roc.dt.list[[paste(offset)]] <- data.table(
     offset, roc$roc, piece=1:nrow(roc$roc), prob.dir="Total")
 }
-auc.dt <- do.call(rbind, auc.dt.list)
+AUC.dt <- do.call(rbind, AUC.dt.list)
 roc.dt <- do.call(rbind, roc.dt.list)
 roc.segs <- do.call(rbind, roc.segs.list)
 err.dt <- do.call(rbind, err.dt.list)
@@ -102,17 +174,18 @@ roc.win.err.dt <- do.call(rbind, roc.win.err.list)
 
 ggplot()+
   geom_point(aes(
-    offset, auc),
-    data=auc.dt)
+    offset, AUC),
+    data=AUC.dt)
 
 common.names <- intersect(names(roc.dt), names(err.dt))
 both.dt <- rbind(
   err.dt[, common.names, with=FALSE],
   roc.dt[, common.names, with=FALSE])
+both.dt[, `min(fp,fn)` := pmin(fp, fn)]
 err.dt.tall <- melt(
   both.dt,
   variable.name="error.type",
-  measure.vars=c("fp", "fn", "errors"))
+  measure.vars=c("fp", "fn", "errors", "min(fp,fn)"))
 id2show <- function(seqID)gsub(
   "ATAC_JV_adipose/samples/AC1/|/problems/chrX-37148256-49242997", "",
   seqID)
@@ -121,13 +194,13 @@ curveAlignment$labels[, sample := id2show(prob.dir)]
 roc.win.err.dt[, sample := id2show(prob.dir)]
 curveAlignment$profiles[, sample := id2show(prob.dir)]
 err.dt.tall[, sample := id2show(prob.dir)]
-auc.dt[, thresh := (min.thresh+max.thresh)/2]
+AUC.dt[, thresh := (min.thresh+max.thresh)/2]
 roc.dt[, Errors := ifelse(errors==min(errors), "Min", "More"), by=list(offset)]
-auc.dt[, max.correct := as.numeric(labels-min.errors)]
-auc.dt[, opt.models := as.numeric(n.min)]
-auc.tall <- melt(
-  auc.dt,
-  measure.vars=c("aub", "aub.deriv", "auc", "max.correct", "opt.models"))
+AUC.dt[, max.correct := as.numeric(labels-min.errors)]
+AUC.dt[, opt.models := as.numeric(n.min)]
+AUC.tall <- melt(
+  AUC.dt,
+  measure.vars=c("AUM", "AUM.deriv", "AUC", "min.errors", "opt.models"))
 min.err <- roc.dt[Errors=="Min"]
 min.err[, piece := 1:.N, by=list(offset)]
 roc.size <- 5
@@ -160,6 +233,17 @@ min.tallrects <- data.table(
   Errors="Min")
 chunk_vars <- "offset"
 chunk_vars <- character()
+ann.colors <- c(
+  noPeaks="#f6f4bf",
+  peakStart="#ffafaf",
+  peakEnd="#ff4c4c",
+  peaks="#a445ee")
+err.dt.show <- err.dt.tall[
+  error.type %in% c("fp","fn") |
+    (error.type=="min(fp,fn)" & sample=="Total")]
+area.show <- err.dt.show[error.type=="min(fp,fn)"]
+AUM.text <- area.show[, .SD[value>0][1], by=offset][AUC.dt, .(
+  offset, sample, min.thresh, AUM), on="offset"]
 animint(
   title="Changepoint detection ROC curve alignment problem",
   ##first=list(offset=0.5),
@@ -174,16 +258,6 @@ animint(
     theme(panel.margin=grid::unit(0, "lines"))+
     theme_animint(width=1300)+
     facet_grid(sample ~ window, scales="free", labeller=label_both)+
-    ## geom_text(aes(
-    ##   43447, 200, label=sprintf(
-    ##     "offset=%.1f thresh=%.1f fp=%d fn=%d",
-    ##     offset, thresh, fp, fn)),
-    ##   hjust=0,
-    ##   showSelected=c("offset", "thresh"),
-    ##   data=data.table(
-    ##     roc.dt,
-    ##     window=1,
-    ##     sample="MSC83"))+
     geom_text(aes(
       43447, y,
       key=paste(offset, thresh, variable),
@@ -262,29 +336,15 @@ animint(
     geom_blank(aes(
       x, y),
       data=data.table(
-        x=0, y=c(10.4, 8.6),
-        variable="max.correct"))+
+        x=0, y=c(3.4, 1.6),
+        variable="min.errors"))+
     xlab("Offset = Difference between predicted values of samples")+
     geom_point(aes(
       offset, value),
       fill=NA,
-      data=auc.tall)+
+      data=AUC.tall)+
     ylab("")+
-    make_tallrect(auc.dt, "offset"),
-  ## auc=ggplot()+
-  ##   ggtitle(
-  ##     "AUC, select offset")+
-  ##   theme_bw()+
-  ##   theme(panel.margin=grid::unit(0, "lines"))+
-  ##   geom_point(aes(
-  ##     offset, auc),
-  ##     fill=NA,
-  ##     data=auc.dt)+
-  ##   geom_tallrect(aes(
-  ##     xmin=offset-off.by/2, xmax=offset+off.by/2),
-  ##     clickSelects="offset",
-  ##     alpha=0.5,
-  ##     data=auc.dt),
+    make_tallrect(AUC.dt, "offset"),
   error=ggplot()+
     ggtitle(
       "Error curves, select threshold")+
@@ -294,36 +354,15 @@ animint(
     scale_color_manual(values=c(
       fp="red",
       fn="deepskyblue",
-      errors="black"))+
+      "min(fp,fn)"="black"))+
     scale_size_manual(values=c(
       fp=5,
       fn=3,
-      errors=1))+
+      "min(fp,fn)"=1))+
     xlab("Prediction threshold")+
     scale_y_continuous(
       "Number of incorrectly predicted labels",
       breaks=seq(0, 20, by=2))+
-    ## geom_vline(aes(
-    ##   xintercept=xintercept),
-    ##   color="grey",
-    ##   data=data.table(xintercept=0))+
-    ## geom_vline(aes(
-    ##   xintercept=thresh, key=piece),
-    ##   showSelected=c("offset", "Errors"),
-    ##   color="grey50",
-    ##   data=data.table(
-    ##     min.err,
-    ##     Errors="Min"))+
-    ## geom_text(aes(
-    ##   thresh+0.2, labels*0.9, key=1, label=paste0(
-    ##     "Min Errors=", errors)),
-    ##   showSelected=c("offset", "Errors"),
-    ##   hjust=0,
-    ##   color="grey50",
-    ##   data=data.table(
-    ##     auc.dt,
-    ##     Errors="Min",
-    ##     sample="Total"))+
     geom_tallrect(aes(
       xmin=min.thresh,
       xmax=max.thresh,
@@ -334,14 +373,22 @@ animint(
       data=min.tallrects)+
     geom_text(aes(
       min.thresh, labels*0.9, key=1, label=paste0(
-        "Min Errors=", errors)),
+        "Min Error=", errors)),
       showSelected=c("offset", "Errors"),
       hjust=0,
       color="grey50",
       data=data.table(
-        auc.dt,
+        AUC.dt,
         Errors="Min",
         sample="Total"))+
+    geom_rect(aes(
+      xmin=min.thresh, ymin=0,
+      key=piece,
+      xmax=max.thresh, ymax=value),
+      chunk_vars=chunk_vars,
+      showSelected="offset",
+      fill="black",
+      data=area.show)+
     geom_segment(aes(
       min.thresh, value,
       key=paste(piece, error.type),
@@ -350,7 +397,13 @@ animint(
       xend=max.thresh, yend=value),
       chunk_vars=chunk_vars,
       showSelected="offset",
-      data=err.dt.tall)+
+      data=err.dt.show)+
+    geom_text(aes(
+      min.thresh, 0.5, key=1,
+      label=sprintf("AUM=%.1f", AUM)),
+      showSelected="offset",
+      hjust=1,
+      data=AUM.text)+
     geom_tallrect(aes(
       xmin=min.thresh, xmax=max.thresh,
       tooltip=sprintf(
@@ -370,12 +423,6 @@ animint(
       FPR, TPR, key=paste(offset, thresh)),
       showSelected="offset",
       data=roc.dt)+
-    ## geom_point(aes(
-    ##   FPR, TPR, key=paste(FPR, TPR)),
-    ##   showSelected="offset",
-    ##   data=min.err,
-    ##   size=roc.size,
-    ##   fill=NA)+
     geom_point(aes(
       FPR, TPR, fill=Errors,
       tooltip=sprintf(
@@ -393,9 +440,9 @@ animint(
     coord_equal()+
     geom_text(aes(
       0.75, 0.25, key=1, label=sprintf(
-        "AUC=%.2f", auc)),
+        "AUC=%.2f", AUC)),
       showSelected="offset",
-      data=auc.dt)+
+      data=AUC.dt)+
     geom_abline(aes(
       slope=slope, intercept=intercept),
       color="grey",
