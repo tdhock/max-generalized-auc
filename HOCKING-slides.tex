@@ -4,7 +4,7 @@
 \usepackage{amsmath,amssymb}
 \usepackage{hyperref}
 \usepackage{graphicx}
-\usepackage{algorithmic}
+\usepackage[noend]{algcompatible}
 \usepackage{multirow}
 
 \DeclareMathOperator*{\argmin}{arg\,min}
@@ -56,15 +56,66 @@
 
 \section{Problem Setting and Related Work}
 
-\section{Results}
-
 \begin{frame}
-  \frametitle{Real data example with non-monotonic label error}
+  \frametitle{Problem: unsupervised changepoint detection}
+  \begin{itemize}
+  \item We are given a data sequence $z_1,\dots,z_T$ measured at $T$
+    points over time/space.
+  \item Ex: DNA copy number data for cancer diagnosis, $z_t\in\mathbb R$.
+  \item The penalized changepoint problem is
+$$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{t=2}^T I[u_{t-1} \neq u_t].$$
+  \end{itemize}
 
-  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic}
-  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error}
+  \parbox{0.6\textwidth}{
+\includegraphics[width=0.6\textwidth]{figure-fn-not-monotonic-no-labels}
+}
+\parbox{0.3\textwidth}{
+  Larger penalty $\lambda$ results in fewer changes/segments.
+
+  \vskip 0.5in
+
+  Smaller penalty $\lambda$ results in more changes/segments.
+}
 
 \end{frame}
+
+
+\begin{frame}
+  \frametitle{Problem: weakly supervised changepoint detection}
+  \begin{itemize}
+  \item We are given a data sequence $\mathbf z$ with labeled regions
+    $L$.
+  \item We compute features $\mathbf x=\phi(\mathbf z)\in\mathbf R^p$
+    and want to learn a function $f(\mathbf x)=\log\lambda\in\mathbf R$ that minimizes label
+    error.
+  \end{itemize}
+
+  \includegraphics[width=0.7\textwidth]{figure-fn-not-monotonic}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Problem: supervised binary classification}
+  
+  \begin{itemize}
+  \item Given pairs of inputs $\mathbf x\in\mathbb R^p$ and outputs
+    $y\in\{0,1\}$ can we learn $f(\mathbf x)= y$?
+  \item Example: email, $\mathbf x =$bag of words, $y=$spam or not.
+  \item Example: images. Jones {\it et al.} PNAS 2009. \includegraphics[width=2in]{cellprofiler} 
+  \end{itemize} 
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Looping ROC curve, simple synthetic example}
+  
+  \includegraphics[height=1.5in]{figure-more-than-one-less-aum}
+  \includegraphics[height=1.5in]{figure-more-than-one-less-auc}
+
+\end{frame}
+
+
+\section{Proposed algorithm}
 
 \begin{frame}
   \frametitle{Looping ROC curve, simple synthetic example}
@@ -73,6 +124,65 @@
   \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
 
 \end{frame}
+
+\begin{frame}
+  \frametitle{Real data example with non-monotonic label error}
+
+  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic}
+  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error-standAlone}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Notation}
+Let there be a total of $B$ breakpoints in the error functions over all $n$ labeled training examples, where each breakpoint $b\in\{1,\dots, B\}$ is represented by the tuple $(v_b, \Delta\text{FP}_b, \Delta\text{FN}_b, \mathcal I_b)$.
+The $\mathcal I_b\in\{1,\dots,n\}$ is an example index, so there are changes $\Delta\text{FP}_b, \Delta\text{FN}_b$ at predicted value $v_b\in\mathbb R$ in the error functions $\text{FP}_{\mathcal I_b},\text{FN}_{\mathcal I_b}$ (Figure~\ref{fig:fn-not-monotonic}). 
+For example in binary classification, there are $B=n$ breakpoints (same as the number of labeled training examples); for each breakpoint $b\in\{1,\dots,B\}$ we have $v_b=0$ and $\mathcal I_b=b$. 
+For breakpoints $b$ with positive labels $y_b=1$ we have $\Delta\text{FP}=0,\Delta\text{FN}=-1$,
+and for negative labels $y_b=-1$ we have $\Delta\text{FP}=1,\Delta\text{FN}=0$.
+In changepoint detection we have more general error functions, which may have more than one breakpoint per example.  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Proposed algorithm}
+  
+\small
+\begin{algorithmic}[1]
+  \STATE {\bfseries Input:} 
+  Predictions $\mathbf{\hat y}\in\mathbb R^n$, 
+  breakpoints in error functions $v_b,\Delta\text{FP}_b,\Delta\text{FN}_b,\mathcal I_b$ for all $b\in\{1,\dots,B\}$.
+  \STATE Zero the $\text{AUM}\in\mathbb R$ and directional derivatives $\mathbf D\in\mathbb R^{n\times 2}$.\label{line:init-zero}
+  \STATE $t_b\gets v_b - \hat y_{\mathcal I_b}$ for all $b$.\label{line:compute-thresh}
+  \STATE $s_1,\dots,s_B\gets \textsc{SortedIndices}(t_1,\dots,t_B).$\label{line:sorted-indices}
+  \STATE Compute $\underline{\text{FP}}_b,\overline{\text{FP}}_b,\underline{\text{FN}}_b,\overline{\text{FN}}_b$ for all $b$ using $s_1,\dots,s_B$.
+  \FOR{$b\in\{2,\dots,B\}$}\label{line:for-intervals}
+  \STATE $\text{AUM} \text{ += } (t_{s_b} - t_{s_{b-1}}) \min\{\underline{\text{FP}}_b, \overline{\text{FN}}_b\} $.\label{line:AUM}
+  \ENDFOR
+  \FOR{$b\in\{1,\dots,B\}$}\label{line:for-breakpoints}
+  \STATE\label{line:D_lo} $\mathbf D_{\mathcal I_b,1} \text{ += } \min\{
+  \overline{\text{FP}}_b , 
+  \overline{\text{FN}}_b 
+  \}
+  -
+  \min\{
+  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
+  \overline{\text{FN}}_b - \Delta\text{FN}_b
+  \}$
+  \STATE\label{line:D_hi} $\mathbf D_{\mathcal I_b,2} \text{ += } \min\{
+  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
+  \underline{\text{FN}}_b + \Delta\text{FN}_b
+  \}
+  -
+  \min\{
+  \underline{\text{FP}}_b , 
+  \underline{\text{FN}}_b 
+  \}$
+  \ENDFOR
+  \STATE {\bfseries Output:} AUM and matrix $\mathbf D$ of directional derivatives.
+\end{algorithmic}
+
+\end{frame}
+\section{Results}
 
 \begin{frame}
   \frametitle{Real data example with AUC greater than one}
@@ -126,5 +236,120 @@
 \includegraphics[width=\textwidth]{figure-aum-grad-speed-both.png}
   
 \end{frame}
+
+\section{Discussion and Conclusions}
+
+\begin{frame}
+  \frametitle{Conclusions}
+  TODO
+\end{frame}
+
+\begin{frame}
+  \frametitle{More notation}
+  First let $\{(
+\text{fpt}
+(\mathbf {\hat y})
+_q, \text{fnt}
+(\mathbf {\hat y})
+_q,
+ \tau
+(\mathbf {\hat y})
+_q
+)\}_{q=1}^Q$ 
+be a sequence of $Q$ tuples, each of which corresponds to a point on the ROC curve (Figure~\ref{fig:more}, right).
+The fpt/fnt are false positive/negative totals whereas $\tau$ are values such there is a change/threshold at $M_{\mathbf{\hat y}}(\tau)$. 
+As shown in Figure~\ref{fig:more} we assume these values are increasing, $ -\infty = \tau
+(\mathbf {\hat y})
+_0 < \cdots <  \tau
+(\mathbf {\hat y})
+_Q = \infty$.
+For each $q\in\{1,\dots,Q\}$ there is a corresponding interval of values $c$ between $\tau(\mathbf {\hat y})_{q-1}$ and $\tau(\mathbf {\hat y})_q$
+such that 
+$\text{FPT}_{\mathbf{\hat y}}(c)=\text{fpt}(\mathbf {\hat y})_q$
+and
+$\text{FNT}_{\mathbf{\hat y}}(c)=\text{fnt}(\mathbf {\hat y})_q$
+for all $c\in(\tau(\mathbf {\hat y})_{q-1}, \tau(\mathbf {\hat y})_q)$
+(Figure~\ref{fig:more}, left).
+Then we define $m(\mathbf {\hat y})_q = \min\{
+    \text{fpt}(\mathbf {\hat y})_q , \, 
+    \text{fnt}(\mathbf {\hat y})_q
+\}$ and so since 
+$m(\mathbf {\hat y})_1=m(\mathbf {\hat y})_Q=0$ the area under those intervals is zero, and the AUM can be computed by summing over all of the other intervals,
+\end{frame}
+
+\begin{frame}
+  \frametitle{L1 relaxation interpretation}
+  
+Our proposed loss function is
+\begin{equation*}
+\label{eq:AUM-computation}
+    \text{AUM}(\mathbf {\hat y}) =
+    \sum_{q=2}^{Q-1}
+    [ \tau(\mathbf {\hat y})_{q} - \tau(\mathbf {\hat y})_{q-1} ]
+    m(\mathbf {\hat y})_q.
+\end{equation*}
+
+It is an L1 relaxation of the following non-convex \textbf{S}um of \textbf{M}in(FP,FN) function, 
+\begin{equation*}
+\label{eq:SM-computation}
+    \text{SM}(\mathbf {\hat y}) =
+    \sum_{q=2}^{Q-1}
+    I[ \tau(\mathbf {\hat y})_{q} \neq \tau(\mathbf {\hat y})_{q-1} ]
+    m(\mathbf {\hat y})_q =
+    \sum_{q:\tau(\mathbf {\hat y})_{q} \neq \tau(\mathbf {\hat y})_{q-1} }
+    m(\mathbf {\hat y})_q.
+\end{equation*}
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{FP and FN counts before/after each threshold}
+  
+
+\begin{eqnarray*}
+  \underline{\text{FP}}_b &=& \sum_{j: t_j < t_b} \Delta\text{FP}_j,\label{eq:first-fp-fn-over-under} \\
+  \overline{\text{FP}}_b &=& \sum_{j: t_j \leq t_b} \Delta\text{FP}_j, \\
+  \underline{\text{FN}}_b &=& \sum_{j: t_j \geq t_b} - \Delta\text{FN}_j, \\
+  \overline{\text{FN}}_b &=& \sum_{j: t_j > t_b} - \Delta\text{FN}_j.\label{eq:last-fp-fn-over-under}
+\end{eqnarray*}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Directional derivatives}
+
+\begin{theorem}
+\label{thm:directional-derivs}
+The AUM directional derivatives for a particular example
+$i\in\{1,\dots,n\}$ can be computed using the following equations.
+\end{theorem}
+\begin{eqnarray*}
+  &&\nabla_{\mathbf v(-1,i)} \text{AUM}(\mathbf{\hat y}) = \\
+  &&\sum_{b: \mathcal I_b = i}
+  \min\{
+  \overline{\text{FP}}_b , 
+  \overline{\text{FN}}_b 
+  \}
+  -
+  \min\{
+  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
+  \overline{\text{FN}}_b - \Delta\text{FN}_b
+  \},\\
+  &&\nabla_{\mathbf v(1,i)} \text{AUM}(\mathbf{\hat y}) = \\
+  &&\sum_{b: \mathcal I_b = i}
+  \min\{
+  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
+  \underline{\text{FN}}_b + \Delta\text{FN}_b
+  \}
+  -
+  \min\{
+  \underline{\text{FP}}_b , 
+  \underline{\text{FN}}_b 
+  \}.
+\end{eqnarray*}  
+\end{frame}
+
+
 
 \end{document}

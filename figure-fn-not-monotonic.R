@@ -4,7 +4,8 @@ data(neuroblastoma, package="neuroblastoma")
 nb.dt <- data.table(neuroblastoma$profiles)
 p4.2 <- nb.dt[profile.id==4 & chromosome==2]
 p4.2[, i := 1:.N]
-label.dt <- data.table(problem=1, min=20, max=80, annotation="1breakpoint", label="one change")
+label.dt <- data.table(
+  problem=1, min=20, max=80, annotation="1breakpoint", label="one change")
 max.segments <- 20
 fit <- jointseg::Fpsn(p4.2$logratio, max.segments)
 segs.dt.list <- list()
@@ -137,6 +138,30 @@ show.segs <- segs.dt[show.labels, on="segments"]
 show.change <- change.dt[show.labels, on="segments"]
 gg <- ggplot()+
   theme_bw()+
+  geom_point(aes(
+    i, logratio),
+    data=p4.2)+
+  geom_segment(aes(
+    start-0.5, mean,
+    xend=end+0.5, yend=mean),
+    color=model.color,
+    size=1,
+    data=show.segs)+
+  geom_vline(aes(
+    xintercept=change),
+    data=show.change,
+    size=1,
+    color=model.color)+
+  facet_grid(segments ~ ., labeller=label_both)+
+  scale_x_continuous("Data sequence index")+
+  scale_y_continuous("Data value")+
+  theme(legend.position="none")
+png("figure-fn-not-monotonic-no-labels.png", 5, 3.8, units="in", res=200)
+print(gg)
+dev.off()
+
+gg <- ggplot()+
+  theme_bw()+
   geom_rect(aes(
     xmin=min, xmax=max,
     ymin=-Inf, ymax=Inf,
@@ -151,14 +176,6 @@ gg <- ggplot()+
     size=2,
     data=show.labels)+
   scale_color_manual(values=err.colors)+
-  ## geom_rect(aes(
-  ##   xmin=min, xmax=max,
-  ##   ymin=-Inf, ymax=Inf,
-  ##   linetype=status),
-  ##   fill=NA,
-  ##   color="black",
-  ##   size=2,
-  ##   data=show.labels)+
   scale_fill_manual(values=c("one change"="grey50"))+
   scale_linetype_manual(
     "Error type",
