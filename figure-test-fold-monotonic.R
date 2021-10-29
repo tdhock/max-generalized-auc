@@ -71,14 +71,15 @@ for(data.i in 1:nrow(data.dt)){
     features=sum(keep),
     n.train=nrow(train.seqs),
     mean.wide=mean(wide.count$count),
-    mean.breaks=mean(break.dt$count))
+    mean.breaks=mean(break.dt$count),
+    total.breaks=sum(break.dt$count))
 }
 (meta.dt <- do.call(rbind, meta.dt.list))
 
 meta.dt[, .(data.name, test.fold, features, n.train, mean.breaks, mean.wide)]
 meta.tall <- data.table::melt(
   meta.dt,
-  measure=c("features", "n.train", "mean.breaks"))
+  measure=c("features", "n.train", "mean.breaks", "total.breaks"))
 (meta.stats <- meta.tall[, .(
   min=min(value),
   max=max(value)

@@ -14,6 +14,17 @@ png("figure-aum-optimized-iterations.png", width=3, height=3, units="in", res=20
 print(gg)
 dev.off()
 
+two.it <- iterations.tall[step.number %in% range(step.number)]
+two.it[, emph := ifelse(step.number==1, "initial", "optimized")]
+emph <- gg+
+  geom_point(aes(
+    step.number, value, color=emph),
+    data=two.it)+
+  theme(legend.position = "none")
+png("figure-aum-optimized-iterations-emph.png", width=3, height=3, units="in", res=200)
+print(emph)
+dev.off()
+
 result.list$auc[, `:=`(x=c(0.25), y=c(0.75, 0.5))]
 gg <- ggplot()+
   geom_path(aes(

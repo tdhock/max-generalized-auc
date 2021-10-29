@@ -9,6 +9,19 @@ addMeta <- function(dt){
 errors.dt <- addMeta(fread("../feature-learning-benchmark/labeled_problems_errors.csv"))
 possible.dt <- addMeta(fread("../feature-learning-benchmark/labeled_problems_possible_errors.csv"))
 
+diff.info <- errors.dt[, aum::aum_diffs_penalty(data.table(example=prob.dir, min.lambda=exp(min.log.penalty), fp, fn), unique(prob.dir)), by=.(set.name, fold)]
+diff.counts <- diff.info[, .(
+  breakpoints=.N,
+  examples=length(unique(example))
+), by=.(set.name, fold)]
+diff.tall <- melt(diff.counts, measure.vars=c("breakpoints", "examples"))
+diff.tall[, .(
+  max=max(value),
+  mean=mean(value),
+  min=min(value),
+  folds=.N
+), by=variable]
+
 fold.counts <- possible.dt[, list(
   examples=.N,
   labels=sum(labels)
@@ -48,9 +61,13 @@ initial.pred[!is.finite(pred.log.lambda), pred.log.lambda := 0]
 
 test.fold.breaks <- test.fold.errors[, .(breaks=.N-1), by=prob.dir]
 test.fold.breaks[, .(
+  total.breaks=sum(breaks),
+  max.breaks=max(breaks),
   mean.breaks=mean(breaks),
+  min.breaks=min(breaks),
   examples=.N
 )]
+diff.counts[test.fold.info[1], on=c("set.name", "fold")]
 
 ## initialization:
 pred.dt <- data.table(initial.pred)

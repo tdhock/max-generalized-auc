@@ -2,6 +2,20 @@ source("packages.R")
 
 data.list <- readRDS("figure-unbalanced-grad-desc-data.rds")
 x.lab <- "Test AUC, median and quartiles over 10 random train sets"
+seeds.wide <- dcast(
+  data.list[["result"]],
+  prop.pos + seed ~ model,
+  value.var="auc")
+seeds.tall <- melt(
+  seeds.wide,
+  id.vars=c("prop.pos","seed","aum.count"),
+  variable.name="baseline.name",
+  value.name="baseline.auc")
+p.tall <- seeds.tall[, {
+  result <- t.test(aum.count, baseline.auc, alternative="greater", paired=TRUE)
+  with(result, data.table(p.value))
+}, by=.(prop.pos, baseline.name)]
+dcast(p.tall, baseline.name ~ prop.pos, value.var="p.value")
 
 result.tall <- melt(data.list[["result"]], measure.vars=c("accuracy", "auc"))
 result.tall[, percent.positive.labels := factor(prop.pos*100)]
@@ -11,6 +25,8 @@ ggplot()+
     percent.positive.labels, value, color=model),
     data=result.tall)
 
+result.tall[variable=="auc"]
+
 result.stats <- result.tall[, .(
   max=max(value),
   q75=quantile(value, 0.75),
@@ -19,6 +35,7 @@ result.stats <- result.tall[, .(
   min=min(value),
   seeds=.N
 ), by=.(variable, prop.pos, `percent\npositive\nlabels`=percent.positive.labels, model=sub("aum", "AUM", model))]
+dcast(result.stats[variable=="auc"], model ~ prop.pos, value.var="median")
 
 glmnet.stats <- result.stats[grepl("glmnet", model)]
 gg <- ggplot()+

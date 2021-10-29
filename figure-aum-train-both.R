@@ -50,3 +50,41 @@ gg <- ggplot()+
 png("figure-aum-train-both.png", width=5.8, height=3.3, units="in", res=200)
 print(gg)
 dev.off()
+
+one <- function(DT)DT[optimization.variable=="prediction vector"]
+gg <- ggplot()+
+  geom_path(aes(
+    FPR, TPR, color=model),
+    data=one(both.list$roc))+
+  geom_point(aes(
+    FPR, TPR, color=model),
+    fill="white",
+    shape=21,
+    data=one(both.list$auc))+
+  geom_segment(aes(
+    x, y,
+    xend=FPR, yend=TPR,
+    color=model),
+    size=0.25,
+    data=one(both.list$auc))+
+  geom_label(aes(
+    x, y, color=model,
+    label=sprintf(
+      "%s AUM=%.2f\nerrors=%d AUC=%.2f",
+      model, aum, errors, auc)),
+    size=3,
+    hjust=0,
+    vjust=1,
+    data=one(both.list$auc))+
+  coord_equal()+
+  guides(color="none")+
+  theme(panel.spacing=grid::unit(0.5, "cm"))+
+  scale_x_continuous(
+    "False positive rate",
+    breaks=c(0,0.5,1))+
+  scale_y_continuous(
+    "True positive rate",
+    breaks=c(0,0.5,1))
+png("figure-aum-train-pred-only.png", width=3, height=3, units="in", res=200)
+print(gg)
+dev.off()
