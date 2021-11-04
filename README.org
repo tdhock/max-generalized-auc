@@ -1,4 +1,4 @@
-** Figures from paper
+** Figures from arXiv:2107.01285
 
 Before running some of the scripts you will need to clone the data
 repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
@@ -25,6 +25,10 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 - [[http://ml.nau.edu/viz/2021-10-21-neuroblastomaProcessed-complex/][8 error curves with 2 different alignments]].
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
+
+** 3 Nov 2021
+
+[[file:HOCKING-slides.tex]] makes [[file:HOCKING-slides.pdf]] for ML lab / Math colloq.
 
 ** 24 June 2021
 
