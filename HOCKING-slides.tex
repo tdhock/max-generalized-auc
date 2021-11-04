@@ -163,8 +163,8 @@ If ROC curve has loops, AUC can be greater than one.
   \item Dark grey area double counted.
   \item Red area negative counted.
   \item Do we want to maximize AUC?
-  \item Minimize Area Under Min (AUM) instead, which pushes ROC points
-    toward upper left.
+  \item Minimize Area Under Min (AUM) instead, which encourages ROC
+    points in upper left.
   \end{itemize}
 
   \includegraphics[height=1.5in]{figure-more-than-one-more-aum}
@@ -175,6 +175,10 @@ If ROC curve has loops, AUC can be greater than one.
 \begin{frame}
   \frametitle{Real data example with non-monotonic label error}
 
+  ROC curve loops result from non-monotonic FP/FN functions, but do
+  these occur in real data? Yes, in supervised changepoint
+  problems.
+  
   \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic}
   \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error-standAlone}
 
@@ -186,7 +190,7 @@ If ROC curve has loops, AUC can be greater than one.
 
 \begin{frame}
   \frametitle{Real data example with AUC greater than one}
-  
+
   \includegraphics[height=1.3in]{figure-aum-convexity-profiles}
   \includegraphics[height=1.3in]{figure-aum-convexity}
 
@@ -195,48 +199,101 @@ If ROC curve has loops, AUC can be greater than one.
   \item AUC=2 when prediction difference=5.
   \item AUM=0 implies AUC=1.
   \item AUM is convex relaxation of non-convex Sum of Min (SM).
-  \item AUM is differentiable almost everywhere; compute the gradient
-    and use it for learning.
+  \item AUM is differentiable almost everywhere.
+  \item Main new idea: compute the gradient of this function and use
+    it for learning.
   \end{itemize}
+
+\end{frame}
+
+
+
+
+\begin{frame}
+  \frametitle{Algorithm inputs: predictions and label error functions}
+
+  \begin{itemize}
+  \item Each observation $i\in\{1,\dots,n\}$ has a predicted value
+    $\hat y_i\in\mathbb R$.
+  \item Breakpoints
+  $b\in\{1,\dots, B\}$ used to represent label error via tuple
+  $(v_b, \Delta\text{FP}_b, \Delta\text{FN}_b, \mathcal I_b)$.
+\item There are changes $\Delta\text{FP}_b, \Delta\text{FN}_b$ at
+  predicted value $v_b\in\mathbb R$ in error function
+  $\mathcal I_b\in\{1,\dots,n\}$.
+  \end{itemize}
+
+  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic}
+  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error-standAlone}
 
 \end{frame}
 
 \begin{frame}
-  \frametitle{Definition of data set, notations}
+  \frametitle{Algorithm computes total FP and FN for each threshold/constant added to predicted values}
+  \begin{itemize}
+  \item Breakpoint threshold,
+    $t_b= v_b - \hat y_{\mathcal I_b}=\tau(\mathbf{\hat y})_q$ for
+    some $q$.
+  \item Total error before/after each breakpoint can be computed via
+    sort and modified cumsum:
+  \end{itemize}
+\begin{eqnarray*}
+  \underline{\text{FP}}_b &=& \sum_{j: t_j < t_b} \Delta\text{FP}_j,\ 
+  \overline{\text{FP}}_b = \sum_{j: t_j \leq t_b} \Delta\text{FP}_j, \\
+  \underline{\text{FN}}_b &=& \sum_{j: t_j \geq t_b} - \Delta\text{FN}_j,\ 
+  \overline{\text{FN}}_b = \sum_{j: t_j > t_b} - \Delta\text{FN}_j.
+\end{eqnarray*}
+
+  \includegraphics[height=1.5in]{figure-more-than-one-more-aum}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Algorithm computes two directional derivatives }
 
   \begin{itemize}
-  \item Let there be a total of $B$ breakpoints in the error functions over
-    all $n$ labeled training examples.
-  \item Each breakpoint
-  $b\in\{1,\dots, B\}$ is represented by the tuple
-  $(v_b, \Delta\text{FP}_b, \Delta\text{FN}_b, \mathcal I_b)$, where the
-  $\mathcal I_b\in\{1,\dots,n\}$ is an example index, and there are
-  changes $\Delta\text{FP}_b, \Delta\text{FN}_b$ at predicted value
-  $v_b\in\mathbb R$ in the error functions.
-\item For example in binary
-  classification, there are $B=n$ breakpoints (same as the number of
-  labeled training examples); for each breakpoint $b\in\{1,\dots,B\}$
-  we have $v_b=0$ and $\mathcal I_b=b$.  For breakpoints $b$ with
-  positive labels $y_b=1$ we have
-  $\Delta\text{FP}=0,\Delta\text{FN}=-1$, and for negative labels
-  $y_b=-1$ we have $\Delta\text{FP}=1,\Delta\text{FN}=0$.  
-\item   In
-  changepoint detection we have more general error functions, which
-  may have more than one breakpoint per example.
+  \item Gradient only defined when function is differentiable, but AUM
+    is not everywhere (see below).
+  \item Directional derivatives defined everywhere.
   \end{itemize}
-  
+% \begin{theorem}
+% \label{thm:directional-derivs}
+% The AUM directional derivatives for a particular example
+% $i\in\{1,\dots,n\}$ can be computed using the following equations.
+% \end{theorem}
+\begin{eqnarray*}
+  &&\nabla_{\mathbf v(-1,i)} \text{AUM}(\mathbf{\hat y}) = \\
+  &&\sum_{b: \mathcal I_b = i}
+  \min\{
+  \overline{\text{FP}}_b , 
+  \overline{\text{FN}}_b 
+  \}
+  -
+  \min\{
+  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
+  \overline{\text{FN}}_b - \Delta\text{FN}_b
+  \},\\
+  &&\nabla_{\mathbf v(1,i)} \text{AUM}(\mathbf{\hat y}) = \\
+  &&\sum_{b: \mathcal I_b = i}
+  \min\{
+  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
+  \underline{\text{FN}}_b + \Delta\text{FN}_b
+  \}
+  -
+  \min\{
+  \underline{\text{FP}}_b , 
+  \underline{\text{FN}}_b 
+     \}.
+\end{eqnarray*}  
+
+  \includegraphics[height=1.6in]{figure-aum-convexity}
+
 \end{frame}
+
 
 \begin{frame}
   \frametitle{Proposed algorithm uses sort to compute AUM and directional derivatives}
 
-  \begin{itemize}
-  \item Gradient only defined when function is differentiable, but AUM
-    is not everywhere.
-  \item Directional derivatives defined everywhere.
-  \item Overall $O(B\log B)$ time due to sort.
-  \end{itemize}
-  
 \small
 \begin{algorithmic}[1]
   \STATE {\bfseries Input:} 
@@ -271,7 +328,11 @@ If ROC curve has loops, AUC can be greater than one.
   \ENDFOR
   \STATE {\bfseries Output:} AUM and matrix $\mathbf D$ of directional derivatives.
 \end{algorithmic}
-
+\begin{itemize}
+\item 
+ Overall $O(B\log B)$ time due to sort.
+\end{itemize}
+  
 \end{frame}
 \section{Empirical results}
 
@@ -396,7 +457,8 @@ If ROC curve has loops, AUC can be greater than one.
 
 \begin{frame}
   \frametitle{More notation}
-  First let $\{(
+  \begin{itemize}
+  \item   First let $\{(
 \text{fpt}
 (\mathbf {\hat y})
 _q, \text{fnt}
@@ -406,25 +468,31 @@ _q,
 (\mathbf {\hat y})
 _q
 )\}_{q=1}^Q$ 
-be a sequence of $Q$ tuples, each of which corresponds to a point on the ROC curve (Figure~\ref{fig:more}, right).
-The fpt/fnt are false positive/negative totals whereas $\tau$ are values such there is a change/threshold at $M_{\mathbf{\hat y}}(\tau)$. 
-As shown in Figure~\ref{fig:more} we assume these values are increasing, $ -\infty = \tau
+be a sequence of $Q$ tuples, each of which corresponds to a point on the ROC curve (and an interval on the fn/fp error plot). 
+\item For each $q$ the
+  $\text{fpt}(\mathbf {\hat y})_q, \text{fpt}(\mathbf {\hat y})_q$ are
+  false positive/negative totals at that point (in that interval) whereas
+  $\tau(\mathbf {\hat y})_q$ is the upper limit of the interval.
+\item The limits are increasing, $ -\infty = \tau
 (\mathbf {\hat y})
 _0 < \cdots <  \tau
 (\mathbf {\hat y})
 _Q = \infty$.
-For each $q\in\{1,\dots,Q\}$ there is a corresponding interval of values $c$ between $\tau(\mathbf {\hat y})_{q-1}$ and $\tau(\mathbf {\hat y})_q$
-such that 
-$\text{FPT}_{\mathbf{\hat y}}(c)=\text{fpt}(\mathbf {\hat y})_q$
-and
-$\text{FNT}_{\mathbf{\hat y}}(c)=\text{fnt}(\mathbf {\hat y})_q$
-for all $c\in(\tau(\mathbf {\hat y})_{q-1}, \tau(\mathbf {\hat y})_q)$
-(Figure~\ref{fig:more}, left).
-Then we define $m(\mathbf {\hat y})_q = \min\{
+% \item For each $q\in\{1,\dots,Q\}$ there is a corresponding interval of values $c$ between $\tau(\mathbf {\hat y})_{q-1}$ and $\tau(\mathbf {\hat y})_q$
+% such that 
+% $\text{FPT}_{\mathbf{\hat y}}(c)=\text{fpt}(\mathbf {\hat y})_q$
+% and
+% $\text{FNT}_{\mathbf{\hat y}}(c)=\text{fnt}(\mathbf {\hat y})_q$
+% for all $c\in(\tau(\mathbf {\hat y})_{q-1}, \tau(\mathbf {\hat y})_q)$.
+\item Then we define $m(\mathbf {\hat y})_q = \min\{
     \text{fpt}(\mathbf {\hat y})_q , \, 
     \text{fnt}(\mathbf {\hat y})_q
-\}$ and so since 
-$m(\mathbf {\hat y})_1=m(\mathbf {\hat y})_Q=0$ the area under those intervals is zero, and the AUM can be computed by summing over all of the other intervals,
+\}$ as the min of fp and fn totals in that interval.
+  \end{itemize}
+
+  \includegraphics[height=1.5in]{figure-more-than-one-more-aum}
+  \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
+
 \end{frame}
 
 \begin{frame}
@@ -452,54 +520,30 @@ It is an L1 relaxation of the following non-convex \textbf{S}um of \textbf{M}in(
 
 \end{frame}
 
-
 \begin{frame}
-  \frametitle{FP and FN counts before/after each threshold}
+  \frametitle{Definition of data set, notations}
+
+  \begin{itemize}
+  \item Let there be a total of $B$ breakpoints in the error functions over
+    all $n$ labeled training examples.
+  \item Each breakpoint
+  $b\in\{1,\dots, B\}$ is represented by the tuple
+  $(v_b, \Delta\text{FP}_b, \Delta\text{FN}_b, \mathcal I_b)$, where the
+  $\mathcal I_b\in\{1,\dots,n\}$ is an example index, and there are
+  changes $\Delta\text{FP}_b, \Delta\text{FN}_b$ at predicted value
+  $v_b\in\mathbb R$ in the error functions.
+\item For example in binary
+  classification, there are $B=n$ breakpoints (same as the number of
+  labeled training examples); for each breakpoint $b\in\{1,\dots,B\}$
+  we have $v_b=0$ and $\mathcal I_b=b$.  For breakpoints $b$ with
+  positive labels $y_b=1$ we have
+  $\Delta\text{FP}=0,\Delta\text{FN}=-1$, and for negative labels
+  $y_b=-1$ we have $\Delta\text{FP}=1,\Delta\text{FN}=0$.  
+\item   In
+  changepoint detection we have more general error functions, which
+  may have more than one breakpoint per example.
+  \end{itemize}
   
-
-\begin{eqnarray*}
-  \underline{\text{FP}}_b &=& \sum_{j: t_j < t_b} \Delta\text{FP}_j,\label{eq:first-fp-fn-over-under} \\
-  \overline{\text{FP}}_b &=& \sum_{j: t_j \leq t_b} \Delta\text{FP}_j, \\
-  \underline{\text{FN}}_b &=& \sum_{j: t_j \geq t_b} - \Delta\text{FN}_j, \\
-  \overline{\text{FN}}_b &=& \sum_{j: t_j > t_b} - \Delta\text{FN}_j.\label{eq:last-fp-fn-over-under}
-\end{eqnarray*}
-
 \end{frame}
-
-\begin{frame}
-  \frametitle{Directional derivatives}
-
-\begin{theorem}
-\label{thm:directional-derivs}
-The AUM directional derivatives for a particular example
-$i\in\{1,\dots,n\}$ can be computed using the following equations.
-\end{theorem}
-\begin{eqnarray*}
-  &&\nabla_{\mathbf v(-1,i)} \text{AUM}(\mathbf{\hat y}) = \\
-  &&\sum_{b: \mathcal I_b = i}
-  \min\{
-  \overline{\text{FP}}_b , 
-  \overline{\text{FN}}_b 
-  \}
-  -
-  \min\{
-  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
-  \overline{\text{FN}}_b - \Delta\text{FN}_b
-  \},\\
-  &&\nabla_{\mathbf v(1,i)} \text{AUM}(\mathbf{\hat y}) = \\
-  &&\sum_{b: \mathcal I_b = i}
-  \min\{
-  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
-  \underline{\text{FN}}_b + \Delta\text{FN}_b
-  \}
-  -
-  \min\{
-  \underline{\text{FP}}_b , 
-  \underline{\text{FN}}_b 
-  \}.
-\end{eqnarray*}  
-\end{frame}
-
-
 
 \end{document}
