@@ -16,9 +16,9 @@ profile <- function(..., possible.fp, possible.fn, errors, labels){
 }
 profile.list <- list(
   less=profile(
-    d(-Inf, 0, 30),
-    d(2, 3, 3),
-    d(4, 30, 0)),
+    d(-Inf, 0, 10),
+    d(2, 1, 1),
+    d(4, 10, 0)),
   more=profile(
     d(-Inf, 0, 30),
     d(2, 8, 8),

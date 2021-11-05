@@ -30,7 +30,7 @@ some.err.tall <- melt(
 some.err.tall[, variable := toupper(var.lower)]
 leg <- "Error type"
 some.err.tall[, Label := paste0("\n", label)]
-gg <- ggplot()+
+gg.err <- ggplot()+
   theme_bw()+
   theme(panel.spacing=grid::unit(0, "lines"))+
   facet_grid(Label ~ ., labeller=label_both)+
@@ -50,7 +50,7 @@ gg <- ggplot()+
     breaks=seq(-2, 6, by=2))+
   coord_cartesian(xlim=c(-3, 5))
 png("figure-aum-convexity-profiles.png", 3.5, 2, units="in", res=200)
-print(gg)
+print(gg.err)
 dev.off()
 
 dmin <- 3.5
@@ -78,6 +78,7 @@ grid.pred[, negative := pred.diff]
 both.pred <- rbind(
   border.pred[, .(positive, negative, pred.diff, differentiable=FALSE)],
   grid.pred[, .(positive, negative, pred.diff, differentiable=TRUE)])
+##positive=0, negative=pred.diff.
 pred.tall <- melt(
   both.pred,
   measure.vars=select.dt$label,
@@ -93,6 +94,16 @@ metrics.wide <- pred.tall[order(pred.diff)][, {
 metrics.wide[auc==max(auc)] #max auc => aum>0.
 
 pred.diff.vec <- c(4.5, 5, 5.14)
+vline.dt <- rbind(
+  data.table(pred=pred.diff.vec, Label="\nnegative"),
+  data.table(pred=0, Label="\npositive"))
+vline.dt[, pred.value := pred-1]
+gg.err+
+  geom_vline(aes(
+    xintercept=pred.value),
+    data=vline.dt)
+## TODO three or more slides showing alignment.
+
 show.roc.dt.list <- list()
 for(pdiff in pred.diff.vec){
   select.dt <- data.table(pred.diff=pdiff)

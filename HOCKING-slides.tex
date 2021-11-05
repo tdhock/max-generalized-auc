@@ -110,13 +110,12 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \frametitle{Receiver Operating Characteristic (ROC) curve}
 
   \begin{itemize}
-  \item ROC curve is plot of x=FPR, y=TPR. 
-  \item Best point in ROC space is upper left (0\% FPR, 100\% TPR).
-  \item Binary classification algo gives predictions.
+  \item Binary classification algo gives predictions
     $[\hat y_1,\hat y_2,\hat y_3,\hat y_4]$.
   \item Each point on the ROC curve is the FPR/TPR if you add some
   constant $c$ to the predictions,
   $[\hat y_1+c,\hat y_2+c,\hat y_3+c,\hat y_4+c]$.
+  \item Best point in ROC space is upper left (0\% FPR, 100\% TPR).
   \item Maximizing Area Under the ROC curve (AUC) is a common
     objective for binary classification, especially for imbalanced
     data (example: 99\% positive, 1\% negative labels).
@@ -295,49 +294,6 @@ If ROC curve has loops, AUC can be greater than one.
 \end{frame}
 
 
-\begin{frame}
-  \frametitle{Proposed algorithm uses sort to compute AUM and directional derivatives}
-
-\small
-\begin{algorithmic}[1]
-  \STATE {\bfseries Input:} 
-  Predictions $\mathbf{\hat y}\in\mathbb R^n$, 
-  breakpoints in error functions $v_b,\Delta\text{FP}_b,\Delta\text{FN}_b,\mathcal I_b$ for all $b\in\{1,\dots,B\}$.
-  \STATE Zero the $\text{AUM}\in\mathbb R$ and directional derivatives $\mathbf D\in\mathbb R^{n\times 2}$.\label{line:init-zero}
-  \STATE $t_b\gets v_b - \hat y_{\mathcal I_b}$ for all $b$.\label{line:compute-thresh}
-  \STATE $s_1,\dots,s_B\gets \textsc{SortedIndices}(t_1,\dots,t_B).$\label{line:sorted-indices}
-  \STATE Compute $\underline{\text{FP}}_b,\overline{\text{FP}}_b,\underline{\text{FN}}_b,\overline{\text{FN}}_b$ for all $b$ using $s_1,\dots,s_B$.
-  \FOR{$b\in\{2,\dots,B\}$}\label{line:for-intervals}
-  \STATE $\text{AUM} \text{ += } (t_{s_b} - t_{s_{b-1}}) \min\{\underline{\text{FP}}_b, \overline{\text{FN}}_b\} $.\label{line:AUM}
-  \ENDFOR
-  \FOR{$b\in\{1,\dots,B\}$}\label{line:for-breakpoints}
-  \STATE\label{line:D_lo} $\mathbf D_{\mathcal I_b,1} \text{ += } \min\{
-  \overline{\text{FP}}_b , 
-  \overline{\text{FN}}_b 
-  \}
-  -
-  \min\{
-  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
-  \overline{\text{FN}}_b - \Delta\text{FN}_b
-  \}$
-  \STATE\label{line:D_hi} $\mathbf D_{\mathcal I_b,2} \text{ += } \min\{
-  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
-  \underline{\text{FN}}_b + \Delta\text{FN}_b
-  \}
-  -
-  \min\{
-  \underline{\text{FP}}_b , 
-  \underline{\text{FN}}_b 
-  \}$
-  \ENDFOR
-  \STATE {\bfseries Output:} AUM and matrix $\mathbf D$ of directional derivatives.
-\end{algorithmic}
-\begin{itemize}
-\item 
- Overall $O(B\log B)$ time due to sort.
-\end{itemize}
-  
-\end{frame}
 \section{Empirical results}
 
 \begin{frame}
@@ -387,6 +343,18 @@ If ROC curve has loops, AUC can be greater than one.
 
 \end{frame}
 
+\begin{frame}
+  \frametitle{Learning algorithm competitive for unbalanced binary classification}
+
+ \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc.png}
+
+ \begin{itemize}
+ \item Squared hinge all pairs is a classic/popular surrogate loss function
+   for AUC optimization.
+ \item All linear models with early stopping regularization.
+ \end{itemize}
+
+\end{frame}
 
 \begin{frame}
   \frametitle{Error rate loss is not as useful as error count loss}
@@ -399,19 +367,6 @@ If ROC curve has loops, AUC can be greater than one.
  \item AUM.rate is a variant which uses normalized error functions,
    Min(FPR,FNR).
  \item Both linear models with early stopping regularization.
- \end{itemize}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Learning algorithm competitive for unbalanced binary classification}
-
- \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc.png}
-
- \begin{itemize}
- \item Squared hinge all pairs is a classic/popular surrogate loss function
-   for AUC optimization.
- \item All linear models with early stopping regularization.
  \end{itemize}
 
 \end{frame}
@@ -547,6 +502,50 @@ It is an L1 relaxation of the following non-convex \textbf{S}um of \textbf{M}in(
   changepoint detection we have more general error functions, which
   may have more than one breakpoint per example.
   \end{itemize}
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Proposed algorithm uses sort to compute AUM and directional derivatives}
+
+\small
+\begin{algorithmic}[1]
+  \STATE {\bfseries Input:} 
+  Predictions $\mathbf{\hat y}\in\mathbb R^n$, 
+  breakpoints in error functions $v_b,\Delta\text{FP}_b,\Delta\text{FN}_b,\mathcal I_b$ for all $b\in\{1,\dots,B\}$.
+  \STATE Zero the $\text{AUM}\in\mathbb R$ and directional derivatives $\mathbf D\in\mathbb R^{n\times 2}$.\label{line:init-zero}
+  \STATE $t_b\gets v_b - \hat y_{\mathcal I_b}$ for all $b$.\label{line:compute-thresh}
+  \STATE $s_1,\dots,s_B\gets \textsc{SortedIndices}(t_1,\dots,t_B).$\label{line:sorted-indices}
+  \STATE Compute $\underline{\text{FP}}_b,\overline{\text{FP}}_b,\underline{\text{FN}}_b,\overline{\text{FN}}_b$ for all $b$ using $s_1,\dots,s_B$.
+  \FOR{$b\in\{2,\dots,B\}$}\label{line:for-intervals}
+  \STATE $\text{AUM} \text{ += } (t_{s_b} - t_{s_{b-1}}) \min\{\underline{\text{FP}}_b, \overline{\text{FN}}_b\} $.\label{line:AUM}
+  \ENDFOR
+  \FOR{$b\in\{1,\dots,B\}$}\label{line:for-breakpoints}
+  \STATE\label{line:D_lo} $\mathbf D_{\mathcal I_b,1} \text{ += } \min\{
+  \overline{\text{FP}}_b , 
+  \overline{\text{FN}}_b 
+  \}
+  -
+  \min\{
+  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
+  \overline{\text{FN}}_b - \Delta\text{FN}_b
+  \}$
+  \STATE\label{line:D_hi} $\mathbf D_{\mathcal I_b,2} \text{ += } \min\{
+  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
+  \underline{\text{FN}}_b + \Delta\text{FN}_b
+  \}
+  -
+  \min\{
+  \underline{\text{FP}}_b , 
+  \underline{\text{FN}}_b 
+  \}$
+  \ENDFOR
+  \STATE {\bfseries Output:} AUM and matrix $\mathbf D$ of directional derivatives.
+\end{algorithmic}
+\begin{itemize}
+\item 
+ Overall $O(B\log B)$ time due to sort.
+\end{itemize}
   
 \end{frame}
 
