@@ -40,7 +40,7 @@
 
 \begin{document}
 
-\title{Optimizing ROC Curves with a Sort-Based Surrogate Loss for Binary Classification and Changepoint Detection}
+\title{Optimizing ROC Curves with a Sort-Based Surrogate Loss for Binary Classification and Changepoint Detection, arXiv:2107.01285}
 
 \author{
   Toby Dylan Hocking --- toby.hocking@nau.edu\\ 
@@ -107,20 +107,20 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \end{frame}
 
 \begin{frame}
-  \frametitle{Area Under ROC curve, synthetic example}
+  \frametitle{Receiver Operating Characteristic (ROC) curve}
 
   \begin{itemize}
-  \item Binary classification algo gives predictions
-    $[\hat y_1,\hat y_2,\hat y_3,\hat y_4]$, which is one point on the
-    ROC curve (x=FPR, y=TPR).
+  \item ROC curve is plot of x=FPR, y=TPR. 
   \item Best point in ROC space is upper left (0\% FPR, 100\% TPR).
+  \item Binary classification algo gives predictions.
+    $[\hat y_1,\hat y_2,\hat y_3,\hat y_4]$.
   \item Each point on the ROC curve is the FPR/TPR if you add some
   constant $c$ to the predictions,
   $[\hat y_1+c,\hat y_2+c,\hat y_3+c,\hat y_4+c]$.
-  \item Optimizing Area Under the ROC curve (AUC) is a common
+  \item Maximizing Area Under the ROC curve (AUC) is a common
     objective for binary classification, especially for imbalanced
-    data (99\% positive, 1\% negative labels).
-  \end{itemize}
+    data (example: 99\% positive, 1\% negative labels).
+  \end{itemize} 
   
   \parbox{1.5in}{
 \includegraphics[width=1.5in]{figure-more-than-one-less-auc}
@@ -139,11 +139,15 @@ In binary classification, ROC curve is monotonic increasing.
   \frametitle{Area Under ROC curve, synthetic example}
 
 \begin{itemize}
-  \item Example: label = [-1, -1, 1, 1], predictions [-8, -5,
-  -5, -8], No constant added $c=0$, $q=1$ in this example (everything
-  predicted negative, so no false positives, but no true positives).
-\item Add $c=6 \Rightarrow$ [-2, 1, 1, -2], some FP and TP, $q=2$
-\item  Add $c=9 \Rightarrow$ [7, 4, 4, 7], all FP and TP, $q=3$.
+  \item label = [1,0,0,...,1,1,0] (20 labels, 10 positive, 10 negative).
+  \item predictions = [-4, -4, -4, ..., -2, -2, -2].
+  \item No constant added $c=0$, $q=1$, everything predicted negative,
+    so no false positives, but no true positives.
+% > WeightedROC::WeightedAUC(WeightedROC::WeightedROC(c(-8,-8,-5,-5), c(1,0,1,0), c(1,9,9,1)))
+% [1] 0.9
+\item Add $c=3 \Rightarrow$ [-1, -1, -1, ..., 1, 1, 1], 1 FP and
+  9 TP, $q=2$.
+\item  Add $c=5 \Rightarrow$ [1, 1, 1, ..., 3, 3, 3], all FP and TP, $q=3$.
   \end{itemize}
 
   \includegraphics[height=1.5in]{figure-more-than-one-less-aum}
