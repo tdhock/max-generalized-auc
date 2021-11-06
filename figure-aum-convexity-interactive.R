@@ -2,14 +2,38 @@ library(animint2)
 library(data.table)
 
 data(neuroblastomaProcessed, package="penaltyLearning")
-
+data(neuroblastoma, package="neuroblastoma")
 e <- function(label, profile.id, chromosome){
   data.table(label, profile.id=factor(profile.id), chromosome=factor(chromosome))
 }
 select.dt <- rbind(
   e("positive", 4, 2),
   e("negative", 513, 3))
+nb.list <- lapply(neuroblastoma, data.table)
+nb.some <- lapply(nb.list, "[", select.dt, on=.NATURAL)
+max.segments <- max(neuroblastomaProcessed$errors$n.segments)
+nb.segs <- nb.some$profiles[, {
+  cum.vec <- cumsum(c(0, logratio))
+  d <- diff(position)/2
+  between <- position[-1]-d
+  data.start.pos <- c(position[1]-d[1], between)
+  data.end.pos <- c(between, position[.N]+d[.N-1])
+  fit <- jointseg::Fpsn(logratio, max.segments)
+  end.t <- t(fit$t.est)
+  end.dt <- data.table(
+    end=as.integer(end.t),
+    segments=as.integer(col(end.t))
+  )[!is.na(end)]
+  end.dt[, start := c(0, end[-.N])+1, by=segments]
+  end.dt[, mean := (cum.vec[end+1]-cum.vec[start])/(start+end-1)]
+  end.dt[, `:=`(
+    start.pos=data.start.pos[start],
+    end.pos=data.end.pos[end]
+  )]
+}, by=label]
+
 some.err <- neuroblastomaProcessed$errors[select.dt, .(
+  segments=n.segments,
   fp, fn, possible.fp, possible.fn,
   min.log.lambda=-max.log.lambda,
   max.log.lambda=-min.log.lambda,
@@ -21,6 +45,7 @@ err.sizes <- c(
   FP=6,
   FN=4)
 err.colors <- c(
+  correct="transparent",
   "min(FP,FN)"="black",
   FP="red",
   FN="deepskyblue")
@@ -28,11 +53,11 @@ some.err.tall <- melt(
   some.err,
   measure.vars=c("fp","fn"),
   variable.name="var.lower")
-some.err.tall[, variable := toupper(var.lower)]
+some.err.tall[, error.type := toupper(var.lower)]
 leg <- "Error type"
 
-dmin <- 3.5
-dmax <- 7.5
+dmin <- 4
+dmax <- 6.5
 some.err[, fp.diff := c(NA, diff(fp)), by=label]
 some.err[, fn.diff := c(NA, diff(fn)), by=label]
 some.diff <- some.err[fp.diff != 0 | fn.diff != 0, .(
@@ -50,9 +75,7 @@ grid.sorted[, min.fp.fn := pmin(fp,fn)]
 border.pred <- grid.dt[
   dmin < pred.diff & pred.diff < dmax]
 grid.pred <- data.table(
-  pred.diff=seq(dmin, dmax, by=0.02))
-grid.pred <- data.table(
-  pred.diff=seq(dmin, dmax, by=0.1))
+  pred.diff=seq(dmin, dmax, by=0.05))
 grid.pred[, positive := 0]
 grid.pred[, negative := pred.diff]
 both.pred <- rbind(
@@ -81,7 +104,7 @@ show.roc.tall <- melt(
   show.roc.dt,
   measure=c("fp","fn","min.fp.fn"),
   variable.name="lower.var")
-show.roc.tall[, variable := ifelse(
+show.roc.tall[, error.type := ifelse(
   lower.var=="min.fp.fn", "min(FP,FN)", toupper(lower.var))]
 
 metrics.tall <- melt(
@@ -112,13 +135,38 @@ pred.tall.thresh.wide <- dcast(
   pred.diff + roc.point ~ label,
   value.var="pred.plus.constant"
 )[, label := "negative"]
-animint(
+nb.models <- nb.segs[start==1, .(label, segments)]
+nb.changes <- nb.segs[start>1]
+err.list <- penaltyLearning::labelError(
+  nb.models,
+  nb.some$annotations,
+  nb.changes,
+  model.vars="segments",
+  change.var="start.pos",
+  problem.vars="label")
+selected.dt <- pred.tall.thresh[
+  some.err,
+  data.table(label, pred.diff, roc.point, segments),
+  nomatch=NULL,
+  on=.(
+    label,
+    pred.plus.constant < max.log.lambda,
+    pred.plus.constant > min.log.lambda
+  )]
+selected.segs <- nb.segs[selected.dt, on=.(
+  label, segments), allow.cartesian=TRUE]
+type.abbrev <- c(
+  "false negative"="FN",
+  "false positive"="FP",
+  correct="correct")
+selected.err <- err.list$label.errors[selected.dt, on=.(
+  label, segments)][, error.type := type.abbrev[status] ]
+viz <- animint(
   title="Simple non-monotonic ROC curve",
   overview=ggplot()+
     ggtitle("Overview, select difference")+
     theme(panel.margin=grid::unit(1, "lines"))+
     theme(text=element_text(size = 15))+
-    theme(legend.position="bottom")+
     theme_animint(width=300, height=300)+
     facet_grid(variable ~ ., scales="free")+
     scale_fill_manual(values=c(
@@ -133,6 +181,86 @@ animint(
     xlab("Prediction difference, f(negative) - f(positive)")+
     coord_cartesian(xlim=c(dmin,dmax))+
     scale_y_continuous("", breaks=seq(0, 3, by=1)),
+  data=ggplot()+
+    ggtitle("Data, labels, predicted changepoint models")+
+    theme_bw()+
+    theme(legend.position="none")+
+    theme_animint(width=600, height=300)+
+    geom_tallrect(aes(
+      xmin=min/1e6, xmax=max/1e6, fill=annotation),
+      alpha=0.5,
+      data=nb.some$annotations)+
+    scale_fill_manual(
+      "label",
+      values=c(
+        breakpoint="violet",
+        normal="orange"))+
+    geom_point(aes(
+      position/1e6, logratio),
+      color="grey50",
+      data=nb.some$profiles)+
+    geom_tallrect(aes(
+      xmin=min/1e6, xmax=max/1e6,
+      color=error.type),
+      data=selected.err,
+      showSelected=c("pred.diff", "roc.point"),
+      size=3,
+      fill="transparent")+
+    geom_segment(aes(
+      start.pos/1e6, mean,
+      xend=end.pos/1e6, yend=mean),
+      data=selected.segs,
+      size=3,
+      color=text.color,
+      showSelected=c("pred.diff", "roc.point"))+
+    geom_vline(aes(
+      xintercept=start.pos/1e6),
+      data=selected.segs[start>1],
+      size=2,
+      color=text.color,
+      showSelected=c("pred.diff", "roc.point"))+
+    scale_color_manual(leg,values=err.colors)+
+    facet_grid(label ~ ., labeller=label_both)+
+    scale_y_continuous(
+      "DNA copy number (microarray logratio)")+
+    scale_x_continuous(
+      "Position on chromosome"),
+  obsErr=ggplot()+
+    ggtitle("Example error functions")+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "lines"))+
+    theme(legend.position="none")+
+    theme_animint(width=300, height=300)+
+    facet_grid(label ~ ., labeller=label_both)+
+    geom_vline(aes(
+      xintercept=pred.plus.constant),
+      data=pred.tall.thresh,
+      showSelected=c("pred.diff", "roc.point"))+
+    geom_segment(aes(
+      min.log.lambda, value,
+      xend=max.log.lambda, yend=value,
+      color=error.type, size=error.type),
+      showSelected="error.type",
+      data=some.err.tall)+
+    geom_segment(aes(
+      positive, -Inf,
+      xend=negative, yend=-Inf),
+      data=pred.tall.thresh.wide,
+      showSelected=c("pred.diff", "roc.point"))+
+    geom_text(aes(
+      negative-0.1, -0.3,
+      label=sprintf("pred.diff=%.2f", pred.diff)),
+      hjust=1,
+      data=pred.tall.thresh.wide,
+      showSelected=c("pred.diff", "roc.point"))+
+    scale_y_continuous(
+      "Label errors",
+      breaks=c(0,1),
+      limits=c(-0.4, 1.4))+
+    scale_color_manual(leg,values=err.colors)+
+    scale_size_manual(leg,values=err.sizes)+
+    scale_x_continuous(
+      "Predicted value f(x)"),
   totals=ggplot()+
     ggtitle("Total error, select interval")+
     theme_bw()+
@@ -149,7 +277,7 @@ animint(
     geom_segment(aes(
       min.thresh, value,
       xend=max.thresh, yend=value,
-      color=variable, size=variable),
+      color=error.type, size=error.type),
       showSelected="pred.diff",
       data=show.roc.tall)+
     geom_vline(aes(
@@ -218,41 +346,6 @@ animint(
       color=text.color,
       showSelected="pred.diff",
       clickSelects="roc.point",
-      data=show.roc.dt),
-  obsErr=ggplot()+
-    ggtitle("Example error functions")+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "lines"))+
-    theme(legend.position="none")+
-    theme_animint(width=300, height=300)+
-    facet_grid(label ~ ., labeller=label_both)+
-    geom_vline(aes(
-      xintercept=pred.plus.constant),
-      data=pred.tall.thresh,
-      showSelected=c("pred.diff", "roc.point"))+
-    geom_segment(aes(
-      min.log.lambda, value,
-      xend=max.log.lambda, yend=value,
-      color=variable, size=variable),
-      data=some.err.tall)+
-    geom_segment(aes(
-      positive, -Inf,
-      xend=negative, yend=-Inf),
-      data=pred.tall.thresh.wide,
-      showSelected=c("pred.diff", "roc.point"))+
-    geom_text(aes(
-      negative-0.1, -0.3,
-      label=sprintf("pred.diff=%.2f", pred.diff)),
-      hjust=1,
-      data=pred.tall.thresh.wide,
-      showSelected=c("pred.diff", "roc.point"))+
-    scale_y_continuous(
-      "Label errors",
-      breaks=c(0,1),
-      limits=c(-0.4, 1.4))+
-    scale_color_manual(leg,values=err.colors)+
-    scale_size_manual(leg,values=err.sizes)+
-    scale_x_continuous(
-      "Predicted value f(x)")
+      data=show.roc.dt)
 )
-
+##animint2gist(viz)
