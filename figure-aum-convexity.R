@@ -147,7 +147,7 @@ gg <- ggplot()+
     x, y),
     data=data.table(x=0, y=c(-0.4,1.4)))+
   scale_x_continuous(
-    "Threshold added to predicted values")
+    "Constant added to predicted values")
 png("figure-aum-convexity-thresholds.png", 5, 3.5, units="in", res=200)
 print(gg)
 dev.off()
@@ -181,10 +181,31 @@ gg.emph <- gg+
   theme_bw()+
   geom_vline(aes(
     xintercept=pred.diff),
-    color="grey",
+    color="grey50",
     data=data.table(pred.diff=pred.diff.vec))
 png("figure-aum-convexity-emph.png", 5, 3, units="in", res=200)
 print(gg.emph)
+dev.off()
+
+metrics.no.SM <- metrics.tall[variable != "SM"]
+gg.no.SM <- ggplot()+
+  theme(panel.spacing=grid::unit(1, "lines"))+
+  theme(text=element_text(size = 15))+
+  theme(legend.position="bottom")+
+  facet_grid(variable ~ ., scales="free")+
+  scale_fill_manual(values=c(
+    "TRUE"="black",
+    "FALSE"="orange"))+
+  geom_point(aes(
+    pred.diff, value, fill=differentiable),
+    size=1,
+    shape=21,
+    data=metrics.no.SM[order(-differentiable)])+
+  xlab("Prediction difference, f(negative) - f(positive)")+
+  coord_cartesian(xlim=c(4,7))+
+  scale_y_continuous("", breaks=seq(0, 3, by=1))
+png("figure-aum-convexity-no-SM.png", 4.2, 3, units="in", res=200)
+print(gg.no.SM)
 dev.off()
 
 png("figure-aum-convexity.png", 4.2, 3, units="in", res=200)
