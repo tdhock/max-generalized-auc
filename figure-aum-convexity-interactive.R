@@ -65,23 +65,20 @@ some.diff <- some.err[fp.diff != 0 | fn.diff != 0, .(
 some.diff[, fp.cum := cumsum(fp.diff), by=label]
 some.diff[, fn.cum := rev(cumsum(rev(-fn.diff))), by=label]
 dlist <- split(some.diff, some.diff[["label"]])
-grid.dt <- with(dlist, positive[negative, on="id", allow.cartesian=TRUE])
-grid.dt[, negative := i.pred.log.lambda]
-grid.dt[, positive := pred.log.lambda]
-grid.dt[, pred.diff := negative - positive]
-grid.sorted <- grid.dt[order(pred.diff), .(
-  pred.diff, fn=fn.cum, fp=i.fp.cum)]
-grid.sorted[, min.fp.fn := pmin(fp,fn)]
-border.pred <- grid.dt[
-  dmin < pred.diff & pred.diff < dmax]
+border.pred <- with(dlist, positive[
+  negative,
+  data.table(
+    differentiable=FALSE,
+    positive=pred.log.lambda,
+    negative=i.pred.log.lambda),
+  on="id",
+  allow.cartesian=TRUE])
 grid.pred <- data.table(
-  pred.diff=seq(dmin, dmax, by=0.05))
-grid.pred[, positive := 0]
-grid.pred[, negative := pred.diff]
-both.pred <- rbind(
-  border.pred[, .(positive, negative, pred.diff, differentiable=FALSE)],
-  grid.pred[, .(positive, negative, pred.diff, differentiable=TRUE)])
-##positive=0, negative=pred.diff.
+  differentiable=TRUE,
+  positive=0,
+  negative=seq(dmin, dmax, by=0.05))
+both.pred <- rbind(border.pred, grid.pred)
+both.pred[, pred.diff := negative-positive]
 pred.tall <- melt(
   both.pred,
   measure.vars=select.dt$label,
@@ -89,12 +86,18 @@ pred.tall <- melt(
   value.name="pred.log.lambda")[select.dt, nomatch=0L, on="label"]
 metrics.wide <- pred.tall[order(pred.diff)][, {
   L <- penaltyLearning::ROChange(some.err, .SD, "label")
+  positive <- pred.log.lambda[label=="positive"]
   with(L, data.table(
     aum, auc,
-    SM=L$roc[min.thresh < max.thresh, sum(min.fp.fn)],
-    roc=list(roc)))
+    SM=roc[min.thresh < max.thresh, sum(min.fp.fn)],
+    roc=list(roc[, `:=`(
+      min.thresh=min.thresh+positive,
+      max.thresh=max.thresh+positive
+    )])
+  ))
 }, by=list(pred.diff, differentiable)]
 metrics.wide[auc==max(auc)] #max auc => aum>0.
+metrics.wide[14:15, roc ]
 
 show.roc.dt <- metrics.wide[, data.table(
   roc[[1]],
@@ -127,7 +130,16 @@ show.roc.dt[, text.roc.i := rank(roc.point), by=.(pred.diff, FPR, TPR)]
 show.roc.dt[, text.FPR := text.roc.i*0.04+FPR]
 text.size <- 15
 text.color <- "blue"
-pred.tall.thresh <- pred.tall[
+both.pred.adj <- melt(both.pred[, .(
+  differentiable,
+  positive=0,
+  negative=pred.diff,
+  pred.diff
+)],
+measure.vars=select.dt$label,
+variable.name = "label",
+value.name="pred.log.lambda")
+pred.tall.thresh <- both.pred.adj[
   show.roc.dt, on="pred.diff", allow.cartesian=TRUE]
 pred.tall.thresh[, pred.plus.constant := pred.log.lambda+text.constant]
 pred.tall.thresh.wide <- dcast(
@@ -204,7 +216,7 @@ viz <- animint(
       color=error.type),
       data=selected.err,
       showSelected=c("pred.diff", "roc.point"),
-      size=3,
+      size=5,
       fill="transparent")+
     geom_segment(aes(
       start.pos/1e6, mean,
@@ -346,6 +358,9 @@ viz <- animint(
       color=text.color,
       showSelected="pred.diff",
       clickSelects="roc.point",
-      data=show.roc.dt)
+      data=show.roc.dt),
+  time=list(
+    variable="pred.diff",
+    ms=500)
 )
 ##animint2gist(viz)
