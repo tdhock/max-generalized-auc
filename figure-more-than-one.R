@@ -20,13 +20,13 @@ profile.list <- list(
     d(2, 1, 1),
     d(4, 10, 0)),
   more=profile(
-    d(-Inf, 0, 30),
-    d(2, 8, 8),
-    d(5, 30, 8),
-    d(7, 30, 25),
-    d(8, 5, 25),
-    d(9, 5, 8),
-    d(10, 30, 0)))
+    d(-Inf, 0, 10),
+    d(2, 8/3, 8/3),
+    d(5, 10, 8/3),
+    d(7, 10, 25/3),
+    d(8, 5/3, 25/3),
+    d(9, 5/3, 8/3),
+    d(10, 10, 0)))
 pred.dt <- data.table(problem=1, pred.log.lambda=0)
 roc.dt.list <- list()
 auc.dt.list <- list()
@@ -251,7 +251,7 @@ for(m in names(profile.list)){
       fill="grey",
       data=p.rect)+
     geom_text(aes(
-      6, 4, label=sprintf("AUM=%.0f", aum)),
+      6, 1.5, label=sprintf("AUM=%.0f", aum)),
       data=p.auc)+
     geom_segment(aes(
       min.thresh, value,
@@ -262,7 +262,7 @@ for(m in names(profile.list)){
       ifelse(
         min.thresh == -Inf, max.thresh-1, ifelse(
           max.thresh == Inf, min.thresh+1, (min.thresh+max.thresh)/2)),
-      ifelse(q %% 2, -5, -2.5),
+      ifelse(q %% 2, -2, -1),
       label=sprintf("q=%d",q)),
       vjust=-0.5,
       size=3,
@@ -273,35 +273,44 @@ for(m in names(profile.list)){
       "Constant $c$ added to predicted values",
       breaks=seq(0, 12, by=2),
       limits=limits.vec)+
-    geom_text(aes(
-      thresh, 15,
-      vjust=fcase(
-        thresh %in% c(7,Inf), -0.5,
-        default=1.2),
-      label=sprintf(
-        "$\\tau(\\mathbf{\\hat{y}})_{%d}=%s$",
-        q, ifelse(
-          is.finite(thresh),
-          paste(thresh),
-          paste(
-            ifelse(thresh<0, "-", ""),
-            "\\infty"))
-      )),
-      angle=90,
-      data=p.roc[, data.table(
-        q=c(0, .I),
-        thresh=c(-Inf, max.thresh))])+
     scale_y_continuous(
       "Total label errors over all
 $n$ labeled training examples",
-      limits=c(NA, 31))
-  g.list <- list(auc=g, aum=g.aum)
+breaks=seq(0, 10, by=2),
+limits=c(NA, 11))
+  g.list <- list(
+    auc=g,
+    "aum-nomath"=g.aum,
+    aum=g.aum+
+      geom_text(aes(
+        thresh, 5.5,
+        vjust=fcase(
+          thresh %in% c(7,Inf), -0.5,
+          default=1.2),
+        label=sprintf(
+          "$\\tau(\\mathbf{\\hat{y}})_{%d}=%s$",
+          q, ifelse(
+            is.finite(thresh),
+            paste(thresh),
+            paste(
+              ifelse(thresh<0, "-", ""),
+              "\\infty"))
+        )),
+        angle=90,
+        data=p.roc[, data.table(
+          q=c(0, .I),
+          thresh=c(-Inf, max.thresh))])
+  )
   for(plot.type in names(g.list)){
     f.tex <- sprintf(
       "figure-more-than-one-%s-%s.tex",
       m, plot.type)
     s <- 0.8
-    tikz(f.tex, width=if(plot.type=="aum")5*s else 3*s, height=3*s, standAlone = TRUE)
+    tikz(
+      f.tex,
+      width=if(plot.type!="auc")5*s else 3*s,
+      height=3*s,
+      standAlone = TRUE)
     print(g.list[[plot.type]])
     dev.off()
     system(paste("pdflatex", f.tex))

@@ -47,6 +47,7 @@
   joint work with my student Jonathan Hillman\\
   Machine Learning Research Lab --- \url{http://ml.nau.edu}\\
   \includegraphics[height=3.5cm]{2021-03-lab-ski-lunch} \\
+  Sign up for my CS570 (Deep Learning) in Spring 2022!\\
   Come to SICCS! Graduate Research Assistantships available!
 }
 
@@ -59,10 +60,9 @@
 \begin{frame}
   \frametitle{Problem: unsupervised changepoint detection}
   \begin{itemize}
-  \item We are given a data sequence $z_1,\dots,z_T$ measured at $T$
-    points over time/space.
+  \item Data sequence $z_1,\dots,z_T$ at $T$ points over time/space.
   \item Ex: DNA copy number data for cancer diagnosis, $z_t\in\mathbb R$.
-  \item The penalized changepoint problem is
+  \item The penalized changepoint problem (Maidstone \emph{et al.} 2017)
 $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{t=2}^T I[u_{t-1} \neq u_t].$$
   \end{itemize}
 
@@ -109,13 +109,13 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 
 \begin{frame}
   \frametitle{Receiver Operating Characteristic (ROC) curve}
-
+Classic evaluation method from the signal processing literature (Egan and
+    Egan, 1975). 
   \begin{itemize}
   \item Binary classification algo gives predictions
     $[\hat y_1,\hat y_2,\hat y_3,\hat y_4]$.
-  \item Each point on the ROC curve is the FPR/TPR if you add some
-  constant $c$ to the predictions,
-  $[\hat y_1+c,\hat y_2+c,\hat y_3+c,\hat y_4+c]$.
+  \item Each point on the ROC curve is the FPR/TPR if you add $c$ to
+    the predictions, $[\hat y_1+c,\hat y_2+c,\hat y_3+c,\hat y_4+c]$.
   \item Best point in ROC space is upper left (0\% FPR, 100\% TPR).
   \item Maximizing Area Under the ROC curve (AUC) is a common
     objective for binary classification, especially for imbalanced
@@ -139,8 +139,8 @@ In binary classification, ROC curve is monotonic increasing.
   \frametitle{Area Under ROC curve, synthetic example}
 
 \begin{itemize}
-  \item label = [1,0,0,...,1,1,0] (20 labels, 10 positive, 10 negative).
-  \item predictions = [-4, -4, -4, ..., -2, -2, -2].
+  \item Labels = [1,0,0,...,1,1,0] (20 labels, 10 positive, 10 negative).
+  \item Predictions = [-4, -4, -4, ..., -2, -2, -2].
   \item No constant added $c=0$, $q=1$, everything predicted negative,
     so no false positives, but no true positives.
 % > WeightedROC::WeightedAUC(WeightedROC::WeightedROC(c(-8,-8,-5,-5), c(1,0,1,0), c(1,9,9,1)))
@@ -150,28 +150,49 @@ In binary classification, ROC curve is monotonic increasing.
 \item  Add $c=5 \Rightarrow$ [1, 1, 1, ..., 3, 3, 3], all FP and TP, $q=3$.
   \end{itemize}
 
-  \includegraphics[height=1.5in]{figure-more-than-one-less-aum}
+  \includegraphics[height=1.5in]{figure-more-than-one-less-aum-nomath}
   \includegraphics[height=1.5in]{figure-more-than-one-less-auc}
 
 \end{frame}
 
+\begin{frame}
+  \frametitle{Real data example when ROC curves are useful}
+
+  Data from collaboration with SICCS professor Patrick Jantz, about
+  predicting presence/absence of trees in different locations.
+  
+  \begin{itemize}
+  \item glmnet: L1-regularized linear model.
+  \item major.class: featureless baseline (ignores inputs, always
+    predicts most frequent class label in train set)
+  \item xgboost: gradient boosted decision trees.
+  \item Which algorithm is the most accurate?
+  \end{itemize}
+   
+  \includegraphics[width=\textwidth]{figure-batchtools-expired-earth-metrics-default-Sugar-Maple.png}
+
+  \url{https://bl.ocks.org/tdhock/raw/172d0f68a51a8de5d6f1bed7f23f5f82/}
+  
+\end{frame}
 
 \section{Proposed algorithm}
 
 \begin{frame}
   \frametitle{Looping ROC curve, simple synthetic example}
 
-If ROC curve has loops, AUC can be greater than one.
+If ROC curve has loops, AUC can be greater than one, but with some
+very sub-optimal points (large min error, for example q=4).
 
   \begin{itemize}
   \item Dark grey area double counted.
   \item Red area negative counted.
   \item Do we want to maximize AUC?
-  \item Minimize Area Under Min (AUM) instead, which encourages ROC
-    points in upper left.
+  \item Minimize Area Under Min (AUM) instead, which encourages
+    monotonic ROC curve with points in upper left (small min error,
+    for example q=1,6,7).
   \end{itemize}
-
-  \includegraphics[height=1.5in]{figure-more-than-one-more-aum}
+ 
+  \includegraphics[height=1.5in]{figure-more-than-one-more-aum-nomath}
   \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
 
 \end{frame}
@@ -193,15 +214,6 @@ If ROC curve has loops, AUC can be greater than one.
 \end{frame}
 
 \begin{frame}
-  \frametitle{Real data example, interactive AUC/AUM demo}
-
-  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive}
-
-  \url{http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b/} 
-
-\end{frame}
-
-\begin{frame}
   \frametitle{Real data example with AUC greater than one}
 
   \includegraphics[height=1.3in]{figure-aum-convexity-profiles}
@@ -216,6 +228,15 @@ If ROC curve has loops, AUC can be greater than one.
   \item Main new idea: compute the gradient of this function and use
     it for learning.
   \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Real data example, interactive AUC/AUM demo}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive}
+
+  \url{http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b/} 
 
 \end{frame}
 
@@ -266,7 +287,7 @@ If ROC curve has loops, AUC can be greater than one.
 
   \begin{itemize}
   \item Gradient only defined when function is differentiable, but AUM
-    is not everywhere (see below).
+    is not differentiable everywhere (see below).
   \item Directional derivatives defined everywhere.
   \end{itemize}
 % \begin{theorem}
@@ -307,7 +328,8 @@ If ROC curve has loops, AUC can be greater than one.
 \section{Empirical results}
 
 \begin{frame}
-  \frametitle{Train set ROC curves for a real changepoint problem}
+  \frametitle{AUM gradient descent results in increased train AUC for
+    a real changepoint problem}
 
 \includegraphics[height=3.7cm]{figure-aum-optimized-iterations.png}
 \includegraphics[height=3.7cm]{figure-aum-train-both.png}
@@ -316,7 +338,8 @@ If ROC curve has loops, AUC can be greater than one.
 \item Left/middle: changepoint problem initialized to prediction vector with
   min label errors, gradient descent on prediction vector.
 \item Right: linear model initialized by minimizing regularized convex
-  loss (surrogate for label error), gradient descent on weight vector.
+  loss (surrogate for label error, Hocking \emph{et al.} ICML 2013),
+  gradient descent on weight vector.
 \end{itemize}
 
 \end{frame}
@@ -331,8 +354,9 @@ If ROC curve has loops, AUC can be greater than one.
 \item Five changepoint problems (panels from left to right).
 \item Two evaluation metrics (AUM=top, AUC=bottom).
 \item Three algorithms (Y axis), Initial=Min regularized convex loss
-  (surrogate for label error), Min.Valid.AUM/Min.Valid.AUC=AUM
+  (surrogate for label error, Hocking \emph{et al.} ICML 2013), Min.Valid.AUM/Max.Valid.AUC=AUM
   gradient descent with early stopping regularization.
+\item Four points = Four random initializations.
 \end{itemize}
 
 \end{frame}
@@ -343,11 +367,11 @@ If ROC curve has loops, AUC can be greater than one.
  \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc-logistic.png}
 
  \begin{itemize}
- \item Test set has 50\% positive, 50\% negative labels.
- \item Train set has variable class imbalance (panels top to
-   bottom).
+ \item Subset of zip.train/zip.test data (only 0/1 labels).
+ \item Test set size 528 with balanced labels (50\%/50\%).
+ \item Train set size 1000 with variable class imbalance.
  \item Loss is $\ell[f(x_i), y_i]w_i$ with $w_i=1$ for identity
-   weights, $w_i=1/N_{y_i}$ for balanced, ex: 1\% position means
+   weights, $w_i=1/N_{y_i}$ for balanced, ex: 1\% positive means
    $w_i\in\{1/10,1/990\}$.
  \end{itemize}
 
@@ -360,7 +384,7 @@ If ROC curve has loops, AUC can be greater than one.
 
  \begin{itemize}
  \item Squared hinge all pairs is a classic/popular surrogate loss function
-   for AUC optimization.
+   for AUC optimization. (Yan \emph{et al.} ICML 2003)
  \item All linear models with early stopping regularization.
  \end{itemize}
 
@@ -387,10 +411,10 @@ If ROC curve has loops, AUC can be greater than one.
 \includegraphics[width=\textwidth]{figure-aum-grad-speed-both.png}
 
 \begin{itemize}
-\item Logistic $O(n)$.
-\item AUM $O(n\log n)$.
-\item Squared Hinge All Pairs $O(n^2)$.
-\item Squared Hinge Each Example $O(n)$.
+\item Logistic $O(n)$. 
+\item AUM $O(n\log n)$. (proposed)
+\item Squared Hinge All Pairs $O(n^2)$. (Yan \emph{et al.} ICML 2003)
+\item Squared Hinge Each Example $O(n)$. (Hocking \emph{et al.} ICML 2013)
 \end{itemize}
   
 \end{frame}
@@ -416,7 +440,7 @@ If ROC curve has loops, AUC can be greater than one.
 \end{frame}
 
 \begin{frame}
-  \frametitle{Thanks!}
+  \frametitle{Thanks to co-author Jonathan Hillman! (second from left)}
 
   \includegraphics[height=3in]{2021-03-lab-ski-lunch} 
 

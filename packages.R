@@ -64,7 +64,7 @@ works_with_R(
   future.apply="1.7.0",
   RJSONIO="1.3.1.4",
   R.utils="2.10.1",
-  "tdhock/penaltyLearning@4e14a0b0e022d919884277d68b8e47bd158459f3",
+  "tdhock/penaltyLearning@558be4c28702396e37477d7fc01bad17d456fd82",
   "tdhock/directlabels@5f8ba1ae60c2a87b96d09a6f9ccaadd6f3859c57",
   "tdhock/aum@ef6c5b851345bc67808f1ceee25b2ac74a03b07b",
   jointseg="1.0.2",
