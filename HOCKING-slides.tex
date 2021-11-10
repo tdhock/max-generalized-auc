@@ -178,15 +178,26 @@ In binary classification, ROC curve is monotonic increasing.
 \section{Proposed algorithm}
 
 \begin{frame}
+  \frametitle{Real changepoint problem with non-monotonic label error}
+
+  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic}
+  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error-standAlone}
+
+  Optimal changepoint model may have non-monotonic error (for example
+  FN), because changepoints at model size $s$ may not be present in
+  model $s+1$.
+
+\end{frame}
+
+\begin{frame}
   \frametitle{Looping ROC curve, simple synthetic example}
 
-If ROC curve has loops, AUC can be greater than one, but with some
-very sub-optimal points (large min error, for example q=4).
-
   \begin{itemize}
-  \item Dark grey area double counted.
-  \item Red area negative counted.
-  \item Do we want to maximize AUC?
+  \item Non-monotonic FP/FN can result in looping ROC curve.
+  \item AUC can be greater than one (dark grey area double counted,
+    red area negative counted).
+  \item Loops have very sub-optimal points (large min error, for
+    example q=4), so do we want to maximize AUC?
   \item Minimize Area Under Min (AUM) instead, which encourages
     monotonic ROC curve with points in upper left (small min error,
     for example q=1,6,7).
@@ -194,22 +205,6 @@ very sub-optimal points (large min error, for example q=4).
  
   \includegraphics[height=1.5in]{figure-more-than-one-more-aum-nomath}
   \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Real data example with non-monotonic label error}
-
-  ROC curve loops result from non-monotonic FP/FN functions, but do
-  these occur in real data? Yes, in supervised changepoint
-  problems.
-  
-  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic}
-  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error-standAlone}
-
-  Optimal changepoint model may have non-monotonic error (for example
-  FN), because changepoints at model size $s$ may not be present in
-  model $s+1$.
 
 \end{frame}
 
@@ -223,7 +218,7 @@ very sub-optimal points (large min error, for example q=4).
   \item $n=2$ labeled changepoint problems.
   \item AUC=2 when prediction difference=5.
   \item AUM=0 implies AUC=1.
-  \item AUM is convex relaxation of non-convex Sum of Min (SM).
+  \item AUM is smooth relaxation of non-convex Sum of Min (SM).
   \item AUM is differentiable almost everywhere.
   \item Main new idea: compute the gradient of this function and use
     it for learning.
@@ -320,7 +315,9 @@ very sub-optimal points (large min error, for example q=4).
      \}.
 \end{eqnarray*}  
 
-  \includegraphics[height=1.6in]{figure-aum-convexity}
+\parbox{2in}{ \includegraphics[width=2in]{figure-aum-convexity} }
+\parbox{2in}{ Proposed learning algo uses mean of these two
+  directional derivatives as ``gradient.''  }
 
 \end{frame}
 
