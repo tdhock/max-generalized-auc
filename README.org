@@ -21,11 +21,29 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 
 ** Interactive figures
 
-- [[http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b/][Aligning two error curves, AUC/AUM demo (DNA copy number data)]].
+[[file:figure-aum-convexity-interactive.png]] 
+
+Interactive version:
+[[http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b]] 
+
+Source:
+[[file:figure-aum-convexity-interactive.R]] 
+
+
 - [[http://ml.nau.edu/viz/2019-08-19-curveAlignment-aub-deriv/][Aligning two error curves (peak detection)]].
 - [[http://ml.nau.edu/viz/2021-10-21-neuroblastomaProcessed-complex/][8 error curves with 2 different alignments]].
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
+
+** 12 Nov 2021
+
+[[file:figure-aum-convexity-interactive.R]] makes interactive figure
+
+[[file:figure-aum-convexity-interactive.png]]
+
+Interactive versions:
+- 7 Nov 2021, continuity in pred.diff interaction http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b
+- 6 Nov 2021, no continuity in pred.diff interaction http://bl.ocks.org/tdhock/raw/de3979318d5255dd6e21ff907e2f3fb4
 
 ** 3 Nov 2021
 
