@@ -218,7 +218,7 @@ In binary classification, ROC curve is monotonic increasing.
   \item $n=2$ labeled changepoint problems.
   \item AUC=2 when prediction difference=5.
   \item AUM=0 implies AUC=1.
-  \item AUM is smooth relaxation of non-convex Sum of Min (SM).
+  \item AUM is continuous L1 relaxation of non-convex Sum of Min (SM).
   \item AUM is differentiable almost everywhere.
   \item Main new idea: compute the gradient of this function and use
     it for learning.
@@ -497,7 +497,7 @@ Our proposed loss function is
     m(\mathbf {\hat y})_q.
 \end{equation*}
 
-It is an L1 relaxation of the following non-convex \textbf{S}um of \textbf{M}in(FP,FN) function, 
+It is a continuous L1 relaxation of the following non-convex \textbf{S}um of \textbf{M}in(FP,FN) function, 
 \begin{equation*}
 \label{eq:SM-computation}
     \text{SM}(\mathbf {\hat y}) =
