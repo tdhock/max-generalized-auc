@@ -1,4 +1,4 @@
-** Figures from arXiv:2107.01285
+** Figures from [[https://arxiv.org/abs/2107.01285][arXiv:2107.01285]]
 
 Before running some of the scripts you will need to clone the data
 repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
