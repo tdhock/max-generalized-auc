@@ -47,9 +47,7 @@ superior accuracy.
 
 [[file:figure-sonar-comparisons.R]] reads that and makes
 
-TODO figure showing test AUC.
-
-TODO figure showing validation AUC.
+[[file:figure-sonar-comparisons.png]]
 
 ** 12 Nov 2021
 

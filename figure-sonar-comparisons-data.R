@@ -1,23 +1,22 @@
-library(data.table)
-data(package="mlbench")
-data(Sonar, package="mlbench")
-data(DNA, package="mlbench")
-data.list <- list(
-  Sonar=list(
-    input.mat=as.matrix(Sonar[,1:60]),
-    output.vec=ifelse(Sonar$Class=="R", 1, -1)),
-  DNA=list(
-    input.mat=ifelse(as.matrix(DNA[,1:180])==0, 0, 1),
-    output.vec=ifelse(DNA$Class=="n", -1, 1)))
-data.name <- "Sonar"
-input.output.list <- data.list[[data.name]]
-input.mat <- input.output.list[["input.mat"]]
-full.input.mat <- scale(input.mat)
-full.output.vec <- input.output.list[["output.vec"]]
-stopifnot(full.output.vec %in% c(-1, 1))
-unique.sets <- c("subtrain", "validation", "test")
-
 OneSeed <- function(seed){
+  library(data.table)
+  data(package="mlbench")
+  data(Sonar, package="mlbench")
+  data(DNA, package="mlbench")
+  data.list <- list(
+    Sonar=list(
+      input.mat=as.matrix(Sonar[,1:60]),
+      output.vec=ifelse(Sonar$Class=="R", 1, -1)),
+    DNA=list(
+      input.mat=ifelse(as.matrix(DNA[,1:180])==0, 0, 1),
+      output.vec=ifelse(DNA$Class=="n", -1, 1)))
+  data.name <- "Sonar"
+  input.output.list <- data.list[[data.name]]
+  input.mat <- input.output.list[["input.mat"]]
+  full.input.mat <- scale(input.mat)
+  full.output.vec <- input.output.list[["output.vec"]]
+  stopifnot(full.output.vec %in% c(-1, 1))
+  unique.sets <- c("subtrain", "validation", "test")
   PairsDT <- function(output.vec){
     is.positive <- output.vec == 1
     data.table(expand.grid(
@@ -143,9 +142,13 @@ OneSeed <- function(seed){
               loss.value=set.loss$loss)
             for(aum.type in c("count", "rate")){
               diff.name <- paste0("diff.", aum.type, ".dt")
-              aum.list <- aum::aum(set.data[[diff.name]], set.loss[["pred"]])
-              out.col <- paste0("aum.", aum.type)
-              out.dt[[out.col]] <- aum.list[["aum"]]
+              out.dt[[out.col]] <- if(all(is.finite(set.loss[["pred"]]))){
+                aum.list <- aum::aum(set.data[[diff.name]], set.loss[["pred"]])
+                out.col <- paste0("aum.", aum.type)
+                aum.list[["aum"]]
+              }else{
+                NA
+              }
             }
             seed.dt.list[[paste(
               seed,
@@ -166,6 +169,7 @@ OneSeed <- function(seed){
 }
 
 LAPPLY <- future.apply::future_lapply
+LAPPLY <- lapply
 future::plan("multisession")
 out.loss.list <- LAPPLY(1:10, OneSeed)
 out.loss <- do.call(rbind, out.loss.list)

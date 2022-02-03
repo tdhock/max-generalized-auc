@@ -13,6 +13,17 @@ show.loss <- out.loss[set.name != "test"][
 
 ggplot(,aes(
   iteration, auc, color=set.name))+
+  geom_line(aes(
+    group=paste(step.size, set.name)),
+    data=out.loss)+
+  facet_grid(
+    seed ~ loss.name,
+    labeller="label_both",
+    scales='free',
+    space='fixed')
+
+ggplot(,aes(
+  iteration, auc, color=set.name))+
   geom_line(
     data=show.loss)+
   geom_point(
@@ -35,9 +46,11 @@ ggplot()+
 
 test.selected.stats <- test.selected[, .(
   median=median(auc),
+  mean=mean(auc),
+  sd=sd(auc),
   q25=quantile(auc, 0.25),
   q75=quantile(auc, 0.75)
-), by=.(loss.name)][order(median)]
+), by=.(loss.name)][order(mean)]
 levs <- test.selected.stats$loss.name
 test.selected.stats[, Loss := factor(loss.name, levs)]
 test.selected[, Loss := factor(loss.name, levs)]
@@ -78,16 +91,26 @@ ggplot()+
   coord_equal()+
   facet_grid(. ~ other.loss.name)
 
+test.dt[, Loss := factor(other.loss.name, levs)]
+text.x <- Inf
+text.size <- 3
+text.hjust <- 1
 gg <- ggplot()+
   geom_segment(aes(
-    q25, Loss,
-    xend=q75, yend=loss.name),
+    mean-sd, Loss,
+    xend=mean+sd, yend=Loss),
     data=test.selected.stats)+
   geom_point(aes(
-    median, Loss),
+    mean, Loss),
     data=test.selected.stats)+
+  geom_text(aes(
+    text.x, Loss, label=sprintf("Diff=%.1f, p=%.3f", statistic, p.value)),
+    vjust=-0.2,
+    size=text.size,
+    hjust=text.hjust,
+    data=test.dt)+
   scale_x_continuous(
     "Test AUC")
-png("figure-sonar-comparisons.png", width=4, height=1.3, res=200, units="in")
+png("figure-sonar-comparisons.png", width=4, height=1.5, res=200, units="in")
 print(gg)
 dev.off()
