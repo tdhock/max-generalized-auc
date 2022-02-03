@@ -35,6 +35,22 @@ Source:
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 3 Feb 2022
+Figure below from [[https://github.com/tdhock/aum/blob/main/vignettes/accuracy-comparison.Rmd][aum package accuracy comparison vignette]] suggests
+that experiments on sonar data could provide convincing evidence of
+superior accuracy.
+
+[[file:figure-from-vignette.png]]
+
+[[file:figure-sonar-comparisons-data.R]] makes
+[[file:figure-sonar-comparisons.csv]]
+
+[[file:figure-sonar-comparisons.R]] reads that and makes
+
+TODO figure showing test AUC.
+
+TODO figure showing validation AUC.
+
 ** 12 Nov 2021
 
 [[file:figure-aum-convexity-interactive.R]] makes interactive figure
