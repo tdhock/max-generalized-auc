@@ -49,6 +49,8 @@ superior accuracy.
 
 [[file:figure-sonar-comparisons.png]]
 
+[[file:figure-sonar-comparisons-iterations.png]]
+
 ** 12 Nov 2021
 
 [[file:figure-aum-convexity-interactive.R]] makes interactive figure

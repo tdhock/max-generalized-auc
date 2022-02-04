@@ -142,9 +142,10 @@ OneSeed <- function(seed){
               loss.value=set.loss$loss)
             for(aum.type in c("count", "rate")){
               diff.name <- paste0("diff.", aum.type, ".dt")
-              out.dt[[out.col]] <- if(all(is.finite(set.loss[["pred"]]))){
+              out.dt[[paste0("aum.", aum.type)]] <- if(
+                all(is.finite(set.loss[["pred"]]))
+              ){
                 aum.list <- aum::aum(set.data[[diff.name]], set.loss[["pred"]])
-                out.col <- paste0("aum.", aum.type)
                 aum.list[["aum"]]
               }else{
                 NA

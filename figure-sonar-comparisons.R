@@ -11,7 +11,8 @@ show.loss <- out.loss[set.name != "test"][
   on=.(seed, loss.name, step.size)
 ]
 
-ggplot(,aes(
+## lots of data.
+gg <- ggplot(,aes(
   iteration, auc, color=set.name))+
   geom_line(aes(
     group=paste(step.size, set.name)),
@@ -34,6 +35,71 @@ ggplot(,aes(
     labeller="label_both",
     scales='free',
     space='fixed')
+
+one.seed <- 6
+point.dt <- max.valid.auc[seed==one.seed]
+line.dt <- show.loss[seed==one.seed & iteration<200]
+gg <- ggplot(,aes(
+  iteration, auc, color=loss.name))+
+  facet_grid(
+    set.name ~ .,
+    labeller="label_both",
+    scales='free',
+    space='fixed')+
+  geom_point(
+    shape=1,
+    data=point.dt)+
+  geom_line(
+    size=1,
+    data=line.dt)
+directlabels::direct.label(gg, "top.polygons")
+
+dl.dt <- rbind(
+  point.dt,
+  line.dt[, .SD[
+    which.max(iteration)
+  ], by=loss.name][, names(point.dt),with=FALSE])
+ggplot(,aes(
+  iteration, auc, color=loss.name))+
+  directlabels::geom_dl(aes(
+    label=loss.name),
+    method=list("top.polygons",directlabels::dl.trans(y=y+0.1)),
+    data=dl.dt)+
+  facet_grid(
+    . ~ set.name,
+    labeller="label_both",
+    scales='free',
+    space='fixed')+
+  geom_point(
+    shape=1,
+    data=point.dt)+
+  geom_line(
+    size=1,
+    data=line.dt)
+
+gg <- ggplot(,aes(
+  iteration, auc, color=loss.name))+
+  geom_point(
+    shape=1,
+    size=4,
+    data=point.dt)+
+  geom_line(aes(
+    linetype=set.name),
+    size=1,
+    data=line.dt)+
+  directlabels::geom_dl(aes(
+    y=auc+0.01,
+    label=loss.name),
+    method=list("top.polygons"),
+    data=point.dt)+
+  scale_linetype_manual(values=c(
+    subtrain="dashed",
+    validation="solid"))
+png(
+  "figure-sonar-comparisons-iterations.png",
+  width=4, height=1.5, res=200, units="in")
+print(gg)
+dev.off()
 
 test.loss <- out.loss[set.name=="test"]
 test.selected <- test.loss[
@@ -104,7 +170,7 @@ gg <- ggplot()+
     mean, Loss),
     data=test.selected.stats)+
   geom_text(aes(
-    text.x, Loss, label=sprintf("Diff=%.1f, p=%.3f", statistic, p.value)),
+    text.x, Loss, label=sprintf("Diff=%.1f p=%.3f", statistic, p.value)),
     vjust=-0.2,
     size=text.size,
     hjust=text.hjust,
