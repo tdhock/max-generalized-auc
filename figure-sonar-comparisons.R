@@ -80,24 +80,25 @@ ggplot(,aes(
 gg <- ggplot(,aes(
   iteration, auc, color=loss.name))+
   geom_point(
-    shape=1,
-    size=4,
+    shape=21,
+    size=2,
+    fill="black",
     data=point.dt)+
   geom_line(aes(
     linetype=set.name),
-    size=1,
+    size=0.5,
     data=line.dt)+
   directlabels::geom_dl(aes(
     y=auc+0.01,
     label=loss.name),
-    method=list("top.polygons"),
+    method=list(cex=0.5,"top.polygons"),
     data=point.dt)+
   scale_linetype_manual(values=c(
     subtrain="dashed",
     validation="solid"))
 png(
   "figure-sonar-comparisons-iterations.png",
-  width=4, height=1.5, res=200, units="in")
+  width=6, height=4, res=200, units="in")
 print(gg)
 dev.off()
 
