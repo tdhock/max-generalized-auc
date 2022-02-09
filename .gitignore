@@ -1,4 +1,5 @@
 figure-sonar-comparisons-data.csv
+figure-sonar-comparisons-data*.csv
 auto
 *.toc
 *.nav

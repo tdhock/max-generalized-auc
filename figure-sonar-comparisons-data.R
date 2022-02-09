@@ -1,5 +1,7 @@
 OneSeed <- function(seed){
   library(data.table)
+  seed.csv <- sprintf("figure-sonar-comparisons-data-seed%d.csv", seed)
+  append <- FALSE
   data(package="mlbench")
   data(Sonar, package="mlbench")
   data(DNA, package="mlbench")
@@ -95,7 +97,7 @@ OneSeed <- function(seed){
   X.mat <- set.data.list$subtrain$input.mat
   for(loss.name in names(loss.list)){
     loss.grad.fun <- loss.list[[loss.name]]
-    for(step.size in 10^seq(-2,1,by=0.5)){
+    for(step.size in 10^seq(-2,4,by=0.5)){
       cat(sprintf("seed=%d loss=%s step.size=%f\n", seed, loss.name, step.size))
       set.seed(1)
       weight.vec <- last.w <- rnorm(ncol(X.mat))
@@ -123,7 +125,8 @@ OneSeed <- function(seed){
         weight.vec <- loss.after.step[["new.weight"]]
         diff.w <- sum(abs(weight.vec-last.w))
         last.w <- weight.vec
-        diverged <- !is.finite(diff.w)
+        diverged <- (!is.finite(diff.w)) ||
+          any(!is.finite(loss.after.step[["pred"]]))
         if(!diverged){
           for(set.name in names(set.data.list)){
             set.data <- set.data.list[[set.name]]
@@ -151,16 +154,14 @@ OneSeed <- function(seed){
                 NA
               }
             }
-            seed.dt.list[[paste(
-              seed,
-              loss.name,
-              step.size,
-              iteration,
-              set.name
-            )]] <- out.dt
+            data.table::fwrite(
+              out.dt,
+              seed.csv,
+              append=append)
+            append <- TRUE
           }#for(set.name
         }#if(!diverged
-        if(2000 < iteration || diverged || diff.w < 1e-6){
+        if(10000 < iteration || diverged || diff.w < 1e-6){
           done <- TRUE
         }
       }#while(!done
@@ -170,9 +171,7 @@ OneSeed <- function(seed){
 }
 
 LAPPLY <- future.apply::future_lapply
-LAPPLY <- lapply
+##LAPPLY <- lapply
 future::plan("multisession")
 out.loss.list <- LAPPLY(1:10, OneSeed)
-out.loss <- do.call(rbind, out.loss.list)
 
-data.table::fwrite(out.loss, "figure-sonar-comparisons-data.csv")

@@ -1,11 +1,19 @@
 library(ggplot2)
 library(data.table)
-out.loss <- data.table::fread("figure-sonar-comparisons-data.csv")
+out.loss.list <- list()
+for(seed.csv in Sys.glob("figure-sonar-comparisons-data-seed*.csv")){
+  out.loss.list[[seed.csv]] <- data.table::fread(seed.csv)
+}
+out.loss <- do.call(rbind, out.loss.list)
 
 (max.valid.auc <- out.loss[
   set.name=="validation",
   .SD[which.max(auc), .(iteration, auc, set.name, step.size)],
   by=.(seed, loss.name)])
+extremes.selected <- sum(max.valid.auc$step.size %in% range(out.loss$step.size))
+if(0 < extremes.selected){
+  stop("some extreme step sizes selected, should increase grid")
+}
 show.loss <- out.loss[set.name != "test"][
   max.valid.auc[,.(seed,loss.name,step.size)],
   on=.(seed, loss.name, step.size)
@@ -61,10 +69,10 @@ dl.dt <- rbind(
   ], by=loss.name][, names(point.dt),with=FALSE])
 ggplot(,aes(
   iteration, auc, color=loss.name))+
-  directlabels::geom_dl(aes(
-    label=loss.name),
-    method=list("top.polygons",directlabels::dl.trans(y=y+0.1)),
-    data=dl.dt)+
+  ## directlabels::geom_dl(aes(
+  ##   label=loss.name),
+  ##   method=list("top.polygons",directlabels::dl.trans(y=y+0.1)),
+  ##   data=dl.dt)+
   facet_grid(
     . ~ set.name,
     labeller="label_both",
@@ -88,11 +96,11 @@ gg <- ggplot(,aes(
     linetype=set.name),
     size=0.5,
     data=line.dt)+
-  directlabels::geom_dl(aes(
-    y=auc+0.01,
-    label=loss.name),
-    method=list(cex=0.5,"top.polygons"),
-    data=point.dt)+
+  ## directlabels::geom_dl(aes(
+  ##   y=auc+0.01,
+  ##   label=loss.name),
+  ##   method=list(cex=0.5,"top.polygons"),
+  ##   data=point.dt)+
   scale_linetype_manual(values=c(
     subtrain="dashed",
     validation="solid"))
