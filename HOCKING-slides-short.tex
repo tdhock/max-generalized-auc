@@ -53,9 +53,17 @@
 
 \date{}
 
-\maketitle 
+\maketitle
 
 \section{Problem Setting and Related Work}
+
+\begin{frame}
+  \frametitle{ICML'13 paper TODO}
+\end{frame}
+
+\begin{frame}
+  \frametitle{JMLR'20 paper ROC curves TODO}
+\end{frame}
 
 \begin{frame}
   \frametitle{Problem: unsupervised changepoint detection}
@@ -102,80 +110,18 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \item Given pairs of inputs $\mathbf x\in\mathbb R^p$ and outputs
     $y\in\{0,1\}$ can we learn $f(\mathbf x)= y$?
   \item Example: email, $\mathbf x =$bag of words, $y=$spam or not.
-  \item Example: images. Jones {\it et al.} PNAS 2009. \includegraphics[width=2in]{cellprofiler} 
+  \item Example: images. Jones {\it et al.} PNAS 2009.
+    \parbox{2in}{\includegraphics[width=2in]{cellprofiler}}
+    \parbox{1.9in}{Like supervised changepoint detection, we want to
+      minimize error rate = sum of:\\
+      \textbf{False positives:} $f(\mathbf x)=1$ but $y=0$ (predict
+        budding, but cell is not).\\
+      \textbf{False negatives:} $f(\mathbf x)=0$ but $y=1$ (predict not
+        budding but cell is).
+    }
   \end{itemize} 
 
 \end{frame}
-
-\begin{frame}
-  \frametitle{Receiver Operating Characteristic (ROC) curve}
-Classic evaluation method from the signal processing literature (Egan and
-    Egan, 1975). 
-  \begin{itemize}
-  \item Binary classification algo gives predictions
-    $[\hat y_1,\hat y_2,\hat y_3,\hat y_4]$.
-  \item Each point on the ROC curve is the FPR/TPR if you add $c$ to
-    the predictions, $[\hat y_1+c,\hat y_2+c,\hat y_3+c,\hat y_4+c]$.
-  \item Best point in ROC space is upper left (0\% FPR, 100\% TPR).
-  \item Maximizing Area Under the ROC curve (AUC) is a common
-    objective for binary classification, especially for imbalanced
-    data (example: 99\% positive, 1\% negative labels).
-  \end{itemize} 
-  
-  \parbox{1.5in}{
-\includegraphics[width=1.5in]{figure-more-than-one-less-auc}
-}
-\parbox{2.5in}{
-In binary classification, ROC curve is monotonic increasing.
-  \begin{itemize}
-  \item AUC=1 best.
-  \item AUC=0.5 for constant prediction (usually worst).
-  \end{itemize}
-}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Area Under ROC curve, synthetic example}
-
-\begin{itemize}
-  \item Labels = [1,0,0,...,1,1,0] (20 labels, 10 positive, 10 negative).
-  \item Predictions = [-4, -4, -4, ..., -2, -2, -2].
-  \item No constant added $c=0$, $q=1$, everything predicted negative,
-    so no false positives, but no true positives.
-% > WeightedROC::WeightedAUC(WeightedROC::WeightedROC(c(-8,-8,-5,-5), c(1,0,1,0), c(1,9,9,1)))
-% [1] 0.9
-\item Add $c=3 \Rightarrow$ [-1, -1, -1, ..., 1, 1, 1], 1 FP and
-  9 TP, $q=2$.
-\item  Add $c=5 \Rightarrow$ [1, 1, 1, ..., 3, 3, 3], all FP and TP, $q=3$.
-  \end{itemize}
-
-  \includegraphics[height=1.5in]{figure-more-than-one-less-aum-nomath}
-  \includegraphics[height=1.5in]{figure-more-than-one-less-auc}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Real data example when ROC curves are useful}
-
-  Data from collaboration with SICCS professor Patrick Jantz, about
-  predicting presence/absence of trees in different locations.
-  
-  \begin{itemize}
-  \item glmnet: L1-regularized linear model.
-  \item major.class: featureless baseline (ignores inputs, always
-    predicts most frequent class label in train set)
-  \item xgboost: gradient boosted decision trees.
-  \item Which algorithm is the most accurate?
-  \end{itemize}
-   
-  \includegraphics[width=\textwidth]{figure-batchtools-expired-earth-metrics-default-Sugar-Maple.png}
-
-  \url{https://bl.ocks.org/tdhock/raw/172d0f68a51a8de5d6f1bed7f23f5f82/}
-  
-\end{frame}
-
-\section{Proposed algorithm}
 
 \begin{frame}
   \frametitle{Real changepoint problem with non-monotonic label error}
@@ -225,18 +171,6 @@ In binary classification, ROC curve is monotonic increasing.
   \end{itemize}
 
 \end{frame}
-
-\begin{frame}
-  \frametitle{Real data example, interactive AUC/AUM demo}
-
-  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive}
-
-  \url{http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b/} 
-
-\end{frame}
-
-
-
 
 \begin{frame}
   \frametitle{Algorithm inputs: predictions and label error functions}
@@ -359,22 +293,6 @@ In binary classification, ROC curve is monotonic increasing.
 \end{frame}
 
 \begin{frame}
-  \frametitle{Standard logistic loss fails for highly imbalanced labels}
-
- \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc-logistic.png}
-
- \begin{itemize}
- \item Subset of zip.train/zip.test data (only 0/1 labels).
- \item Test set size 528 with balanced labels (50\%/50\%).
- \item Train set size 1000 with variable class imbalance.
- \item Loss is $\ell[f(x_i), y_i]w_i$ with $w_i=1$ for identity
-   weights, $w_i=1/N_{y_i}$ for balanced, ex: 1\% positive means
-   $w_i\in\{1/10,1/990\}$.
- \end{itemize}
-
-\end{frame}
-
-\begin{frame}
   \frametitle{Learning algorithm competitive for unbalanced binary classification}
 
  \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc.png}
@@ -383,21 +301,6 @@ In binary classification, ROC curve is monotonic increasing.
  \item Squared hinge all pairs is a classic/popular surrogate loss function
    for AUC optimization. (Yan \emph{et al.} ICML 2003)
  \item All linear models with early stopping regularization.
- \end{itemize}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Error rate loss is not as useful as error count loss}
-
- \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc-aum.png}
-
- \begin{itemize}
- \item AUM.count is as described previously: error functions used to
-   compute Min(FP,FN) are absolute label counts.
- \item AUM.rate is a variant which uses normalized error functions,
-   Min(FPR,FNR).
- \item Both linear models with early stopping regularization.
  \end{itemize}
 
 \end{frame}
@@ -579,5 +482,115 @@ It is a continuous L1 relaxation of the following non-convex \textbf{S}um of \te
 \end{itemize}
   
 \end{frame}
+
+\begin{frame}
+  \frametitle{Receiver Operating Characteristic (ROC) curve}
+Classic evaluation method from the signal processing literature (Egan and
+    Egan, 1975). 
+  \begin{itemize}
+  \item Binary classification algo gives predictions
+    $[\hat y_1,\hat y_2,\hat y_3,\hat y_4]$.
+  \item Each point on the ROC curve is the FPR/TPR if you add $c$ to
+    the predictions, $[\hat y_1+c,\hat y_2+c,\hat y_3+c,\hat y_4+c]$.
+  \item Best point in ROC space is upper left (0\% FPR, 100\% TPR).
+  \item Maximizing Area Under the ROC curve (AUC) is a common
+    objective for binary classification, especially for imbalanced
+    data (example: 99\% positive, 1\% negative labels).
+  \end{itemize} 
+  
+  \parbox{1.5in}{
+\includegraphics[width=1.5in]{figure-more-than-one-less-auc}
+}
+\parbox{2.5in}{
+In binary classification, ROC curve is monotonic increasing.
+  \begin{itemize}
+  \item AUC=1 best.
+  \item AUC=0.5 for constant prediction (usually worst).
+  \end{itemize}
+}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Area Under ROC curve, synthetic example}
+
+\begin{itemize}
+  \item Labels = [1,0,0,...,1,1,0] (20 labels, 10 positive, 10 negative).
+  \item Predictions = [-4, -4, -4, ..., -2, -2, -2].
+  \item No constant added $c=0$, $q=1$, everything predicted negative,
+    so no false positives, but no true positives.
+% > WeightedROC::WeightedAUC(WeightedROC::WeightedROC(c(-8,-8,-5,-5), c(1,0,1,0), c(1,9,9,1)))
+% [1] 0.9
+\item Add $c=3 \Rightarrow$ [-1, -1, -1, ..., 1, 1, 1], 1 FP and
+  9 TP, $q=2$.
+\item  Add $c=5 \Rightarrow$ [1, 1, 1, ..., 3, 3, 3], all FP and TP, $q=3$.
+  \end{itemize}
+
+  \includegraphics[height=1.5in]{figure-more-than-one-less-aum-nomath}
+  \includegraphics[height=1.5in]{figure-more-than-one-less-auc}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Real data example when ROC curves are useful}
+
+  Data from collaboration with SICCS professor Patrick Jantz, about
+  predicting presence/absence of trees in different locations.
+  
+  \begin{itemize}
+  \item glmnet: L1-regularized linear model.
+  \item major.class: featureless baseline (ignores inputs, always
+    predicts most frequent class label in train set)
+  \item xgboost: gradient boosted decision trees.
+  \item Which algorithm is the most accurate?
+  \end{itemize}
+   
+  \includegraphics[width=\textwidth]{figure-batchtools-expired-earth-metrics-default-Sugar-Maple.png}
+
+  \url{https://bl.ocks.org/tdhock/raw/172d0f68a51a8de5d6f1bed7f23f5f82/}
+  
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Real data example, interactive AUC/AUM demo}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive}
+
+  \url{http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b/} 
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Standard logistic loss fails for highly imbalanced labels}
+
+ \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc-logistic.png}
+
+ \begin{itemize}
+ \item Subset of zip.train/zip.test data (only 0/1 labels).
+ \item Test set size 528 with balanced labels (50\%/50\%).
+ \item Train set size 1000 with variable class imbalance.
+ \item Loss is $\ell[f(x_i), y_i]w_i$ with $w_i=1$ for identity
+   weights, $w_i=1/N_{y_i}$ for balanced, ex: 1\% positive means
+   $w_i\in\{1/10,1/990\}$.
+ \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Error rate loss is not as useful as error count loss}
+
+ \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc-aum.png}
+
+ \begin{itemize}
+ \item AUM.count is as described previously: error functions used to
+   compute Min(FP,FN) are absolute label counts.
+ \item AUM.rate is a variant which uses normalized error functions,
+   Min(FPR,FNR).
+ \item Both linear models with early stopping regularization.
+ \end{itemize}
+
+\end{frame}
+
 
 \end{document}
