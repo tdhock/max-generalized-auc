@@ -363,4 +363,4 @@ viz <- animint(
     variable="pred.diff",
     ms=500)
 )
-animint2gist(viz)
+##animint2gist(viz)

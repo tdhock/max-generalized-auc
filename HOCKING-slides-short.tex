@@ -55,7 +55,7 @@
 
 \maketitle
 
-\section{Problem Setting: Maximizing Area Under ROC Curves (AUC)}
+\section{Problem Setting 1: ROC curves for evaluating supervised  binary classification algorithms}
 
 \begin{frame}
   \frametitle{Problem: supervised binary classification}
@@ -66,13 +66,11 @@
   \item Example: email, $\mathbf x =$bag of words, $y=$spam or not.
   \item Example: images. Jones {\it et al.} PNAS 2009.
     \parbox{2in}{\includegraphics[width=2in]{cellprofiler}}
-    \parbox{1.9in}{Like supervised changepoint detection, we want to
-      minimize error rate = sum of:\\
+    \parbox{1.9in}{Most algorithms (SVM, Logistic regression, etc) minimize a differentiable surrogate of zero-one loss = sum of:\\
       \textbf{False positives:} $f(\mathbf x)=1$ but $y=0$ (predict
-        budding, but cell is not).\\
-      \textbf{False negatives:} $f(\mathbf x)=0$ but $y=1$ (predict not
-        budding but cell is).
-    }
+      budding, but cell is not).\\
+      \textbf{False negatives:} $f(\mathbf x)=0$ but $y=1$ (predict
+      not budding but cell is).  }
   \end{itemize} 
 \end{frame}
 
@@ -84,13 +82,27 @@
   \item For a given set of predicted scores, plot True Positive Rate
     vs False Positive Rate, each point on the ROC curve is a different
     threshold of the predicted scores.
-  \item Best classifier is in upper left (TPR=1, FPR=0), with large
+  \item Best classifier has a point near upper left (TPR=1, FPR=0), with large
     Area Under the Curve (AUC).
-  \item Proposed idea: a new surrogate for AUC that is differentiable,
-    so can be used for gradient descent learning.
+  % \item Proposed idea: a new surrogate for AUC that is differentiable,
+  %   so can be used for gradient descent learning.
   \end{itemize}
   \includegraphics[width=\textwidth]{figure-more-than-one-binary}
 \end{frame}
+
+\begin{frame}
+  \frametitle{ROC curves useful for imbalanced problems}
+
+  \includegraphics[width=0.65\textwidth]{figure-batchtools-expired-earth-roc}
+
+  \begin{itemize}
+  \item At default prediction threshold (D), glmnet has fewer errors.
+  \item At FPR=4\%, xgboost has fewer errors.
+  \end{itemize}
+  
+\end{frame}
+ 
+\section{Problem setting 2: ROC curves for evaluating supervised changepoint algorithms}
 
 \begin{frame}
   \frametitle{Problem: unsupervised changepoint detection}
@@ -129,8 +141,6 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 
 \end{frame}
 
-\section{My previous research on evaluating weakly supervised changepoint algorithms using AUC}
-
 \begin{frame}
   \frametitle{Weakly supervised changepoint detection problem setting}
 
@@ -149,32 +159,6 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \end{frame}
 
 \begin{frame}
-  \frametitle{New max-margin loss function for penalty learning}
-  {\scriptsize Hocking TD, Rigaill G, Bach F, Vert J-P. Learning Sparse Penalties
-  for Change-point Detection using Max Margin Interval
-  Regression. ICML'13.}
-
-  \includegraphics[width=\textwidth]{figure-ICML13-margin}
-
-  Main new idea: learning a penalty/smoothing by minimizing a
-  margin-based differentiable loss function (surrogate for label
-  error), similar to Support Vector Machine and censored regression.
-\end{frame}
-
-\begin{frame}
-  \frametitle{Empirical error rates in 10-fold cross-validation}
-  {\scriptsize Hocking TD, Rigaill G, Bach F, Vert J-P. Learning Sparse Penalties
-  for Change-point Detection using Max Margin Interval
-  Regression. ICML'13.}
-
-  \includegraphics[width=\textwidth]{table-ICML13-error-rates}
-
-  Proposed penalty learning methods ($m\geq 1$ features with linear
-  weights to learn) have much smaller error rates than previous
-  unsupervised models (BIC, mBIC) and constant method (cghseg.k).
-\end{frame}
-
-\begin{frame}
   \frametitle{Empirical evaluation using AUC}
 
   {\scriptsize Maidstone R, Hocking TD, Rigaill G, Fearnhead P. On optimal multiple
@@ -185,33 +169,10 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \item Proposed fpop, a fast new algorithm for computing optimal solution to
     penalized changepoint problem.
 %$$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{t=2}^T I[u_{t-1} \neq u_t].$$
-\item Prediction accuracy analysis using AUC in labeled neuroblastoma
-  data set.
+\item Prediction accuracy analysis using ROC curve, one point on the curve for each constant added to penalty $\lambda$.
   \end{itemize}
 
   \includegraphics[width=0.6\textwidth]{figure-Maidstone-roc}
-\end{frame}
-
-\begin{frame}
-  \frametitle{Weakly supervised peak detection in genomic data}
-{\scriptsize Hocking TD, Rigaill G, Fearnhead P, Bourque G. Constrained Dynamic Programming and Supervised Penalty Learning Algorithms for Peak Detection in Genomic Data. Journal of Machine Learning Research 21(87):1-40, 2020.}
-
-  \includegraphics[width=\textwidth]{figure-Hocking2020-peak-label-errors}
-
-  Problem setting: weakly supervised peak detection in genomic data
-  (want to learn peak pattern from partial labels, and predict
-  consistently/accurately in unlabeled regions).
-\end{frame}
-
-\begin{frame}
-  \frametitle{New up-down constraints on adjacent segment means}
-{\scriptsize Hocking TD, Rigaill G, Fearnhead P, Bourque G. Constrained Dynamic Programming and Supervised Penalty Learning Algorithms for Peak Detection in Genomic Data. Journal of Machine Learning Research 21(87):1-40, 2020.}
-
-  \includegraphics[width=0.7\textwidth]{figure-Hocking2020-peak-constraints}
-
-  Proposed fast dynamic programming algorithm for computing optimal
-  changepoints subject to up-down constraints on adjacent segment
-  means.
 \end{frame}
 
 \begin{frame}
@@ -234,6 +195,17 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \end{frame}
 
 \section{Proposed surrogate loss for ROC curve optimization}
+
+\begin{frame}
+  \frametitle{Overview}
+
+  \includegraphics[width=0.54\textwidth]{figure-fn-not-monotonic}
+
+\begin{itemize}
+\item 
+\end{itemize}
+\end{frame}
+
 
 \begin{frame}
   \frametitle{Changepoint FP/FN functions may be non-monotonic}
@@ -846,6 +818,54 @@ In binary classification, ROC curve is monotonic increasing.
 \begin{frame}
   \frametitle{DP model selection TODO}
   \includegraphics[width=\textwidth]{figure-dp-model-selection-iterations}
+\end{frame}
+
+\begin{frame}
+  \frametitle{New max-margin loss function for penalty learning}
+  {\scriptsize Hocking TD, Rigaill G, Bach F, Vert J-P. Learning Sparse Penalties
+  for Change-point Detection using Max Margin Interval
+  Regression. ICML'13.}
+
+  \includegraphics[width=\textwidth]{figure-ICML13-margin}
+
+  Main new idea: learning a penalty/smoothing by minimizing a
+  margin-based differentiable loss function (surrogate for label
+  error), similar to Support Vector Machine and censored regression.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Empirical error rates in 10-fold cross-validation}
+  {\scriptsize Hocking TD, Rigaill G, Bach F, Vert J-P. Learning Sparse Penalties
+  for Change-point Detection using Max Margin Interval
+  Regression. ICML'13.}
+
+  \includegraphics[width=\textwidth]{table-ICML13-error-rates}
+
+  Proposed penalty learning methods ($m\geq 1$ features with linear
+  weights to learn) have much smaller error rates than previous
+  unsupervised models (BIC, mBIC) and constant method (cghseg.k).
+\end{frame}
+
+\begin{frame}
+  \frametitle{Weakly supervised peak detection in genomic data}
+{\scriptsize Hocking TD, Rigaill G, Fearnhead P, Bourque G. Constrained Dynamic Programming and Supervised Penalty Learning Algorithms for Peak Detection in Genomic Data. Journal of Machine Learning Research 21(87):1-40, 2020.}
+
+  \includegraphics[width=\textwidth]{figure-Hocking2020-peak-label-errors}
+
+  Problem setting: weakly supervised peak detection in genomic data
+  (want to learn peak pattern from partial labels, and predict
+  consistently/accurately in unlabeled regions).
+\end{frame}
+
+\begin{frame}
+  \frametitle{New up-down constraints on adjacent segment means}
+{\scriptsize Hocking TD, Rigaill G, Fearnhead P, Bourque G. Constrained Dynamic Programming and Supervised Penalty Learning Algorithms for Peak Detection in Genomic Data. Journal of Machine Learning Research 21(87):1-40, 2020.}
+
+  \includegraphics[width=0.7\textwidth]{figure-Hocking2020-peak-constraints}
+
+  Proposed fast dynamic programming algorithm for computing optimal
+  changepoints subject to up-down constraints on adjacent segment
+  means.
 \end{frame}
 
 
