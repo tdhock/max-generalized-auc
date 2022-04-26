@@ -1,4 +1,4 @@
-\documentclass{beamer}
+\documentclass[t]{beamer}
 \usepackage{tikz}
 \usepackage[all]{xy}
 \usepackage{amsmath,amssymb}
@@ -236,16 +236,24 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \section{Proposed surrogate loss for ROC curve optimization}
 
 \begin{frame}
-  \frametitle{Real changepoint problem with non-monotonic label error}
+  \frametitle{Changepoint FP/FN functions may be non-monotonic}
 
   \includegraphics[width=0.54\textwidth]{figure-fn-not-monotonic}
   \includegraphics[width=0.42\textwidth]{figure-fn-not-monotonic-error-standAlone}
 
-  Optimal changepoint model may have non-monotonic error (for example
+\begin{itemize}
+\item Optimal changepoint model may have non-monotonic error (for example
   FN), because changepoints at model size $s$ may not be present in
   model $s+1$.
-
+\item Penalty values where the FP/FN changes can be efficiently
+  computed. Hocking TD, Vargovich J. Linear Time Dynamic Programming
+  for Computing Breakpoints in the Regularization Path of Models
+  Selected From a Finite Set. Journal of Computational and Graphical
+  Statistics (2021).
+\end{itemize}
 \end{frame}
+
+
 
 \begin{frame}
   \frametitle{Looping ROC curve, simple synthetic example}
@@ -264,6 +272,34 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \includegraphics[height=1.5in]{figure-more-than-one-more-aum-nomath}
   \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
 
+\end{frame}
+
+\begin{frame}
+  \frametitle{Two real data sets}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+  
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-diff4-1}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Two real error functions}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-diff4-2}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Total error as a function of constant added to predictions}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-diff4-3}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Corresponding ROC curves}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-diff4}
 \end{frame}
 
 \begin{frame}

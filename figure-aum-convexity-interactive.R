@@ -25,7 +25,7 @@ nb.segs <- nb.some$profiles[, {
     segments=as.integer(col(end.t))
   )[!is.na(end)]
   end.dt[, start := c(0, end[-.N])+1, by=segments]
-  end.dt[, mean := (cum.vec[end+1]-cum.vec[start])/(start+end-1)]
+  end.dt[, mean := (cum.vec[end+1]-cum.vec[start])/(end-start+1)]
   end.dt[, `:=`(
     start.pos=data.start.pos[start],
     end.pos=data.end.pos[end]
@@ -363,4 +363,4 @@ viz <- animint(
     variable="pred.diff",
     ms=500)
 )
-##animint2gist(viz)
+animint2gist(viz)
