@@ -15,10 +15,25 @@ profile <- function(..., possible.fp, possible.fn, errors, labels){
     fp, fn, errors, possible.fp, possible.fn, labels)]
 }
 profile.list <- list(
+  best=profile(
+    d(-Inf, 0, 10),
+    d(2, 0, 0),
+    d(4, 10, 0)),
+  constant=profile(
+    d(-Inf, 0, 10),
+    d(4, 10, 0)),
   less=profile(
     d(-Inf, 0, 10),
     d(2, 1, 1),
     d(4, 10, 0)),
+  ok=profile(
+    d(-Inf, 0, 10),
+    d(2, 0, 8),
+    d(5, 4, 5),
+    d(7, 4, 3),
+    d(8, 7, 3),
+    d(9, 7, 0),
+    d(10, 10, 0)),
   more=profile(
     d(-Inf, 0, 10),
     d(2, 8/3, 8/3),
@@ -101,6 +116,54 @@ ggplot()+
   geom_text(aes(
     0.5, 0.5, label=sprintf("auc=%.2f", auc)),
     data=auc.dt)
+
+auc.dt[, Model := ifelse(model=="less", "good", model)]
+auc.dt[, AUC := round(auc, 2)]
+roc.join <- auc.dt[roc.dt, on="model"]
+poly.join <- auc.dt[poly.dt, on="model"]
+ggplot()+
+  theme_bw()+
+  scale_fill_manual(values=c(positive="black", negative="red"))+
+  geom_polygon(aes(
+    FPR, TPR, group=paste(seg, model), fill=area),
+    alpha=0.2,
+    data=poly.join)+
+  geom_path(aes(
+    FPR, TPR),
+    data=roc.join)+
+  facet_grid(. ~ AUC + model, labeller=label_both)+
+  coord_equal()+
+  scale_x_continuous(
+    "False Positive Rate",
+    breaks = seq(0, 1, by=0.5))+
+  scale_y_continuous(
+    "True Positive Rate",
+    breaks = seq(0, 1, by=0.5))
+
+some <- function(dt)dt[auc<=1]
+gg <- ggplot()+
+  theme_bw()+
+  scale_fill_manual(values=c(positive="black", negative="red"))+
+  geom_polygon(aes(
+    FPR, TPR, group=paste(seg, model)),
+    alpha=0.2,
+    data=some(poly.join))+
+  geom_path(aes(
+    FPR, TPR),
+    data=some(roc.join))+
+  facet_grid(.~AUC+Model, labeller=label_both)+
+  coord_equal()+
+  scale_x_continuous(
+    "False Positive Rate",
+    labels=c("0","0.5","1"),
+    breaks = seq(0, 1, by=0.5))+
+  scale_y_continuous(
+    "True Positive Rate",
+    breaks = seq(0, 1, by=0.5),
+    labels=c("0","0.5","1"))
+png("figure-more-than-one-binary.png", width=5, height=2, units="in", res=200)
+print(gg)
+dev.off()
 
 err.sizes <- c(
   FP=3,
