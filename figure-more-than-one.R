@@ -71,6 +71,8 @@ for(profile.i in seq_along(profile.list)){
 }
 roc.dt <- do.call(rbind, roc.dt.list)
 auc.dt <- do.call(rbind, auc.dt.list)
+roc.dt[, aum := min.fp.fn*(max.thresh-min.thresh)]
+roc.dt[, AUM := sum(ifelse(is.finite(aum), aum, 0)), by=model]
 fp.fn.dt <- data.table::melt(roc.dt, measure.vars=c("fp", "fn", "min.fp.fn"))
 err.sizes <- c(
   fp=3,
@@ -185,6 +187,31 @@ png("figure-more-than-one-binary.png", width=5, height=2, units="in", res=200)
 print(gg)
 dev.off()
 
+fp.fn.dt[, Model := factor(model, model.ord)]
+gg <- ggplot()+
+  facet_grid(. ~ Model + AUM, labeller=label_both)+
+  theme_bw()+
+  theme(panel.spacing=grid::unit(0, "lines"))+
+  geom_rect(aes(
+    xmin=min.thresh, xmax=max.thresh,
+    ymin=0, ymax=value),
+    color="grey",
+    fill="grey",
+    data=some(fp.fn.dt[variable=="min.fp.fn"]))+
+  geom_segment(aes(
+    min.thresh, value,
+    color=variable, size=variable,
+    xend=max.thresh, yend=value),
+    data=some(fp.fn.dt))+
+  scale_color_manual(values=err.colors)+
+  scale_size_manual(values=err.sizes)+
+  scale_x_continuous("Constant added to predictions")
+png(
+  "figure-more-than-one-binary-aum.png", 
+  width=6, height=2, units="in", res=200)
+print(gg)
+dev.off()
+
 roc.join[, min.FPR.FNR := pmin(FPR,1-TPR)]
 roc.join[, `sum(min)` := sum(min.FPR.FNR), by=Model]
 gg <- ggplot()+
@@ -227,6 +254,9 @@ err.colors <- c(
   FP="red",
   FN="deepskyblue",
   "min(FP,FN)"="black")
+
+ggplot()+
+
 binary.list <- list(
   "1"=profile(
     d(-Inf, 0, 1),
