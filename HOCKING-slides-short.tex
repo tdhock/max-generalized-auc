@@ -174,7 +174,7 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \end{frame}
 
 \begin{frame}
-  \frametitle{Empirical error rates in 10-fold cross-validation}
+  \frametitle{Empirical test error rates in 10-fold cross-validation}
   {\scriptsize Hocking TD, Rigaill G, Bach F, Vert J-P. Learning Sparse Penalties
   for Change-point Detection using Max Margin Interval
   Regression. ICML'13.}
@@ -183,7 +183,7 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 
   \begin{itemize}
   \item   Proposed penalty learning methods ($m\geq 1$ features with linear
-  weights to learn) have much smaller error rates than previous
+  weights to learn, R package penaltyLearning) have much smaller error rates than previous
   unsupervised models (BIC, mBIC) and constant method (cghseg.k).
 \item In changepoint detection, evaluation using predicted error rates
   can be misleading/unfair for the same reasons as in binary classification.
@@ -198,22 +198,23 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   (2016).}
 
   \begin{itemize}
-  \item Proposed fpop, a fast new algorithm for computing optimal solution to
+  \item Proposed FPOP (R package fpop), computes optimal solution to
     penalized changepoint problem.
 %$$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{t=2}^T I[u_{t-1} \neq u_t].$$
-\item Prediction accuracy analysis using ROC curve, one point on the curve for each constant added to penalty $\lambda$.
+  \item ROC curve computed by adding constants to penalty $\lambda$
+    (\texttt{penaltyLearning::ROChange} in R).
   \end{itemize}
-
-  \includegraphics[width=0.6\textwidth]{figure-Maidstone-roc}
+\includegraphics[width=0.6\textwidth]{figure-Maidstone-roc}
 \end{frame}
 
 \begin{frame}
   \frametitle{Evaluating peak detection algorithms using AUC}
 {\scriptsize Hocking TD, Rigaill G, Fearnhead P, Bourque G. Constrained Dynamic Programming and Supervised Penalty Learning Algorithms for Peak Detection in Genomic Data. Journal of Machine Learning Research 21(87):1-40, 2020.}
 
-  \includegraphics[width=0.7\textwidth]{figure-Hocking2020-roc}
+\includegraphics[width=0.66\textwidth]{figure-Hocking2020-roc}
 
-  Proposed GPDPA has larger AUC than previous algorithms.
+  Proposed GPDPA (R package PeakSegOptimal) has larger AUC than
+  previous algorithms.
 
 \end{frame}
 
@@ -222,8 +223,8 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   {\scriptsize Hocking TD, Srivastava A. Labeled Optimal Partitioning. Accepted in Computational Statistics, arXiv:2006.13967.}
   \includegraphics[width=0.9\textwidth]{figure-LOPART-roc}
 
-  Proposed LOPART algorithm has consistently larger test AUC than
-  previous algorithms.
+  Proposed LOPART algorithm (R package LOPART) has consistently larger
+  test AUC than previous algorithms.
 \end{frame}
 
 \section{Proposed surrogate loss for ROC curve optimization: Area Under Min\{FP,FN\} (AUM)} 
@@ -234,12 +235,12 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \begin{itemize}
   \item We assume there are $n$ observations and each observation
     $i\in\{1,\dots,n\}$ has a predicted score $\hat y_i\in\mathbb R$ and a corresponding error function.
-  \item In binary classification each observation $i$ with a positive
-    label has an error function which results in a false negative if
-    $\hat y_i<0$.
-  \item And each observation with a negative
+  \item In binary classification each observation $i$ with a negative
     label has an error function which results in a false positive if
     $\hat y_i>0$.
+  \item And each observation with a positive
+    label has an error function which results in a false negative if
+    $\hat y_i<0$.
   \end{itemize}
 
 \includegraphics[width=0.5\textwidth]{figure-more-than-one-binary-errors}  
@@ -253,16 +254,19 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \includegraphics[width=0.54\textwidth]{figure-fn-not-monotonic}
   \includegraphics[width=0.42\textwidth]{figure-fn-not-monotonic-error-standAlone}
 
+\vspace{-0.1cm}
+
 \begin{itemize}
 \item Optimal changepoint model may have non-monotonic error (for example
-  FN), because changepoints at model size $s$ may not be present in
+  FN above), because changepoints at model size $s$ may not be present in
   model $s+1$.
 \item Penalty values where the FP/FN changes can be efficiently
-  computed. Hocking TD, Vargovich J. Linear Time Dynamic Programming
+  computed, \texttt{penaltyLearning::modelSelection} in R.
+\end{itemize}
+{\scriptsize Hocking TD, Vargovich J. Linear Time Dynamic Programming
   for Computing Breakpoints in the Regularization Path of Models
   Selected From a Finite Set. Journal of Computational and Graphical
-  Statistics (2021).
-\end{itemize}
+  Statistics (2021).}
 \end{frame}
 
 
@@ -290,13 +294,12 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \end{frame}
 
 \begin{frame}
-  \frametitle{Algorithm computes total FP and FN for each threshold/constant added to predicted values}
+  \frametitle{Proposed surrogate loss, Area Under Min (AUM)}
   \begin{itemize}
-  \item Breakpoint threshold,
-    $t_b= v_b - \hat y_{\mathcal I_b}=\tau(\mathbf{\hat y})_q$ for
-    some $q$.
-  \item Total label error (FP/FN/min) before/after each breakpoint can
-    be computed via sort and modified cumsum:
+  \item Threshold
+    $t_b= v_b - \hat y_{\mathcal I_b}=\tau(\mathbf{\hat y})_q$ is largest constant you can add to predictions and still be on ROC point $q$.
+  \item Proposed surrogate loss, Area Under Min (AUM) of total FP/FN,
+    computed via sort and modified cumsum:
   \end{itemize}
 \begin{eqnarray*}
   \underline{\text{FP}}_b &=& \sum_{j: t_j < t_b} \Delta\text{FP}_j,\ 
@@ -311,12 +314,12 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \end{frame}
 
 \begin{frame}
-  \frametitle{Algorithm computes two directional derivatives }
+  \frametitle{Proposed algorithm computes two directional derivatives }
 
   \begin{itemize}
   \item Gradient only defined when function is differentiable, but AUM
     is not differentiable everywhere (see below).
-  \item Directional derivatives defined everywhere.
+  \item Directional derivatives always computable (R package aum),
   \end{itemize}
 % \begin{theorem}
 % \label{thm:directional-derivs}
@@ -424,15 +427,22 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \begin{itemize}
   \item ROC curves are used to evaluate binary classification and
     changepoint detection algorithms.
-  \item In changepoint detection there can be loops in ROC curves, so
-    maximizing AUC greater than 1 is not be desirable.
-  \item Instead we propose to minimize a new loss, AUM=Area
-    Under Min(FP,FN).
+  % \item In changepoint detection there can be loops in ROC curves, so
+  %   maximizing AUC greater than 1 is not be desirable.
+  % \item In changepoint detection, maximizing Area Under ROC curve is
+  %   non-trivial even for the train set with unconstrained
+  %   predictions.
+  \item We propose a new loss function, AUM=Area Under Min(FP,FN),
+    which is a differentiable surrogate of the sum of Min(FP,FN) over
+    all points on the ROC curve.
   \item We propose new algorithm for efficient AUM and directional
     derivative computation.
+  \item Implementations available in R and python/torch:
+    \url{https://cloud.r-project.org/web/packages/aum/}
+    \url{https://tdhock.github.io/blog/2022/aum-learning/}
   \item Empirical results provide evidence that learning using AUM
     minimization results in ROC curve optimization (encourages
-    monotonic/regular curves with large AUC but no loops).
+    monotonic/regular curves with large AUC).
   \item Future work: other model classes, sort-based surrogates for
     other problems/objectives such as information retreival.
   \end{itemize}
