@@ -73,15 +73,16 @@ roc.dt <- do.call(rbind, roc.dt.list)
 auc.dt <- do.call(rbind, auc.dt.list)
 roc.dt[, aum := min.fp.fn*(max.thresh-min.thresh)]
 roc.dt[, AUM := sum(ifelse(is.finite(aum), aum, 0)), by=model]
-fp.fn.dt <- data.table::melt(roc.dt, measure.vars=c("fp", "fn", "min.fp.fn"))
+roc.dt[, `:=`(FP=fp, FN=fn, `min(FP,FN)`=min.fp.fn)]
+fp.fn.dt <- data.table::melt(roc.dt, measure.vars=c("FP", "FN", "min(FP,FN)"))
 err.sizes <- c(
-  fp=3,
-  fn=2,
-  min.fp.fn=1)
+  FP=3,
+  FN=2,
+  "min(FP,FN)"=1)
 err.colors <- c(
-  fp="red",
-  fn="deepskyblue",
-  min.fp.fn="black")
+  FP="red",
+  FN="deepskyblue",
+  "min(FP,FN)"="black")
 ggplot()+
   facet_grid(model ~ ., labeller=label_both)+
   theme_bw()+
@@ -91,7 +92,7 @@ ggplot()+
     ymin=0, ymax=value),
     color="grey",
     fill="grey",
-    data=fp.fn.dt[variable=="min.fp.fn"])+
+    data=fp.fn.dt[variable=="min(FP,FN)"])+
   geom_segment(aes(
     min.thresh, value,
     color=variable, size=variable,
@@ -188,6 +189,7 @@ print(gg)
 dev.off()
 
 fp.fn.dt[, Model := factor(model, model.ord)]
+leg <- "Error type"
 gg <- ggplot()+
   facet_grid(. ~ Model + AUM, labeller=label_both)+
   theme_bw()+
@@ -197,15 +199,16 @@ gg <- ggplot()+
     ymin=0, ymax=value),
     color="grey",
     fill="grey",
-    data=some(fp.fn.dt[variable=="min.fp.fn"]))+
+    data=some(fp.fn.dt[variable=="min(FP,FN)"]))+
   geom_segment(aes(
     min.thresh, value,
     color=variable, size=variable,
     xend=max.thresh, yend=value),
     data=some(fp.fn.dt))+
-  scale_color_manual(values=err.colors)+
-  scale_size_manual(values=err.sizes)+
-  scale_x_continuous("Constant added to predictions")
+  scale_color_manual(leg, values=err.colors)+
+  scale_size_manual(leg, values=err.sizes)+
+  scale_x_continuous("Constant added to predictions")+
+  scale_y_continuous("Label errors")
 png(
   "figure-more-than-one-binary-aum.png", 
   width=6, height=2, units="in", res=200)

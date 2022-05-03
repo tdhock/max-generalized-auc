@@ -37,6 +37,8 @@ Source:
 
 ** 2 May 2022
 
+Slides for London [[file:HOCKING-slides-london.tex][tex]], [[file:HOCKING-slides-london.pdf][pdf]].
+
 Additional figures in [[file:figure-more-than-one.R]]
 
 [[file:figure-more-than-one-binary-errors.png]]
