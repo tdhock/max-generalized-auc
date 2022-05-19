@@ -1,0 +1,921 @@
+\documentclass[t]{beamer} 
+\usepackage{tikz}
+\usepackage[all]{xy}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage[noend]{algcompatible}
+\usepackage{multirow}
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\Lik}{Lik}
+\DeclareMathOperator*{\PoissonLoss}{PoissonLoss}
+\DeclareMathOperator*{\Peaks}{Peaks}
+\DeclareMathOperator*{\Segments}{Segments}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\maximize}{maximize}
+\DeclareMathOperator*{\minimize}{minimize}
+\newcommand{\sign}{\operatorname{sign}}
+\newcommand{\RR}{\mathbb R}
+\newcommand{\ZZ}{\mathbb Z}
+\newcommand{\NN}{\mathbb N}
+\newcommand{\z}{$z = 2, 4, 3, 5, 1$} 
+
+\newcommand{\algo}[1]{\textcolor{#1}{#1}}
+\definecolor{PDPA}{HTML}{66C2A5}
+\definecolor{CDPA}{HTML}{FC8D62}
+\definecolor{GPDPA}{HTML}{4D4D4D}
+
+% Set transparency of non-highlighted sections in the table of
+% contents slide.
+\setbeamertemplate{section in toc shaded}[default][100]
+\AtBeginSection[]
+{
+  \setbeamercolor{section in toc}{fg=red} 
+  \setbeamercolor{section in toc shaded}{fg=black} 
+  \begin{frame}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+\begin{document}
+
+\title{Optimizing ROC Curves with a Sort-Based Surrogate Loss for Binary Classification and Changepoint Detection, arXiv:2107.01285}
+
+\author{
+  Toby Dylan Hocking --- toby.hocking@nau.edu\\ 
+  joint work with my student Jonathan Hillman\\
+  Machine Learning Research Lab --- \url{http://ml.nau.edu}\\
+  \includegraphics[height=3.5cm]{2021-03-lab-ski-lunch} \\
+  %Sign up for my CS570 (Deep Learning) in Spring 2022!\\
+  Come to SICCS! Graduate Research Assistantships available!
+}
+
+\date{}
+
+\maketitle
+
+\section{Problem Setting 1: ROC curves for evaluating supervised  binary classification algorithms}
+
+\begin{frame}
+  \frametitle{Problem: supervised binary classification}
+  
+  \begin{itemize}
+  \item Given pairs of inputs $\mathbf x\in\mathbb R^p$ and outputs
+    $y\in\{0,1\}$ can we learn $f(\mathbf x)= y$?
+  \item Example: email, $\mathbf x =$bag of words, $y=$spam or not.
+  \item Example: images. Jones {\it et al.} PNAS 2009.
+    \parbox{2in}{\includegraphics[width=2in]{cellprofiler}}
+    \parbox{1.9in}{Most algorithms (SVM, Logistic regression, etc) minimize a differentiable surrogate of zero-one loss = sum of:\\
+      \textbf{False positives:} $f(\mathbf x)=1$ but $y=0$ (predict
+      budding, but cell is not).\\
+      \textbf{False negatives:} $f(\mathbf x)=0$ but $y=1$ (predict
+      not budding but cell is).  }
+  \end{itemize} 
+\end{frame}
+
+\begin{frame}
+  \frametitle{Receiver Operating Characteristic (ROC) Curves}
+  \begin{itemize}
+  \item Classic evaluation method from the signal processing
+    literature (Egan and Egan, 1975).
+  \item For a given set of predicted scores, plot True Positive Rate
+    vs False Positive Rate, each point on the ROC curve is a different
+    threshold of the predicted scores.
+  \item Best classifier has a point near upper left (TPR=1, FPR=0), with large
+    Area Under the Curve (AUC).
+  % \item Proposed idea: a new surrogate for AUC that is differentiable,
+  %   so can be used for gradient descent learning.
+  \end{itemize}
+  \includegraphics[width=\textwidth]{figure-more-than-one-binary}
+\end{frame}
+
+\begin{frame}
+  \frametitle{ROC curves useful for imbalanced problems}
+
+  \includegraphics[width=0.65\textwidth]{figure-batchtools-expired-earth-roc}
+
+  \begin{itemize}
+  \item At default prediction threshold (D), glmnet has fewer errors.
+  \item At FPR=4\%, xgboost has fewer errors.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Research question and new idea}
+  Can we learn a binary classification function $f$ which directly
+  optimizes the ROC curve?
+  \begin{itemize}
+  \item Most algorithms involve minimizing a differentiable surrogate
+    of the zero-one loss, which is not the same.
+  \item The Area Under the ROC Curve (AUC) is piecewise constant
+    (gradient zero almost everywhere), so can not be used with
+    gradient descent algorithms.
+  \item We propose to encourage points to be in the upper left of ROC
+    space, using a loss function which is a differentiable surrogate
+    of the sum of min(FP,FN).
+  \end{itemize}
+  \includegraphics[width=\textwidth]{figure-more-than-one-binary-dots}
+\end{frame}
+ 
+\section{Problem setting 2: ROC curves for evaluating supervised changepoint algorithms}
+
+\begin{frame}
+  \frametitle{Problem: unsupervised changepoint detection}
+  \begin{itemize}
+  \item Data sequence $z_1,\dots,z_T$ at $T$ points over time/space.
+  \item Ex: DNA copy number data for cancer diagnosis, $z_t\in\mathbb R$.
+  \item The penalized changepoint problem (Maidstone \emph{et al.} 2017)
+$$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{t=2}^T I[u_{t-1} \neq u_t].$$
+  \end{itemize}
+
+  \parbox{0.6\textwidth}{
+\includegraphics[width=0.6\textwidth]{figure-fn-not-monotonic-no-labels}
+}
+\parbox{0.3\textwidth}{
+  Larger penalty $\lambda$ results in fewer changes/segments.
+
+  \vskip 0.5in
+
+  Smaller penalty $\lambda$ results in more changes/segments.
+}
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Problem: weakly supervised changepoint detection}
+  \begin{itemize}
+  \item First described by Hocking \emph{et al.} ICML 2013.
+  \item We are given a data sequence $\mathbf z$ with labeled regions
+    $L$.
+  \item We compute features $\mathbf x=\phi(\mathbf z)\in\mathbf R^p$
+    and want to learn a function $f(\mathbf x)=-\log\lambda\in\mathbf R$ that minimizes label error (sum of false positives and false negatives), or maximizes AUC.
+  \end{itemize}
+
+  \includegraphics[width=0.7\textwidth]{figure-fn-not-monotonic}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Weakly supervised changepoint detection problem setting}
+
+  {\scriptsize Hocking TD. Introduction to supervised changepoint
+    detection. International useR2017 conference tutorial.}
+
+  \includegraphics[width=\textwidth]{neuroblastoma-ok-relapse-supervised}
+
+  \begin{itemize}
+  \item Black dots are data sequences in which we want to find
+    changepoints (each panel is a separate sequence).
+  \item Colored rectangles are weak/partial labels from an expert.
+  \item Want accurate predictions on new/unlabeled regions.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Empirical test error rates in 10-fold cross-validation}
+  {\scriptsize Hocking TD, Rigaill G, Bach F, Vert J-P. Learning Sparse Penalties
+  for Change-point Detection using Max Margin Interval
+  Regression. ICML'13.}
+
+  \includegraphics[width=\textwidth]{table-ICML13-error-rates}
+
+  \begin{itemize}
+  \item   Proposed penalty learning methods ($m\geq 1$ features with linear
+  weights to learn, R package penaltyLearning) have much smaller error rates than previous
+  unsupervised models (BIC, mBIC) and constant method (cghseg.k).
+\item In changepoint detection, evaluation using predicted error rates
+  can be misleading/unfair for the same reasons as in binary classification.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Empirical evaluation using AUC}
+
+  {\scriptsize Maidstone R, Hocking TD, Rigaill G, Fearnhead P. On optimal multiple
+  changepoint algorithms for large data. Statistics and Computing
+  (2016).}
+
+  \begin{itemize}
+  \item Proposed FPOP (R package fpop), computes optimal solution to
+    penalized changepoint problem.
+%$$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{t=2}^T I[u_{t-1} \neq u_t].$$
+  \item ROC curve computed by adding constants to penalty $\lambda$
+    (\texttt{penaltyLearning::ROChange} in R).
+  \end{itemize}
+\includegraphics[width=0.6\textwidth]{figure-Maidstone-roc}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Evaluating peak detection algorithms using AUC}
+{\scriptsize Hocking TD, Rigaill G, Fearnhead P, Bourque G. Constrained Dynamic Programming and Supervised Penalty Learning Algorithms for Peak Detection in Genomic Data. Journal of Machine Learning Research 21(87):1-40, 2020.}
+
+\includegraphics[width=0.66\textwidth]{figure-Hocking2020-roc}
+
+  Proposed GPDPA (R package PeakSegOptimal) has larger AUC than
+  previous algorithms.
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Evaluating a new algorithm with label constraints}
+  {\scriptsize Hocking TD, Srivastava A. Labeled Optimal Partitioning. Accepted in Computational Statistics, arXiv:2006.13967.}
+  \includegraphics[width=0.9\textwidth]{figure-LOPART-roc}
+
+  Proposed LOPART algorithm (R package LOPART) has consistently larger
+  test AUC than previous algorithms.
+\end{frame}
+
+\section{Proposed surrogate loss for ROC curve optimization: Area Under Min\{FP,FN\} (AUM)} 
+
+\begin{frame}
+  \frametitle{Binary classification FP/FN functions}
+
+  \begin{itemize}
+  \item We assume there are $n$ observations and each observation
+    $i\in\{1,\dots,n\}$ has a predicted score $\hat y_i\in\mathbb R$ and a corresponding error function.
+  \item In binary classification each observation $i$ with a negative
+    label has an error function which results in a false positive if
+    $\hat y_i>0$.
+  \item And each observation with a positive
+    label has an error function which results in a false negative if
+    $\hat y_i<0$.
+  \end{itemize}
+
+\includegraphics[width=0.5\textwidth]{figure-more-than-one-binary-errors}  
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Changepoint FP/FN functions may be non-monotonic}
+
+  \includegraphics[width=0.54\textwidth]{figure-fn-not-monotonic}
+  \includegraphics[width=0.42\textwidth]{figure-fn-not-monotonic-error-standAlone}
+
+\vspace{-0.1cm}
+
+\begin{itemize}
+\item Optimal changepoint model may have non-monotonic error (for example
+  FN above), because changepoints at model size $s$ may not be present in
+  model $s+1$.
+\item Penalty values where the FP/FN changes can be efficiently
+  computed, \texttt{penaltyLearning::modelSelection} in R.
+\end{itemize}
+{\scriptsize Hocking TD, Vargovich J. Linear Time Dynamic Programming
+  for Computing Breakpoints in the Regularization Path of Models
+  Selected From a Finite Set. Journal of Computational and Graphical
+  Statistics (2021).}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Algorithm inputs: predictions and label error functions}
+
+  \begin{itemize}
+  \item Each observation $i\in\{1,\dots,n\}$ has a predicted value
+    $\hat y_i\in\mathbb R$.
+  \item Breakpoints
+  $b\in\{1,\dots, B\}$ used to represent label error via tuple
+  $(v_b, \Delta\text{FP}_b, \Delta\text{FN}_b, \mathcal I_b)$.
+\item There are changes $\Delta\text{FP}_b, \Delta\text{FN}_b$ at
+  predicted value $v_b\in\mathbb R$ in error function
+  $\mathcal I_b\in\{1,\dots,n\}$.
+  \end{itemize}
+
+  \parbox{0.49\textwidth}{
+    Binary classification\\
+  \includegraphics[width=0.49\textwidth]{figure-more-than-one-binary-errors}
+}\parbox{0.49\textwidth}{
+  Changepoint detection\\
+  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error-standAlone}}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Proposed surrogate loss, Area Under Min (AUM)}
+  \begin{itemize}
+  \item Threshold
+    $t_b= v_b - \hat y_{\mathcal I_b}=\tau(\mathbf{\hat y})_q$ is largest constant you can add to predictions and still be on ROC point $q$.
+  \item Proposed surrogate loss, Area Under Min (AUM) of total FP/FN,
+    computed via sort and modified cumsum:
+  \end{itemize}
+\begin{eqnarray*}
+  \underline{\text{FP}}_b &=& \sum_{j: t_j < t_b} \Delta\text{FP}_j,\ 
+  \overline{\text{FP}}_b = \sum_{j: t_j \leq t_b} \Delta\text{FP}_j, \\
+  \underline{\text{FN}}_b &=& \sum_{j: t_j \geq t_b} - \Delta\text{FN}_j,\ 
+  \overline{\text{FN}}_b = \sum_{j: t_j > t_b} - \Delta\text{FN}_j.
+\end{eqnarray*}
+
+  \includegraphics[height=1.5in]{figure-more-than-one-more-aum}
+  \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Small AUM is correlated with large AUC}
+  
+  \includegraphics[height=1.5in]{figure-more-than-one-binary-dots}
+
+  \includegraphics[height=1.5in]{figure-more-than-one-binary-aum}
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Proposed algorithm computes two directional derivatives }
+
+  \begin{itemize}
+  \item Gradient only defined when function is differentiable, but AUM
+    is not differentiable everywhere (see below).
+  \item Directional derivatives always computable (R package aum),
+  \end{itemize}
+% \begin{theorem}
+% \label{thm:directional-derivs}
+% The AUM directional derivatives for a particular example
+% $i\in\{1,\dots,n\}$ can be computed using the following equations.
+% \end{theorem}
+\begin{eqnarray*}
+  &&\nabla_{\mathbf v(-1,i)} \text{AUM}(\mathbf{\hat y}) = \\
+  &&\sum_{b: \mathcal I_b = i}
+  \min\{
+  \overline{\text{FP}}_b , 
+  \overline{\text{FN}}_b 
+  \}
+  -
+  \min\{
+  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
+  \overline{\text{FN}}_b - \Delta\text{FN}_b
+  \},\\
+  &&\nabla_{\mathbf v(1,i)} \text{AUM}(\mathbf{\hat y}) = \\
+  &&\sum_{b: \mathcal I_b = i}
+  \min\{
+  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
+  \underline{\text{FN}}_b + \Delta\text{FN}_b
+  \}
+  -
+  \min\{
+  \underline{\text{FP}}_b , 
+  \underline{\text{FN}}_b 
+     \}.
+\end{eqnarray*}  
+
+\parbox{2in}{ \includegraphics[width=2in]{figure-aum-convexity} }
+\parbox{2in}{ Proposed learning algo uses mean of these two
+  directional derivatives as ``gradient.''  }
+
+\end{frame}
+
+\section{Empirical results: minimizing AUM results in optimized ROC curves}
+
+\begin{frame}
+  \frametitle{AUM gradient descent results in increased train AUC for
+    a real changepoint problem}
+
+\includegraphics[height=3.7cm]{figure-aum-optimized-iterations.png}
+\includegraphics[height=3.7cm]{figure-aum-train-both.png}
+
+\begin{itemize}
+\item Left/middle: changepoint problem initialized to prediction vector with
+  min label errors, gradient descent on prediction vector.
+\item Right: linear model initialized by minimizing regularized convex
+  loss (surrogate for label error, Hocking \emph{et al.} ICML 2013),
+  gradient descent on weight vector.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Learning algorithm results in better test AUC/AUM for changepoint problems}
+    
+\includegraphics[width=\textwidth]{figure-test-aum-comparison.png}
+\includegraphics[width=\textwidth]{figure-test-auc-comparison.png}
+
+\begin{itemize}
+\item Five changepoint problems (panels from left to right).
+\item Two evaluation metrics (AUM=top, AUC=bottom).
+\item Three algorithms (Y axis), Initial=Min regularized convex loss
+  (surrogate for label error, Hocking \emph{et al.} ICML 2013), Min.Valid.AUM/Max.Valid.AUC=AUM
+  gradient descent with early stopping regularization.
+\item Four points = Four random initializations.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Learning algorithm competitive for unbalanced binary classification}
+
+ \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc.png}
+
+ \begin{itemize}
+ \item Squared hinge all pairs is a classic/popular surrogate loss function
+   for AUC optimization. (Yan \emph{et al.} ICML 2003)
+ \item All linear models with early stopping regularization.
+ \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Comparable computation time to other loss functions}
+
+\includegraphics[width=\textwidth]{figure-aum-grad-speed-both.png}
+
+\begin{itemize}
+\item Logistic $O(n)$. 
+\item AUM $O(n\log n)$. (proposed)
+\item Squared Hinge All Pairs $O(n^2)$. (Yan \emph{et al.} ICML 2003)
+\item Squared Hinge Each Example $O(n)$. (Hocking \emph{et al.} ICML 2013)
+\end{itemize}
+  
+\end{frame}
+
+\section{Discussion and Conclusions}
+
+\begin{frame}
+  \frametitle{Discussion and Conclusions, Pre-print arXiv:2107.01285}
+  \begin{itemize}
+  \item ROC curves are used to evaluate binary classification and
+    changepoint detection algorithms.
+  % \item In changepoint detection there can be loops in ROC curves, so
+  %   maximizing AUC greater than 1 is not be desirable.
+  % \item In changepoint detection, maximizing Area Under ROC curve is
+  %   non-trivial even for the train set with unconstrained
+  %   predictions.
+  \item We propose a new loss function, AUM=Area Under Min(FP,FN),
+    which is a differentiable surrogate of the sum of Min(FP,FN) over
+    all points on the ROC curve.
+  \item We propose new algorithm for efficient AUM and directional
+    derivative computation.
+  \item Implementations available in R and python/torch:
+    \url{https://cloud.r-project.org/web/packages/aum/}
+    \url{https://tdhock.github.io/blog/2022/aum-learning/}
+  \item Empirical results provide evidence that learning using AUM
+    minimization results in ROC curve optimization (encourages
+    monotonic/regular curves with large AUC).
+  \item Future work: other model classes, sort-based surrogates for
+    other problems/objectives such as information retreival.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Thanks to co-author Jonathan Hillman! (second from left)}
+
+  \includegraphics[height=3in]{2021-03-lab-ski-lunch} 
+
+  Contact: toby.hocking@nau.edu
+
+\end{frame}
+
+\section{Appendix: Non-monotonic ROC curves in changepoint detection}
+
+
+\begin{frame}
+  \frametitle{Looping ROC curve, simple synthetic example}
+
+  \begin{itemize}
+  \item Non-monotonic FP/FN can result in looping ROC curve.
+  \item AUC can be greater than one (dark grey area double counted,
+    red area negative counted).
+  \item Loops have very sub-optimal points (large min error, for
+    example q=4), so do we want to maximize AUC?
+  \item Minimize Area Under Min (AUM) instead, which encourages
+    monotonic ROC curve with points in upper left (small min error,
+    for example q=1,6,7).
+  \end{itemize}
+ 
+  \includegraphics[height=1.5in]{figure-more-than-one-more-aum-nomath}
+  \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Two real changepoint data sets}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+  
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r4-1.PNG}  
+\end{frame} 
+
+\begin{frame}
+  \frametitle{Two real changepoint error functions}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r4-2.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Total error as a function of constant added to predictions}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r4-3.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Corresponding ROC curves}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r4.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r1.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r2.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r3.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r4.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r5.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r6.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d4r7.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d5r1.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d5r2.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d5r3.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d5r4.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d5r5.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d5r6.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Demonstration of AUC/AUM computation}
+  {\scriptsize\url{https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/}}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive-cropped/d5r7.PNG}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Real data example with AUC greater than one}
+
+  \includegraphics[height=1.3in]{figure-aum-convexity-profiles}
+  \includegraphics[height=1.3in]{figure-aum-convexity}
+
+  \begin{itemize}
+  \item $n=2$ labeled changepoint problems.
+  \item Prediction difference=4 $\Rightarrow$ AUC=1 and AUM=0.
+  \item Prediction difference=5 $\Rightarrow$ AUC=2 and AUM$>0$.
+  \item AUM is continuous L1 relaxation of piecewise constant Sum of
+    Min (SM).
+  \item AUM is differentiable almost everywhere.
+  \item Main new idea: compute the gradient of this function and use
+    it for learning.
+  \end{itemize}
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{More notation}
+  \begin{itemize}
+  \item   First let $\{(
+\text{fpt}
+(\mathbf {\hat y})
+_q, \text{fnt}
+(\mathbf {\hat y})
+_q,
+ \tau
+(\mathbf {\hat y})
+_q
+)\}_{q=1}^Q$ 
+be a sequence of $Q$ tuples, each of which corresponds to a point on the ROC curve (and an interval on the fn/fp error plot). 
+\item For each $q$ the
+  $\text{fpt}(\mathbf {\hat y})_q, \text{fpt}(\mathbf {\hat y})_q$ are
+  false positive/negative totals at that point (in that interval) whereas
+  $\tau(\mathbf {\hat y})_q$ is the upper limit of the interval.
+\item The limits are increasing, $ -\infty = \tau
+(\mathbf {\hat y})
+_0 < \cdots <  \tau
+(\mathbf {\hat y})
+_Q = \infty$.
+% \item For each $q\in\{1,\dots,Q\}$ there is a corresponding interval of values $c$ between $\tau(\mathbf {\hat y})_{q-1}$ and $\tau(\mathbf {\hat y})_q$
+% such that 
+% $\text{FPT}_{\mathbf{\hat y}}(c)=\text{fpt}(\mathbf {\hat y})_q$
+% and
+% $\text{FNT}_{\mathbf{\hat y}}(c)=\text{fnt}(\mathbf {\hat y})_q$
+% for all $c\in(\tau(\mathbf {\hat y})_{q-1}, \tau(\mathbf {\hat y})_q)$.
+\item Then we define $m(\mathbf {\hat y})_q = \min\{
+    \text{fpt}(\mathbf {\hat y})_q , \, 
+    \text{fnt}(\mathbf {\hat y})_q
+\}$ as the min of fp and fn totals in that interval.
+  \end{itemize}
+
+  \includegraphics[height=1.5in]{figure-more-than-one-more-aum}
+  \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
+
+\end{frame}
+
+\begin{frame}
+  
+\parbox{2.5in}{
+  Our proposed loss function is
+\begin{equation*}
+\label{eq:AUM-computation}
+    \text{AUM}(\mathbf {\hat y}) =
+    \sum_{q=2}^{Q-1}
+    [ \tau(\mathbf {\hat y})_{q} - \tau(\mathbf {\hat y})_{q-1} ]
+    m(\mathbf {\hat y})_q.
+\end{equation*}
+}\parbox{1in}{
+  \includegraphics[height=1.3in]{figure-aum-convexity}
+}
+
+It is a continuous L1 relaxation of the following non-convex \textbf{S}um of \textbf{M}in(FP,FN) function, 
+\begin{equation*}
+\label{eq:SM-computation}
+    \text{SM}(\mathbf {\hat y}) =
+    \sum_{q=2}^{Q-1}
+    I[ \tau(\mathbf {\hat y})_{q} \neq \tau(\mathbf {\hat y})_{q-1} ]
+    m(\mathbf {\hat y})_q =
+    \sum_{q:\tau(\mathbf {\hat y})_{q} \neq \tau(\mathbf {\hat y})_{q-1} }
+    m(\mathbf {\hat y})_q.
+\end{equation*}
+
+  \includegraphics[width=0.9\textwidth]{figure-more-than-one-binary-dots}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Definition of data set, notations}
+
+  \begin{itemize}
+  \item Let there be a total of $B$ breakpoints in the error functions over
+    all $n$ labeled training examples.
+  \item Each breakpoint
+  $b\in\{1,\dots, B\}$ is represented by the tuple
+  $(v_b, \Delta\text{FP}_b, \Delta\text{FN}_b, \mathcal I_b)$, where the
+  $\mathcal I_b\in\{1,\dots,n\}$ is an example index, and there are
+  changes $\Delta\text{FP}_b, \Delta\text{FN}_b$ at predicted value
+  $v_b\in\mathbb R$ in the error functions.
+\item For example in binary
+  classification, there are $B=n$ breakpoints (same as the number of
+  labeled training examples); for each breakpoint $b\in\{1,\dots,B\}$
+  we have $v_b=0$ and $\mathcal I_b=b$.  For breakpoints $b$ with
+  positive labels $y_b=1$ we have
+  $\Delta\text{FP}=0,\Delta\text{FN}=-1$, and for negative labels
+  $y_b=-1$ we have $\Delta\text{FP}=1,\Delta\text{FN}=0$.  
+\item   In
+  changepoint detection we have more general error functions, which
+  may have more than one breakpoint per example.
+  \end{itemize}
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Proposed algorithm uses sort to compute AUM and directional derivatives}
+
+\small
+\begin{algorithmic}[1]
+  \STATE {\bfseries Input:} 
+  Predictions $\mathbf{\hat y}\in\mathbb R^n$, 
+  breakpoints in error functions $v_b,\Delta\text{FP}_b,\Delta\text{FN}_b,\mathcal I_b$ for all $b\in\{1,\dots,B\}$.
+  \STATE Zero the $\text{AUM}\in\mathbb R$ and directional derivatives $\mathbf D\in\mathbb R^{n\times 2}$.\label{line:init-zero}
+  \STATE $t_b\gets v_b - \hat y_{\mathcal I_b}$ for all $b$.\label{line:compute-thresh}
+  \STATE $s_1,\dots,s_B\gets \textsc{SortedIndices}(t_1,\dots,t_B).$\label{line:sorted-indices}
+  \STATE Compute $\underline{\text{FP}}_b,\overline{\text{FP}}_b,\underline{\text{FN}}_b,\overline{\text{FN}}_b$ for all $b$ using $s_1,\dots,s_B$.
+  \FOR{$b\in\{2,\dots,B\}$}\label{line:for-intervals}
+  \STATE $\text{AUM} \text{ += } (t_{s_b} - t_{s_{b-1}}) \min\{\underline{\text{FP}}_b, \overline{\text{FN}}_b\} $.\label{line:AUM}
+  \ENDFOR
+  \FOR{$b\in\{1,\dots,B\}$}\label{line:for-breakpoints}
+  \STATE\label{line:D_lo} $\mathbf D_{\mathcal I_b,1} \text{ += } \min\{
+  \overline{\text{FP}}_b , 
+  \overline{\text{FN}}_b 
+  \}
+  -
+  \min\{
+  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
+  \overline{\text{FN}}_b - \Delta\text{FN}_b
+  \}$
+  \STATE\label{line:D_hi} $\mathbf D_{\mathcal I_b,2} \text{ += } \min\{
+  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
+  \underline{\text{FN}}_b + \Delta\text{FN}_b
+  \}
+  -
+  \min\{
+  \underline{\text{FP}}_b , 
+  \underline{\text{FN}}_b 
+  \}$
+  \ENDFOR
+  \STATE {\bfseries Output:} AUM and matrix $\mathbf D$ of directional derivatives.
+\end{algorithmic}
+\begin{itemize}
+\item 
+ Overall $O(B\log B)$ time due to sort.
+\end{itemize}
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Receiver Operating Characteristic (ROC) curve}
+Classic evaluation method from the signal processing literature (Egan and
+    Egan, 1975). 
+  \begin{itemize}
+  \item Binary classification algo gives predictions
+    $[\hat y_1,\hat y_2,\hat y_3,\hat y_4]$.
+  \item Each point on the ROC curve is the FPR/TPR if you add $c$ to
+    the predictions, $[\hat y_1+c,\hat y_2+c,\hat y_3+c,\hat y_4+c]$.
+  \item Best point in ROC space is upper left (0\% FPR, 100\% TPR).
+  \item Maximizing Area Under the ROC curve (AUC) is a common
+    objective for binary classification, especially for imbalanced
+    data (example: 99\% positive, 1\% negative labels).
+  \end{itemize} 
+  
+  \parbox{1.5in}{
+\includegraphics[width=1.5in]{figure-more-than-one-less-auc}
+}
+\parbox{2.5in}{
+In binary classification, ROC curve is monotonic increasing.
+  \begin{itemize}
+  \item AUC=1 best.
+  \item AUC=0.5 for constant prediction (usually worst).
+  \end{itemize}
+}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Area Under ROC curve, synthetic example}
+
+\begin{itemize}
+  \item Labels = [1,0,0,...,1,1,0] (20 labels, 10 positive, 10 negative).
+  \item Predictions = [-4, -4, -4, ..., -2, -2, -2].
+  \item No constant added $c=0$, $q=1$, everything predicted negative,
+    so no false positives, but no true positives.
+% > WeightedROC::WeightedAUC(WeightedROC::WeightedROC(c(-8,-8,-5,-5), c(1,0,1,0), c(1,9,9,1)))
+% [1] 0.9
+\item Add $c=3 \Rightarrow$ [-1, -1, -1, ..., 1, 1, 1], 1 FP and
+  9 TP, $q=2$.
+\item  Add $c=5 \Rightarrow$ [1, 1, 1, ..., 3, 3, 3], all FP and TP, $q=3$.
+  \end{itemize}
+
+  \includegraphics[height=1.5in]{figure-more-than-one-less-aum-nomath}
+  \includegraphics[height=1.5in]{figure-more-than-one-less-auc}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Real data example when ROC curves are useful}
+
+  Data from collaboration with SICCS professor Patrick Jantz, about
+  predicting presence/absence of trees in different locations.
+  
+  \begin{itemize}
+  \item glmnet: L1-regularized linear model.
+  \item major.class: featureless baseline (ignores inputs, always
+    predicts most frequent class label in train set)
+  \item xgboost: gradient boosted decision trees.
+  \item Which algorithm is the most accurate?
+  \end{itemize}
+   
+  \includegraphics[width=\textwidth]{figure-batchtools-expired-earth-metrics-default-Sugar-Maple.png}
+
+  \url{https://bl.ocks.org/tdhock/raw/172d0f68a51a8de5d6f1bed7f23f5f82/}
+  
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Real data example, interactive AUC/AUM demo}
+
+  \includegraphics[width=\textwidth]{figure-aum-convexity-interactive}
+
+  \url{http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b/} 
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Standard logistic loss fails for highly imbalanced labels}
+
+ \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc-logistic.png}
+
+ \begin{itemize}
+ \item Subset of zip.train/zip.test data (only 0/1 labels).
+ \item Test set size 528 with balanced labels (50\%/50\%).
+ \item Train set size 1000 with variable class imbalance.
+ \item Loss is $\ell[f(x_i), y_i]w_i$ with $w_i=1$ for identity
+   weights, $w_i=1/N_{y_i}$ for balanced, ex: 1\% positive means
+   $w_i\in\{1/10,1/990\}$.
+ \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Error rate loss is not as useful as error count loss}
+
+ \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc-aum.png}
+
+ \begin{itemize}
+ \item AUM.count is as described previously: error functions used to
+   compute Min(FP,FN) are absolute label counts.
+ \item AUM.rate is a variant which uses normalized error functions,
+   Min(FPR,FNR).
+ \item Both linear models with early stopping regularization.
+ \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{New max-margin loss function for penalty learning}
+  {\scriptsize Hocking TD, Rigaill G, Bach F, Vert J-P. Learning Sparse Penalties
+  for Change-point Detection using Max Margin Interval
+  Regression. ICML'13.}
+
+  \includegraphics[width=\textwidth]{figure-ICML13-margin}
+
+  Main new idea: learning a penalty/smoothing by minimizing a
+  margin-based differentiable loss function (surrogate for label
+  error), similar to Support Vector Machine and censored regression.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Weakly supervised peak detection in genomic data}
+{\scriptsize Hocking TD, Rigaill G, Fearnhead P, Bourque G. Constrained Dynamic Programming and Supervised Penalty Learning Algorithms for Peak Detection in Genomic Data. Journal of Machine Learning Research 21(87):1-40, 2020.}
+
+  \includegraphics[width=\textwidth]{figure-Hocking2020-peak-label-errors}
+
+  Problem setting: weakly supervised peak detection in genomic data
+  (want to learn peak pattern from partial labels, and predict
+  consistently/accurately in unlabeled regions).
+\end{frame}
+
+\begin{frame}
+  \frametitle{New up-down constraints on adjacent segment means}
+{\scriptsize Hocking TD, Rigaill G, Fearnhead P, Bourque G. Constrained Dynamic Programming and Supervised Penalty Learning Algorithms for Peak Detection in Genomic Data. Journal of Machine Learning Research 21(87):1-40, 2020.}
+
+  \includegraphics[width=0.7\textwidth]{figure-Hocking2020-peak-constraints}
+
+  Proposed fast dynamic programming algorithm for computing optimal
+  changepoints subject to up-down constraints on adjacent segment
+  means.
+\end{frame}
+
+
+\end{document}

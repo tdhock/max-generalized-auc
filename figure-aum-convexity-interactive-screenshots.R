@@ -1,7 +1,7 @@
 PNG.vec <- Sys.glob("figure-aum-convexity-interactive-screenshots/*.PNG")
 for(PNG in PNG.vec){
   img <- magick::image_read(PNG)
-  crop <- magick::image_crop(img, "1455x950+17+93")
+  crop <- magick::image_crop(img, "1455x940+17+93")
   out <- sub("screenshots", "cropped", PNG)
   dir.create(dirname(out), showWarnings=FALSE, recursive=TRUE)
   magick::image_write(crop, out)

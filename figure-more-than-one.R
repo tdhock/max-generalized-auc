@@ -17,14 +17,31 @@ profile <- function(..., possible.fp, possible.fn, errors, labels){
 profile.list <- list(
   best=profile(
     d(-Inf, 0, 10),
+    d(1, 0, 4),
+    d(1.5,0,2),
     d(2, 0, 0),
+    d(2.5,3,0),
+    d(3, 7, 0),
     d(4, 10, 0)),
-  constant=profile(
+  bad=profile(
     d(-Inf, 0, 10),
-    d(4, 10, 0)),
+    d(1,1,9),
+    d(2,2,8),
+    d(3,3,7),
+    d(4,4,6),
+    d(5,5,5),
+    d(6, 10, 0)),
   less=profile(
     d(-Inf, 0, 10),
     d(2, 1, 1),
+    d(4, 10, 0)),
+  good=profile(
+    d(-Inf, 0, 10),
+    d(0.5,1,8),
+    d(1, 1, 4),
+    d(2, 1, 1),
+    d(2.5,3,1),
+    d(3, 8, 1),
     d(4, 10, 0)),
   ok=profile(
     d(-Inf, 0, 10),
@@ -54,15 +71,18 @@ for(profile.i in seq_along(profile.list)){
 }
 roc.dt <- do.call(rbind, roc.dt.list)
 auc.dt <- do.call(rbind, auc.dt.list)
-fp.fn.dt <- data.table::melt(roc.dt, measure.vars=c("fp", "fn", "min.fp.fn"))
+roc.dt[, aum := min.fp.fn*(max.thresh-min.thresh)]
+roc.dt[, AUM := sum(ifelse(is.finite(aum), aum, 0)), by=model]
+roc.dt[, `:=`(FP=fp, FN=fn, `min(FP,FN)`=min.fp.fn)]
+fp.fn.dt <- data.table::melt(roc.dt, measure.vars=c("FP", "FN", "min(FP,FN)"))
 err.sizes <- c(
-  fp=3,
-  fn=2,
-  min.fp.fn=1)
+  FP=3,
+  FN=2,
+  "min(FP,FN)"=1)
 err.colors <- c(
-  fp="red",
-  fn="deepskyblue",
-  min.fp.fn="black")
+  FP="red",
+  FN="deepskyblue",
+  "min(FP,FN)"="black")
 ggplot()+
   facet_grid(model ~ ., labeller=label_both)+
   theme_bw()+
@@ -72,7 +92,7 @@ ggplot()+
     ymin=0, ymax=value),
     color="grey",
     fill="grey",
-    data=fp.fn.dt[variable=="min.fp.fn"])+
+    data=fp.fn.dt[variable=="min(FP,FN)"])+
   geom_segment(aes(
     min.thresh, value,
     color=variable, size=variable,
@@ -100,7 +120,6 @@ poly.dt <- roc.dt[, {
     area=rep(area, 4),
     seg=rep(i, 4))
 }, by=model]
-
 ggplot()+
   theme_bw()+
   scale_fill_manual(values=c(positive="black", negative="red"))+
@@ -111,13 +130,17 @@ ggplot()+
   geom_path(aes(
     FPR, TPR),
     data=roc.dt)+
+  geom_point(aes(
+    FPR, TPR),
+    data=roc.dt)+
   facet_grid(. ~ model, labeller=label_both)+
   coord_equal()+
   geom_text(aes(
     0.5, 0.5, label=sprintf("auc=%.2f", auc)),
     data=auc.dt)
 
-auc.dt[, Model := ifelse(model=="less", "good", model)]
+model.ord <- c("best","good","ok","bad")
+auc.dt[, Model := factor(model, model.ord)]
 auc.dt[, AUC := round(auc, 2)]
 roc.join <- auc.dt[roc.dt, on="model"]
 poly.join <- auc.dt[poly.dt, on="model"]
@@ -140,7 +163,7 @@ ggplot()+
     "True Positive Rate",
     breaks = seq(0, 1, by=0.5))
 
-some <- function(dt)dt[auc<=1]
+some <- function(dt)dt[model %in% model.ord]
 gg <- ggplot()+
   theme_bw()+
   scale_fill_manual(values=c(positive="black", negative="red"))+
@@ -151,7 +174,7 @@ gg <- ggplot()+
   geom_path(aes(
     FPR, TPR),
     data=some(roc.join))+
-  facet_grid(.~AUC+Model, labeller=label_both)+
+  facet_grid(.~Model+AUC, labeller=label_both)+
   coord_equal()+
   scale_x_continuous(
     "False Positive Rate",
@@ -165,6 +188,67 @@ png("figure-more-than-one-binary.png", width=5, height=2, units="in", res=200)
 print(gg)
 dev.off()
 
+fp.fn.dt[, Model := factor(model, model.ord)]
+leg <- "Error type"
+gg <- ggplot()+
+  facet_grid(. ~ Model + AUM, labeller=label_both)+
+  theme_bw()+
+  theme(panel.spacing=grid::unit(0, "lines"))+
+  geom_rect(aes(
+    xmin=min.thresh, xmax=max.thresh,
+    ymin=0, ymax=value),
+    color="grey",
+    fill="grey",
+    data=some(fp.fn.dt[variable=="min(FP,FN)"]))+
+  geom_segment(aes(
+    min.thresh, value,
+    color=variable, size=variable,
+    xend=max.thresh, yend=value),
+    data=some(fp.fn.dt))+
+  scale_color_manual(leg, values=err.colors)+
+  scale_size_manual(leg, values=err.sizes)+
+  scale_x_continuous("Constant added to predictions")+
+  scale_y_continuous("Label errors")
+png(
+  "figure-more-than-one-binary-aum.png", 
+  width=6, height=2, units="in", res=200)
+print(gg)
+dev.off()
+
+roc.join[, min.FPR.FNR := pmin(FPR,1-TPR)]
+roc.join[, `sum(min)` := sum(min.FPR.FNR), by=Model]
+gg <- ggplot()+
+  theme_bw()+
+  scale_fill_gradient2(
+    "min(FPR,FNR)",
+    midpoint=0.25,
+    low="blue",
+    mid="white",
+    high="red")+
+  geom_path(aes(
+    FPR, TPR),
+    data=some(roc.join))+
+  geom_point(aes(
+    FPR, TPR, fill=min.FPR.FNR),
+    shape=21,
+    data=some(roc.join))+
+  facet_grid(.~Model+`sum(min)`, labeller=label_both)+
+  coord_equal()+
+  scale_x_continuous(
+    "False Positive Rate",
+    labels=c("0","0.5","1"),
+    breaks = seq(0, 1, by=0.5))+
+  scale_y_continuous(
+    "True Positive Rate",
+    breaks = seq(0, 1, by=0.5),
+    labels=c("0","0.5","1"))
+print(gg)
+png(
+  "figure-more-than-one-binary-dots.png", 
+  width=6, height=2, units="in", res=200)
+print(gg)
+dev.off()
+
 err.sizes <- c(
   FP=3,
   FN=2,
@@ -173,6 +257,68 @@ err.colors <- c(
   FP="red",
   FN="deepskyblue",
   "min(FP,FN)"="black")
+
+ggplot()+
+
+binary.list <- list(
+  "1"=profile(
+    d(-Inf, 0, 1),
+    d(0, 0, 0)),
+  "0"=profile(
+    d(-Inf, 0, 0),
+    d(0, 1, 0)))
+leg <- "Error type"
+label.tall.dt.list <- list()
+for(label in names(binary.list)){
+  label.dt <- binary.list[[label]]
+  label.tall <- melt(label.dt, measure=c("fp","fn"))
+  label.tall[, Variable := toupper(variable)]
+  label.tall.dt.list[[label]] <- data.table(label, label.tall)
+  ggplot()+
+    scale_color_manual(leg, values=err.colors)+
+    scale_size_manual(leg, values=err.sizes)+
+    scale_y_continuous("Label Errors")+
+    scale_x_continuous(
+      "Predicted score")+
+    geom_segment(aes(
+      min.log.lambda, value,
+      color=Variable,
+      size=Variable,
+      xend=max.log.lambda, yend=value),
+      data=label.tall)
+}
+label.tall.dt <- do.call(rbind, label.tall.dt.list)
+lab.info <- rbind(
+  data.table(label="0", hjust=1.1),
+  data.table(label="1", hjust=-0.1))
+label.non.zero <- label.tall.dt[value>0][lab.info, on="label"]
+label.non.zero[, x := ifelse(label=="0", min.log.lambda, max.log.lambda)]
+gg <- ggplot()+
+  scale_color_manual(leg, values=err.colors)+
+  scale_size_manual(leg, values=err.sizes)+
+  scale_y_continuous(
+    "Label Errors",
+    breaks=0:1)+
+  scale_x_continuous(
+    "Predicted score f(x)",
+    limits=c(-2,2))+
+  geom_segment(aes(
+    min.log.lambda, value,
+    color=Variable,
+    size=Variable,
+    xend=max.log.lambda, yend=value),
+    data=label.tall.dt)+
+  geom_text(aes(
+    x, 1, hjust=hjust, label=Variable, color=Variable),
+    vjust=1, 
+    data=label.non.zero)+
+  facet_grid(label ~ ., labeller=label_both)
+png(
+  "figure-more-than-one-binary-errors.png",
+  width=3, height=2.5, units="in", res=200)
+print(gg)
+dev.off()
+
 for(m in names(profile.list)){
   p.roc <- roc.dt[model==m]
   p.auc <- auc.dt[model==m]
@@ -212,7 +358,6 @@ for(m in names(profile.list)){
       data=p.auc)+
     theme(legend.position="none")
   ##if(all(p.poly$area=="positive"))g <- g+theme(legend.position="none")
-  leg <- "Error type"
   g.aum <- ggplot()+
     theme_bw()+
     theme(

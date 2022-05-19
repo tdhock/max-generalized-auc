@@ -41,6 +41,20 @@ New image classification experiment
 [[file:figure-aum-neural-networks-data.py]] adapted from torch AUM code,
 https://tdhock.github.io/blog/2022/aum-learning/
 
+** 2 May 2022
+
+Slides for London [[file:HOCKING-slides-london.tex][tex]], [[file:HOCKING-slides-london.pdf][pdf]].
+
+Additional figures in [[file:figure-more-than-one.R]]
+
+[[file:figure-more-than-one-binary-errors.png]]
+
+
+[[file:figure-more-than-one-binary-dots.png]]
+
+
+[[file:figure-more-than-one-binary-aum.png]]
+
 ** 3 Feb 2022
 Figure below from [[https://github.com/tdhock/aum/blob/main/vignettes/accuracy-comparison.Rmd][aum package accuracy comparison vignette]] suggests
 that experiments on sonar data could provide convincing evidence of
