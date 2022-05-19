@@ -35,6 +35,12 @@ Source:
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 19 May 2022
+
+New image classification experiment
+[[file:figure-aum-neural-networks-data.py]] adapted from torch AUM code,
+https://tdhock.github.io/blog/2022/aum-learning/
+
 ** 3 Feb 2022
 Figure below from [[https://github.com/tdhock/aum/blob/main/vignettes/accuracy-comparison.Rmd][aum package accuracy comparison vignette]] suggests
 that experiments on sonar data could provide convincing evidence of
