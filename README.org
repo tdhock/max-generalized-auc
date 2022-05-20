@@ -41,6 +41,10 @@ New image classification experiment
 [[file:figure-aum-neural-networks-data.py]] adapted from torch AUM code,
 https://tdhock.github.io/blog/2022/aum-learning/
 
+[[file:figure-aum-neural-networks.R]] makes
+
+[[file:figure-aum-neural-networks-test-auc.png]]
+
 ** 2 May 2022
 
 Slides for London [[file:HOCKING-slides-london.tex][tex]], [[file:HOCKING-slides-london.pdf][pdf]].

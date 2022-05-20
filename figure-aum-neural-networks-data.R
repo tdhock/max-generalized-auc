@@ -32,12 +32,18 @@ batchtools::getStatus(reg=reg)
 jt <- batchtools::getJobTable(reg=reg)
 jt[!is.na(error)]
 
+
+if(!file.exists("figure-aum-neural-networks-data")){
+  download.file(
+    "https://rcdata.nau.edu/genomic-ml/figure-aum-neural-networks-data.tgz",
+    "figure-aum-neural-networks-data.tgz")
+  system("tar xf figure-aum-neural-networks-data.tgz")
+}
 "figure-aum-neural-networks-data/AUM/1/1e-06/FashionMNIST/1000/steps.csv"
 steps.csv.vec <- Sys.glob(
   "figure-aum-neural-networks-data/*/*/*/*/*/steps.csv")
 system(paste("wc -l", paste(steps.csv.vec, collapse=" ")))
 unlink(grep("_count", steps.csv.vec, value=TRUE))
-
 library(data.table)
 steps.dt <- data.table(steps.csv=steps.csv.vec)[, {
   steps <- fread(
@@ -60,13 +66,8 @@ steps.dt <- data.table(steps.csv=steps.csv.vec)[, {
     "/steps.csv")
   data.table(meta, steps)
 }, by=steps.csv]
+out.names <- setdiff(names(steps.dt), "steps.csv")
+data.table::fwrite(
+  steps.dt[,out.names,with=FALSE],
+  "figure-aum-neural-networks-data.csv")
 
-library(ggplot2)
-steps.dt[, iteration := epoch*max(na.omit(step))+step]
-one <- steps.dt[
-  data_set=="MNIST" & out_name=="AUC" & set_name=="validation"]
-ggplot()+
-  facet_grid(lr ~ seed, labeller=label_both)+
-  geom_line(aes(
-    iteration, out_value, color=loss),
-    data=one)
