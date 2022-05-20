@@ -1,9 +1,21 @@
-import numpy as np
-import pandas as pd
+import pdb
+import os
 from pytorch_lightning.metrics.classification import AUROC
 import torch
 import torchvision.datasets
 compute_auc = AUROC()
+torch.set_num_interop_threads(1)#to avoid monsoon admin complaints.
+
+class MySubset(torch.utils.data.Dataset):
+    def __init__(self, dataset, indices):
+        self.dataset = dataset
+        self.indices = indices
+    def __getitem__(self, index):
+        i = self.indices[index].item()
+        return self.dataset[i]
+    def __len__(self):
+        return len(self.indices)
+
 
 data_dict = {}
 data_name_tup = ("MNIST", "FashionMNIST")
@@ -18,13 +30,28 @@ for data_name in data_name_tup:
             target_transform=lambda label: 0 if label < 5 else 1)
         if in_name is "train":
             torch.manual_seed(1)
-            proportions=[("subtrain",0.8),("validation",0.2)]
-            lengths=[int(p*len(data_set)) for s,p in proportions]
-            sub_list=torch.utils.data.random_split(data_set, lengths)
-            for (s,p),sub_set in zip(proportions,sub_list):
+            label_list = [y for x,y in data_set]
+            train_labels = torch.tensor(label_list)
+            skip_dict = {0:1, 1:100}
+            index_dict = {
+                lab:(train_labels==lab).nonzero() for lab in skip_dict}
+            index_list = [
+                index_dict[lab][::skip] for lab,skip in skip_dict.items()]
+            indices = torch.cat(index_list)
+            imbalanced = MySubset(data_set, indices)
+            length_dict={"subtrain":int(0.8*len(imbalanced))}
+            length_dict["validation"]=len(imbalanced)-length_dict["subtrain"]
+            sub_list = torch.utils.data.random_split(
+                imbalanced, length_dict.values())
+            for s,sub_set in zip(length_dict.keys(),sub_list):
                 data_dict[data_name][s] = sub_set
         else:
             data_dict[data_name]["test"]=data_set
+dl = torch.utils.data.DataLoader(
+    data_dict["MNIST"]["subtrain"], batch_size=2000)
+for x,y in dl:
+    pass
+print(x.shape)
 
 class LeNet5(torch.nn.Module):
     def __init__(self):
@@ -50,7 +77,7 @@ class LeNet5(torch.nn.Module):
     def forward(self, feature_mat):
         return self.seq(feature_mat)
 
-def AUM(pred_tensor, label_tensor):
+def AUM(pred_tensor, label_tensor, rate=False):
     """Area Under Min(FP,FN)
 
     Loss function for imbalanced binary classification
@@ -60,12 +87,18 @@ def AUM(pred_tensor, label_tensor):
     labels for each observation in the set/batch).
 
     """
-    fn_diff = torch.where(label_tensor == 1, -1, 0)
-    fp_diff = torch.where(label_tensor == 1, 0, 1)
+    is_positive = label_tensor == 1
+    is_negative = label_tensor != 1
+    fn_diff = torch.where(is_positive, -1, 0)
+    fp_diff = torch.where(is_positive, 0, 1)
     thresh_tensor = -pred_tensor.flatten()
     sorted_indices = torch.argsort(thresh_tensor)
-    sorted_fp_cum = fp_diff[sorted_indices].cumsum(axis=0)
-    sorted_fn_cum = -fn_diff[sorted_indices].flip(0).cumsum(axis=0).flip(0)
+    fp_denom = torch.sum(is_negative) if rate else 1
+    fn_denom = torch.sum(is_positive) if rate else 1
+    sorted_fp_cum = fp_diff[
+        sorted_indices].cumsum(axis=0)/fp_denom
+    sorted_fn_cum = -fn_diff[
+        sorted_indices].flip(0).cumsum(axis=0).flip(0)/fn_denom
     sorted_thresh = thresh_tensor[sorted_indices]
     sorted_is_diff = sorted_thresh.diff() != 0
     sorted_fp_end = torch.cat([sorted_is_diff, torch.tensor([True])])
@@ -76,64 +109,116 @@ def AUM(pred_tensor, label_tensor):
     uniq_min = torch.minimum(uniq_fn_before[1:], uniq_fp_after[:-1])
     return torch.mean(uniq_min * uniq_thresh.diff())
 
-loss_dict = {
-    "logistic":torch.nn.BCEWithLogitsLoss(),
-    "AUM":AUM,
+def AUM_rate(pred_tensor, label_tensor):
+    """Area Under Min(FPR,FNR)"""
+    return AUM(pred_tensor, label_tensor, rate=True)
+
+out_cols = [
+    "epoch",
+    "step",
+    "set_name",
+    "out_name",
+    "out_value"
+    ]
+loss_name = "logistic"
+lr = 1e-3
+seed=1
+batch_size=50
+def one_trial(loss_name, seed_str, lr_str, data_name, batch_size_str):
+    out_csv = "/".join([
+        "figure-aum-neural-networks-data",
+        loss_name, seed_str, lr_str, data_name, batch_size_str,
+        "steps.csv"
+        ])
+    out_dir = os.path.dirname(out_csv)
+    os.makedirs(out_dir, exist_ok=True)
+    def write_row(items,w_or_a):
+        f=open(out_csv,w_or_a)
+        f.write(",".join(items)+"\n")
+    write_row(out_cols,"w")
+    seed = int(seed_str)
+    lr = float(lr_str)
+    batch_size = int(batch_size_str)
+    set_dict = data_dict[data_name]
+    subtrain_label_list = [y for x,y in set_dict["subtrain"]]
+    subtrain_label_tensor = torch.tensor(subtrain_label_list)
+    label_count_dict = {
+        lab:torch.sum(subtrain_label_tensor==lab) for lab in (0,1)}
+    print(label_count_dict)
+    label_weight_dict = {
+        lab:1/count for lab,count in label_count_dict.items()}
+    def get_weight_tensor(lab_tensor):
+        return torch.where(
+            lab_tensor==0,
+            label_weight_dict[0],
+            label_weight_dict[1])
+    torch.sum(get_weight_tensor(subtrain_label_tensor)) #should be 2.
+    def log_loss(pred_tensor, label_tensor, *args):
+        bce_inst = torch.nn.BCEWithLogitsLoss(*args)
+        return bce_inst(pred_tensor, label_tensor.float())
+    def weights_balanced(pred_tensor, label_tensor):
+        return log_loss(
+            pred_tensor, label_tensor,
+            get_weight_tensor(label_tensor))
+    loss_dict = {
+        "logistic":log_loss,
+        "balanced":weights_balanced,
+        "AUM":AUM,
+        "AUM_rate":AUM_rate,
     }
+    loss_fun = loss_dict[loss_name]
+    def compute_loss_pred(features, labels):
+        pred_mat = model(features)
+        pred_vec = pred_mat.reshape(len(pred_mat))
+        return loss_fun(pred_vec, labels), pred_vec
+    out_metrics = {
+        "AUC":compute_auc,
+        "loss":loss_fun
+        }
+    torch.manual_seed(seed) 
+    model = LeNet5()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    for epoch in range(100):
+        step = 0
+        print(epoch)
+        # first update weights.
+        subtrain_loader = torch.utils.data.DataLoader(
+            set_dict["subtrain"], shuffle=True, batch_size=batch_size)
+        for subtrain_features, subtrain_labels in subtrain_loader:
+            # then compute subtrain/validation loss.
+            with torch.no_grad():
+                for set_name,set_obj in set_dict.items():
+                    set_loader = torch.utils.data.DataLoader(
+                        set_obj, batch_size=100)
+                    pred_list = []
+                    label_list = []
+                    for batch_features, batch_labels in set_loader:
+                        batch_loss, batch_pred = compute_loss_pred(
+                            batch_features, batch_labels)
+                        pred_list.append(batch_pred)
+                        label_list.append(batch_labels)
+                    set_pred_tensor = torch.cat(pred_list)
+                    set_label_tensor = torch.cat(label_list)
+                    for out_name,out_fun in out_metrics.items():
+                        out_tensor = out_fun(set_pred_tensor, set_label_tensor)
+                        out_dict = {
+                            "epoch":epoch,
+                            "step":step,
+                            "set_name":set_name,
+                            "out_name":out_name,
+                            "out_value":out_tensor.item()
+                            }
+                        item_list = [str(out_dict[N]) for N in out_cols]
+                        write_row(item_list,"a")
+            step += 1
+            optimizer.zero_grad()
+            subtrain_loss, pred_vec = compute_loss_pred(
+                subtrain_features, subtrain_labels)
+            subtrain_loss.backward()
+            optimizer.step()
 
-def compute_loss_pred(features, labels):
-    pred_mat = model(features)
-    pred_vec = pred_mat.reshape(len(pred_mat))
-    return loss_fun(pred_vec, labels), pred_vec
-
-loss_df_list = []
-max_epochs=100
-torch.manual_seed(1) #TODO multiple seeds.
-# TODO for loop over loss functions.
-loss_name = "AUM"
-loss_fun = loss_dict[loss_name]
-out_metrics = {
-    "AUC":compute_auc,
-    "loss":loss_fun
-    }
-# TODO for loop over learning rates.
-# TODO for loop over data sets.
-set_dict = data_dict["MNIST"]
-model = LeNet5()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
-for epoch in range(max_epochs):
-    print(epoch)
-    # first update weights.
-    subtrain_loader = torch.utils.data.DataLoader(
-        set_dict["subtrain"], shuffle=True, batch_size=50)
-    for subtrain_features, subtrain_labels in subtrain_loader:
-        optimizer.zero_grad()
-        subtrain_loss, pred_vec = compute_loss_pred(
-            subtrain_features, subtrain_labels)
-        subtrain_loss.backward()
-        optimizer.step()
-    # then compute subtrain/validation loss.
-    with torch.no_grad():
-        for set_name,set_obj in set_dict.items():
-            set_loader = torch.utils.data.DataLoader(
-                set_obj, batch_size=100)
-            pred_list = []
-            label_list = []
-            for batch_features, batch_labels in set_loader:
-                batch_loss, batch_pred = compute_loss_pred(
-                    batch_features, batch_labels)
-                pred_list.append(batch_pred)
-                label_list.append(batch_labels)
-            set_pred_tensor = torch.cat(pred_list)
-            set_label_tensor = torch.cat(label_list)
-            for out_name,out_fun in out_metrics.items():
-                out_tensor = out_fun(set_pred_tensor, set_label_tensor)
-                loss_df_list.append(pd.DataFrame({
-                    "epoch":[epoch],
-                    "loss_name":[loss_name],
-                    "set_name":[set_name],
-                    "out_name":[out_name],
-                    "out_value":out_tensor.detach().numpy(),
-                    }))
-loss_df = pd.concat(loss_df_list)
-
+if __name__ == '__main__':
+    import sys
+    args = sys.argv[1:]
+    print(args)
+    one_trial(*args)
