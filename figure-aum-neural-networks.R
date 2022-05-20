@@ -83,6 +83,14 @@ png(
   width=7, height=1.3, units="in", res=200)
 print(gg)
 dev.off()
+
+p.wide <- dcast(select.test.auc, data_set+seed ~ loss,value.var="out_num")
+p.tall <- melt(p.wide, measure=c("AUM","balanced","logistic"))
+p.tall[, {
+  t.test(
+    AUM_rate, value, alternative="greater", paired=TRUE
+  )[c("estimate","p.value")]
+}, keyby=.(data_set,variable)]
     
 select.valid <- selected.dt[,valid.vars,with=FALSE]
 select.valid.auc <- valid.auc[select.valid,on=names(select.valid)]
