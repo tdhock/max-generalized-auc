@@ -1,7 +1,15 @@
-** Figures from [[https://arxiv.org/abs/2107.01285][arXiv:2107.01285]]
+** Replication materials for "Optimizing ROC Curves with a Sort-Based Surrogate Loss Function for Binary Classification and Changepoint Detection,"  [[https://arxiv.org/abs/2107.01285][arXiv:2107.01285]]
 
-Before running some of the scripts you will need to clone the data
-repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
+This paper proposed a new surrogate loss function, Area Under Min of
+FP and FN (AUM). Minimizing AUM was shown to result in maximizing Area
+Under the ROC Curve (AUC). Reference implementation of Algorithm 1
+(AUM and directional derivative computation) in C++ can be found in [[https://github.com/tdhock/aum/blob/main/src/aum_sort.cpp][R
+package aum]]. AUM implementation in pytorch can be found in
+[[file:figure-aum-neural-networks-data.py]].
+
+Before running some of the replication scripts below, you will need to
+clone the data repositories:
+[[https://github.com/tdhock/feature-learning-benchmark]] and
 [[https://github.com/tdhock/neuroblastoma-data]].
 
 - Figure 1: Example changepoint data with non-monotonic FP. [[file:figure-fn-not-monotonic.png][Left PNG]]
@@ -15,9 +23,9 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 - Figure 5: Test AUM/AUC comparison across multiple seeds and datasets[[file:figure-test-auc-comparison.png][Top PNG]], [[file:figure-test-aum-comparison.png][Bottom PNG]], [[file:figure-test-comparison.R][R code]]
 - Figure 6: binary classification test AUC. [[file:figure-unbalanced-grad-desc-aum.png][Left PNG]] (Comparing AUM
   variants), [[file:figure-unbalanced-grad-desc.png][Right PNG]] (AUM compared to baselines), [[file:figure-aum-grad-speed-random.png][Right PNG]], [[file:figure-unbalanced-grad-desc.R][R code]].
-- Figure 7: speed comparison. [[file:figure-aum-grad-speed-both.png][PNG]], [[file:figure-aum-grad-speed.R][R code]].
-- Figure showing 2d loss functions.
-- Figure showing 1d loss functions.
+- Figure 7: [[file:figure-aum-neural-networks-test-auc.png][PNG]] (Test AUC of neural network for image classification),
+  [[file:figure-aum-neural-networks.R][R code]].
+- Figure 8: speed comparison. [[file:figure-aum-grad-speed-both.png][PNG]], [[file:figure-aum-grad-speed.R][R code]].
 
 ** Interactive figures
 
