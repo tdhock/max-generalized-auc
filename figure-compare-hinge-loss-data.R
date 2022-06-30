@@ -37,10 +37,19 @@ for(pred.i in 1:nrow(grid.dt)){
   roc.list <- penaltyLearning::ROChange(
     err.dt, pred.tall,
     problem.vars="obs")
+  err.marg <- data.table(err.dt)
+  err.marg[, `:=`(
+    min.log.lambda = c(-Inf, 1, -Inf, -1),
+    max.log.lambda = c(1, Inf, -1, Inf)
+  )]
+  roc.marg <- penaltyLearning::ROChange(
+    err.marg, pred.tall,
+    problem.vars="obs")
   loss.wide.list[[pred.i]] <- data.table(
     pred.i, pred.wide,
     aum=roc.list$aum,
     auc=roc.list$auc,
+    aum.marg=roc.marg$aum,
     `01.loss`=sum(pred.tall[["01.loss"]]),
     hinge.loss=sum(pred.tall$hinge.loss))
 }

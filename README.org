@@ -328,6 +328,8 @@ Initial results on two data sets (ATAC, CTCF) show that
 
 [[file:figure-compare-hinge-loss.png]]
 
+[[file:figure-compare-hinge-loss-contours.png]]
+
 ** 18 May 2020
 
 [[file:figure-neuroblastomaProcessed-combinations.R]] makes new figure
