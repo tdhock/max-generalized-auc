@@ -32,6 +32,7 @@ for(pred.i in 1:nrow(grid.dt)){
     variable.name="obs"
   )[lab.dt, on="obs"]
   pred.tall[, hinge.loss := positive.part(1-label*pred.log.lambda)]
+  pred.tall[, logistic.loss := log(1+exp(-label*pred.log.lambda))]
   pred.tall[, pred.label := ifelse(0<pred.log.lambda, 1, -1)]
   pred.tall[, `01.loss` := ifelse(pred.label == label, 0, 1)]
   roc.list <- penaltyLearning::ROChange(
@@ -47,10 +48,11 @@ for(pred.i in 1:nrow(grid.dt)){
     problem.vars="obs")
   loss.wide.list[[pred.i]] <- data.table(
     pred.i, pred.wide,
-    aum=roc.list$aum,
-    auc=roc.list$auc,
-    aum.marg=roc.marg$aum,
+    AUM=roc.list$aum,
+    AUC=roc.list$auc,
+    AUM.margin=roc.marg$aum,
     `01.loss`=sum(pred.tall[["01.loss"]]),
+    logistic.loss=sum(pred.tall$logistic.loss),
     hinge.loss=sum(pred.tall$hinge.loss))
 }
 loss.wide <- do.call(rbind, loss.wide.list)
