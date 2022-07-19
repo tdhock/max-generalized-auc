@@ -43,6 +43,23 @@ Source:
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 19 July 2022
+
+[[file:figure-compare-hinge-loss.R]] makes
+
+[[file:figure-compare-hinge-loss-pairwise-line.png]]
+
+[[file:figure-compare-hinge-loss-squared-pairwise-relative.png]]
+   
+
+[[file:figure-compare-hinge-loss-squared-pairwise.png]]
+   
+
+[[file:figure-compare-hinge-loss-hinge-pairwise-relative.png]]
+   
+
+[[file:figure-compare-hinge-loss-hinge-pairwise.png]]
+   
 ** 19 May 2022
 
 New image classification experiment
