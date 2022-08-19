@@ -86,6 +86,33 @@ png("figure-aum-grad-speed-both.png", width=7, height=3.2, res=200, units="in")
 print(dl)
 dev.off()
 
+binary.stats <- problem.stats[Problem=="Binary classification"]
+dl <- ggplot()+
+  theme(legend.position="none")+
+  geom_ribbon(aes(
+    N, ymin=min, ymax=max, fill=Algorithm),
+    alpha=0.5,
+    data=binary.stats)+
+  geom_line(aes(
+    N, median, color=Algorithm),
+    data=binary.stats)+
+  scale_color_manual(values=algo.colors)+
+  scale_fill_manual(values=algo.colors)+
+  mydl(binary.stats[Algorithm != "Squared Hinge\nAll Pairs",])+
+  mydl(binary.stats[Algorithm == "Squared Hinge\nAll Pairs",])+
+  scale_x_log10(
+    "n = number of predicted values = size of gradient vector",
+    breaks=breaks,
+    limits=c(1e1, 2e6),
+    labels=sprintf("%.e", breaks))+
+  scale_y_log10(paste0("Computation time in seconds,
+median line, min/max band over ",problem.stats[1, times], " timings"),
+breaks=10^seq(-6, 0))
+dl
+png("figure-aum-grad-speed-binary.png", width=7, height=3.4, res=200, units="in")
+print(dl)
+dev.off()
+
 timing.dt <- data.table::fread("figure-aum-grad-speed-data.csv")
 timing.stats <- timing.dt[, .(
   max=max(seconds),

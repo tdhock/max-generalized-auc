@@ -43,6 +43,14 @@ Source:
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 19 Aug 2022
+
+[[file:HOCKING-slides-prescott.tex]] makes [[file:HOCKING-slides-prescott.pdf]]
+
+with new figure code [[file:figure-aum-grad-speed-binary.R]] which makes
+
+[[file:figure-aum-grad-speed-binary.png]]
+
 ** 19 July 2022
 
 [[file:figure-compare-hinge-loss.R]] makes
