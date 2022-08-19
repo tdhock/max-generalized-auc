@@ -362,7 +362,7 @@ dev.off()
 gg <- ggplot()+
   geom_tile(aes(
     pos, neg, fill=loss.norm),
-    data=loss.tall)+
+    data=loss.tall[loss.name %in% c("AUC", "AUM", "logistic.loss")])+
   geom_rect(aes(
     xmin=xmin, xmax=xmax,
     ymin=ymin, ymax=ymax),
@@ -377,10 +377,22 @@ gg <- ggplot()+
   scale_fill_gradient(
     "Relative\nvalues",
     low="white",
-    high="blue")+
+    high="red")+
   coord_equal()+
+  geom_text(aes(
+    x,y,label=label),
+    data=data.table(x=-3,y=-3,label="   correct rank"),
+    color="grey50",
+    vjust=1.3,
+    angle=45,
+    hjust=0)+
+  geom_text(aes(
+    x,y,label=label),
+    data=data.table(x=0,y=0,label="correct \nlabel "),
+    hjust=-0.1,
+    vjust=1.1)+
   xlab("Real-valued prediction for positive label")+
   ylab("Real-valued prediction\nfor negative label")
-png("figure-compare-hinge-loss.png", width=6, height=2, res=200, units="in")
+png("figure-compare-hinge-loss.png", width=7, height=2.6, res=200, units="in")
 print(gg)
 dev.off()

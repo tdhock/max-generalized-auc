@@ -69,12 +69,13 @@
   \item Example: images. Jones {\it et al.} PNAS 2009.
   \item In all of these examples, we typically have many more negative
     examples than positive examples (unbalanced).
-    \parbox{2in}{\includegraphics[width=1.8in]{cellprofiler}}
-    \parbox{1.9in}{Most algorithms (SVM, Logistic regression, etc) minimize a differentiable surrogate of zero-one loss = sum of:\\
+    \parbox{1.5in}{\includegraphics[width=1.5in]{cellprofiler}}
+    \parbox{2.4in}{Most algorithms (Logistic regression, SVM, etc) minimize a differentiable surrogate of zero-one loss = sum of:\\
       \textbf{False positives:} $f(\mathbf x)>0$ but $y=0$ (predict
       budding, but cell is not).\\
       \textbf{False negatives:} $f(\mathbf x)<0$ but $y=1$ (predict
-      not budding, but cell is).  }
+      not budding, but cell is).
+  }
   \end{itemize} 
 \end{frame}
 
@@ -83,9 +84,9 @@
   \begin{itemize}
   \item Classic evaluation method from the signal processing
     literature (Egan and Egan, 1975).
-  \item For a given set of predicted scores, plot True Positive Rate
-    vs False Positive Rate, each point on the ROC curve is a different
-    threshold of the predicted scores.
+  \item For a given set of predictions, plot True Positive Rate
+    (=1-False Negative Rate) vs False Positive Rate, each point on the
+    ROC curve is a different threshold of the predicted scores.
   \item Best classifier has a point near upper left (TPR=1, FPR=0), with large
     Area Under the Curve (AUC).
   % \item Proposed idea: a new surrogate for AUC that is differentiable,
@@ -140,7 +141,8 @@ the point on the ROC curve that corresponds to observation $i$.
     $\hat y_{s_{q-1}} \geq \hat y_{s_q}$.
   \item Error values $\text{FP}_i,\text{FN}_i$ from last slide
     computed via modified cumulative sum (linear time).
-  \item $q$ is index of points on the ROC curve, proposed loss is
+  \item $q$ is index of points on the ROC curve, proposed loss is Area
+    Under Min of FP and FN,
   \end{itemize}
 \begin{equation}
     \text{AUM}(\mathbf{\hat y}) =
@@ -173,20 +175,20 @@ the point on the ROC curve that corresponds to observation $i$.
   \frametitle{Geometric interpretation of proposed loss}
   
     \centering
-    \includegraphics[width=0.8\textwidth]{figure-compare-hinge-loss-contours-logistic.png}
+    \includegraphics[width=0.8\textwidth]{figure-compare-hinge-loss}
 
     \begin{itemize}
     \item Visualization of loss functions when there are two labels: one
       positive, one negative.
-    \item Minima of AUM occur for any predictions that result in
+    \item Maxima of AUC occur for any predictions that result in
       correct ranking (predicted score for positive label greater than
-      predicted score for negative label).
+      predicted score for negative label), same as Minima of AUM.
     \item Minimizing logistic loss tends to encourage predictions that
       result in a correct labeling.
     \end{itemize}
 \end{frame}
 
-\section{Empirical results: minimizing AUM results in optimized ROC curves}
+\section{Empirical results: minimizing AUM results in maximizing AUC} 
 
 % \begin{frame}
 %   \frametitle{Data set sizes}
@@ -315,12 +317,11 @@ the point on the ROC curve that corresponds to observation $i$.
     all points on the ROC curve.
   \item We propose new algorithm for efficient log-linear AUM and directional
     derivative computation.
-  \item Implementations available in R and python/torch:
+  \item Implementations available in R/C++ and python/torch:
     \url{https://cloud.r-project.org/web/packages/aum/}
     \url{https://tdhock.github.io/blog/2022/aum-learning/}
   \item Empirical results provide evidence that learning using AUM
-    minimization results in ROC curve optimization (encourages
-    monotonic/regular curves with large AUC).
+    minimization results in maximizing Area Under ROC Curve.
   \item Future work: exploiting piecewise linear structure of the AUM
     loss, other model classes, other problems/objectives.
   \end{itemize}
