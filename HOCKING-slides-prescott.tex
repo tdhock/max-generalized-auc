@@ -44,11 +44,11 @@
 
 \author{
   Toby Dylan Hocking --- toby.hocking@nau.edu\\
-  joint work with Joseph R. Barr, Garinn Morton, Tyler Thatcher, and Peter Shaw.\\
-  Machine Learning Research Lab --- \url{http://ml.nau.edu}\\
+  Acronis SCS and Northern Arizona University, USA\\
   School of Informatics, Computing and Cyber Systems\\
-  Northern Arizona University, USA\\
+  Machine Learning Research Lab --- \url{http://ml.nau.edu}\\
   \includegraphics[height=3.5cm]{2021-03-lab-ski-lunch} \\
+  joint work with Joseph R. Barr, Garinn Morton, Tyler Thatcher, and Peter Shaw.\\
 }
 
 \date{}
@@ -180,11 +180,13 @@ the point on the ROC curve that corresponds to observation $i$.
     \begin{itemize}
     \item Visualization of loss functions when there are two labels: one
       positive, one negative.
-    \item Maxima of AUC occur for any predictions that result in
-      correct ranking (predicted score for positive label greater than
-      predicted score for negative label), same as Minima of AUM.
-    \item Minimizing logistic loss tends to encourage predictions that
-      result in a correct labeling.
+    \item AUC is piecewise constant (abrupt changes 0--0.5--1),\\
+      gradient is zero, can not be used for learning.
+    \item AUM is differentiable almost everywhere,\\
+      gradient can be used for learning.
+    \item Min AUM happens when max AUC, correct rank (prediction
+      for positive label greater than for negative).
+    \item Min logistic loss encourages correct labels. 
     \end{itemize}
 \end{frame}
 

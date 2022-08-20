@@ -34,7 +34,7 @@ gg <- ggplot()+
     hjust=0)+
   geom_text(aes(
     x,y,label=label),
-    data=data.table(x=Inf,y=-Inf,label="correct \nlabel "),
+    data=data.table(x=Inf,y=-Inf,label="correct \nlabels "),
     hjust=1,
     vjust=-0.2)+
   geom_rect(aes(
@@ -108,7 +108,7 @@ gg <- ggplot()+
     hjust=0)+
   geom_text(aes(
     x,y,label=label),
-    data=data.table(x=Inf,y=-Inf,label="correct \nlabel "),
+    data=data.table(x=Inf,y=-Inf,label="correct \nlabels "),
     hjust=1,
     vjust=-0.2)+
   geom_rect(aes(
@@ -164,7 +164,7 @@ gg <- ggplot()+
     hjust=0)+
   geom_text(aes(
     x,y,label=label),
-    data=data.table(x=Inf,y=-Inf,label="correct \nlabel "),
+    data=data.table(x=Inf,y=-Inf,label="correct \nlabels "),
     hjust=1,
     vjust=-0.2)+
   geom_rect(aes(
@@ -216,7 +216,7 @@ gg <- ggplot()+
     hjust=0)+
   geom_text(aes(
     x,y,label=label),
-    data=data.table(x=Inf,y=-Inf,label="correct \nlabel "),
+    data=data.table(x=Inf,y=-Inf,label="correct \nlabels "),
     hjust=1,
     vjust=-0.2)+
   geom_rect(aes(
@@ -272,7 +272,7 @@ gg <- ggplot()+
     hjust=0)+
   geom_text(aes(
     x,y,label=label),
-    data=data.table(x=Inf,y=-Inf,label="correct \nlabel "),
+    data=data.table(x=Inf,y=-Inf,label="correct \nlabels "),
     hjust=1,
     vjust=-0.2)+
   geom_rect(aes(
@@ -324,7 +324,7 @@ gg <- ggplot()+
     hjust=0)+
   geom_text(aes(
     x,y,label=label),
-    data=data.table(x=Inf,y=-Inf,label="correct \nlabel "),
+    data=data.table(x=Inf,y=-Inf,label="correct \nlabels "),
     hjust=1,
     vjust=-0.2)+
   geom_rect(aes(
@@ -388,7 +388,7 @@ gg <- ggplot()+
     hjust=0)+
   geom_text(aes(
     x,y,label=label),
-    data=data.table(x=0,y=0,label="correct \nlabel "),
+    data=data.table(x=0,y=0,label="correct \nlabels "),
     hjust=-0.1,
     vjust=1.1)+
   xlab("Real-valued prediction for positive label")+
