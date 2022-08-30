@@ -32,11 +32,10 @@ clone the data repositories:
 [[file:figure-aum-convexity-interactive.png]] 
 
 Interactive version:
-[[http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b]] 
+https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/
 
 Source:
 [[file:figure-aum-convexity-interactive.R]] 
-
 
 - [[http://ml.nau.edu/viz/2019-08-19-curveAlignment-aub-deriv/][Aligning two error curves (peak detection)]].
 - [[http://ml.nau.edu/viz/2021-10-21-neuroblastomaProcessed-complex/][8 error curves with 2 different alignments]].
