@@ -65,7 +65,7 @@ some.diff <- some.err[fp.diff != 0 | fn.diff != 0, .(
 some.diff[, fp.cum := cumsum(fp.diff), by=label]
 some.diff[, fn.cum := rev(cumsum(rev(-fn.diff))), by=label]
 dlist <- split(some.diff, some.diff[["label"]])
-border.pred <- with(dlist, positive[
+border.pred <- with(dlist, positive[ #orange dots
   negative,
   data.table(
     differentiable=FALSE,
@@ -73,7 +73,7 @@ border.pred <- with(dlist, positive[
     negative=i.pred.log.lambda),
   on="id",
   allow.cartesian=TRUE])
-grid.pred <- data.table(
+grid.pred <- data.table( #black dots
   differentiable=TRUE,
   positive=0,
   negative=seq(dmin, dmax, by=0.05))
@@ -98,6 +98,13 @@ metrics.wide <- pred.tall[order(pred.diff)][, {
 }, by=list(pred.diff, differentiable)]
 metrics.wide[auc==max(auc)] #max auc => aum>0.
 metrics.wide[14:15, roc ]
+
+##compute slope and intercept of each of the 6 T_b(s) functions, plot
+##them using geom_abline, and geom_point to represent the 9
+##intersection points.
+some.diff[, `:=`(slope=TODO, intercept=TODO)]
+
+##ignore rest.
 
 show.roc.dt <- metrics.wide[, data.table(
   roc[[1]],
