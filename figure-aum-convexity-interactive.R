@@ -102,7 +102,9 @@ metrics.wide[14:15, roc ]
 ##compute slope and intercept of each of the 6 T_b(s) functions, plot
 ##them using geom_abline, and geom_point to represent the 9
 ##intersection points.
-some.diff[, `:=`(slope=TODO, intercept=TODO)]
+some.diff[, `:=`(
+  slope=ifelse(label=="positive", 0, -1),
+  intercept=pred.log.lambda-ifelse(label=="positive", 0, 6.5))]
 
 ##ignore rest.
 
