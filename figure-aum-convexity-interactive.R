@@ -98,14 +98,116 @@ metrics.wide <- pred.tall[order(pred.diff)][, {
 }, by=list(pred.diff, differentiable)]
 metrics.wide[auc==max(auc)] #max auc => aum>0.
 metrics.wide[14:15, roc ]
+initial.pred.diff <- 6.5
+metrics.wide[,step.size := initial.pred.diff - pred.diff]
 
+#jadon
+library(dplyr)
 ##compute slope and intercept of each of the 6 T_b(s) functions, plot
 ##them using geom_abline, and geom_point to represent the 9
 ##intersection points.
 some.diff[, `:=`(
-  slope=ifelse(label=="positive", 0, -1),
-  intercept=pred.log.lambda-ifelse(label=="positive", 0, 6.5))]
+  prediction.value.change=ifelse(label=="positive", 0, -1), # Delta-i s
+  intercept=pred.log.lambda-ifelse(label=="positive", 0, initial.pred.diff))]
+# pred.log.lambda == v_b
+some.diff[, slope := -prediction.value.change]
 
+ggplot() +
+  geom_point(aes(step.size, aum, color = differentiable), data = metrics.wide)
+
+intersect.fn <- function(a, b){
+  x <- (b[1] - a[1]) / (a[2] - b[2])
+  y <- a[1] + a[2] * x
+  return(xy=c(x, y))
+}
+
+# build the intersection points
+intersection.points <- data.frame(matrix(ncol = 6, nrow = 0))
+colnames(intersection.points) <- c("x", "y", "intercept.a", "slope.a", "intercept.b", "slope.b")
+for (a in 1:nrow(some.diff)) {
+  for (b in a:nrow(some.diff)) {
+    if (a != b) {
+      intercept.a <- some.diff[a]$intercept
+      intercept.b <- some.diff[b]$intercept
+      slope.a <- some.diff[a]$slope
+      slope.b <- some.diff[b]$slope
+      found.intersection <- intersect.fn(
+        c(intercept.a, slope.a),
+        c(intercept.b, slope.b)
+      )
+      if (is.finite(found.intersection)) {
+        inter <- c(
+          x=found.intersection[1],
+          y=found.intersection[2],
+          intercept.a=intercept.a,
+          slope.a=slope.a,
+          intercept.b=intercept.b,
+          slope.b=slope.b
+        )
+        intersection.points[nrow(intersection.points) + 1,] <- inter
+      }
+    }
+  }
+}
+# sort intersections by x value
+intersection.points <- distinct(intersection.points[order(intersection.points$x),])
+
+fp.vec <- c()
+
+aum.points <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(aum.points) <- c("x", "y")
+aum.slope <- 0
+for (i in 2:nrow(some.diff)) {
+  slope.diff <- some.diff[i]$slope - some.diff[i-1]$slope
+  aum.slope <- aum.slope + slope.diff * some.diff[i]$prediction.value.change
+}
+print(aum.slope)
+
+initial.aum <- metrics.wide[step.size == 0]$aum
+aum.points[1,] <- c(0, initial.aum)
+for (i in 1:nrow(intersection.points)) {
+  point <- intersection.points[i,]
+  new.aum <- ((point$x - aum.points[i,]$x) * aum.slope) + aum.points[i,]$y
+  aum.points[nrow(aum.points) + 1,] <- c(point$x, new.aum)
+  # the aum.slope should be updated here
+  aum.slope <- 0
+}
+
+aum.segments <- data.frame(matrix(ncol = 4, nrow = 0))
+colnames(aum.segments) <- c("x", "y", "xend", "yend")
+for (i in 1:nrow(aum.points)-1) {
+  aum.segments[i,] <- c(
+    x=aum.points[i,]$x,
+    y=aum.points[i,]$y, 
+    xend=aum.points[i+1,]$x, 
+    yend=aum.points[i+1,]$y
+  )
+}
+
+print(intersection.points)
+
+add.kind <- function(df, kind){
+  data.frame(df, kind=factor(kind, c("aum", "inter")))
+}
+
+aum.plot <- ggplot() +
+  ggtitle("AUM Intersection Points") +
+  geom_vline(data = add.kind(intersection.points, "aum"), aes(xintercept = x), color="grey") +
+  geom_vline(data = add.kind(intersection.points, "inter"), aes(xintercept = x), color="grey") +
+  geom_point(data = add.kind(metrics.wide, "aum"), aes(step.size, aum, color = differentiable)) +
+  geom_abline(data = add.kind(some.diff, "inter"), aes(intercept = intercept, slope = slope)) +
+  geom_point(data = add.kind(intersection.points, "inter"), aes(x = x, y = y), color="orange") +
+  geom_segment(data = add.kind(aum.segments, "aum"), aes(x = x, y = y, xend = xend, yend = yend)) +
+  facet_grid(kind ~ ., scales="free")
+aum.plot
+
+intersection.viz <- animint(
+  title="AUM and intersections",
+  aum=aum.plot
+)
+animint2gist(intersection.viz)
+
+grid.arrange(aum.plot, intersections.plot)
 ##ignore rest.
 
 show.roc.dt <- metrics.wide[, data.table(
@@ -372,4 +474,4 @@ viz <- animint(
     variable="pred.diff",
     ms=500)
 )
-##animint2gist(viz)
+animint2gist(viz)
