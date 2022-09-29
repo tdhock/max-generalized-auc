@@ -152,8 +152,6 @@ for (a in 1:nrow(some.diff)) {
 # sort intersections by x value
 intersection.points <- distinct(intersection.points[order(intersection.points$x),])
 
-fp.vec <- c()
-
 aum.points <- data.frame(matrix(ncol = 2, nrow = 0))
 colnames(aum.points) <- c("x", "y")
 aum.slope <- 0
@@ -161,7 +159,12 @@ for (i in 2:nrow(some.diff)) {
   slope.diff <- some.diff[i]$slope - some.diff[i-1]$slope
   aum.slope <- aum.slope + slope.diff * some.diff[i]$prediction.value.change
 }
-print(aum.slope)
+
+fp <- function(b) {
+  for (i in 1:b) {
+    some.diff[i,]$fp.diff
+  }
+}
 
 initial.aum <- metrics.wide[step.size == 0]$aum
 aum.points[1,] <- c(0, initial.aum)
@@ -171,6 +174,17 @@ for (i in 1:nrow(intersection.points)) {
   aum.points[nrow(aum.points) + 1,] <- c(point$x, new.aum)
   # the aum.slope should be updated here
   aum.slope <- 0
+  
+  # fake the slope update by using the next non-differentiable point
+  # that lines up with the next intersection point
+  if (i < nrow(intersection.points)) {
+    next.point <- intersection.points[i+1,]
+    closest.point <- metrics.wide[step.size >= (next.point$x - 0.00005) & step.size <= (next.point$x + 0.00005)]
+    next.aum <- closest.point$aum
+    rise <- next.aum - new.aum
+    run <- next.point$x - point$x
+    aum.slope <- rise / run
+  }
 }
 
 aum.segments <- data.frame(matrix(ncol = 4, nrow = 0))
@@ -192,11 +206,16 @@ add.kind <- function(df, kind){
 
 aum.plot <- ggplot() +
   ggtitle("AUM Intersection Points") +
+  # light grey verticle lines showing the intersection x values
   geom_vline(data = add.kind(intersection.points, "aum"), aes(xintercept = x), color="grey") +
   geom_vline(data = add.kind(intersection.points, "inter"), aes(xintercept = x), color="grey") +
+  # normal step size vs aum graph
   geom_point(data = add.kind(metrics.wide, "aum"), aes(step.size, aum, color = differentiable)) +
+  # threshold lines
   geom_abline(data = add.kind(some.diff, "inter"), aes(intercept = intercept, slope = slope)) +
+  # intersection points on the threshold lines
   geom_point(data = add.kind(intersection.points, "inter"), aes(x = x, y = y), color="orange") +
+  # computed aum line segments
   geom_segment(data = add.kind(aum.segments, "aum"), aes(x = x, y = y, xend = xend, yend = yend)) +
   facet_grid(kind ~ ., scales="free")
 aum.plot
