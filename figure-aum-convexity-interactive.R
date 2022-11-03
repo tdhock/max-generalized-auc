@@ -111,6 +111,7 @@ some.diff[, `:=`(
   intercept=pred.log.lambda-ifelse(label=="positive", 0, initial.pred.diff))]
 # pred.log.lambda == v_b
 some.diff[, slope := -prediction.value.change]
+line.data <- data.table(some.diff)
 
 ggplot() +
   geom_point(aes(step.size, aum, color = differentiable), data = metrics.wide)
@@ -122,12 +123,21 @@ intersect.fn <- function(a, b){
 }
 
 # build the intersection points
-intersection.points <- data.frame(matrix(ncol = 6, nrow = 0))
-colnames(intersection.points) <- c("x", "y", "intercept.a", "slope.a", "intercept.b", "slope.b")
+intersection.col.names <- c(
+  "x", "y", 
+  "intercept.a", "slope.a", 
+  "intercept.b", "slope.b",
+  "fp.diff.a", "fn.diff.a",
+  "fp.diff.b", "fn.diff.b"
+)
+intersection.points <- data.frame(matrix(ncol = length(intersection.col.names), nrow = 0))
+colnames(intersection.points) <- intersection.col.names
 for (a in 1:nrow(some.diff)) {
   for (b in a:nrow(some.diff)) {
     if (a != b) {
-      intercept.a <- some.diff[a]$intercept
+      line.a <- some.diff[a]
+      line.b <- some.diff[b]
+      intercept.a <- line.a$intercept
       intercept.b <- some.diff[b]$intercept
       slope.a <- some.diff[a]$slope
       slope.b <- some.diff[b]$slope
@@ -142,7 +152,11 @@ for (a in 1:nrow(some.diff)) {
           intercept.a=intercept.a,
           slope.a=slope.a,
           intercept.b=intercept.b,
-          slope.b=slope.b
+          slope.b=slope.b,
+          fp.diff.a=line.a$fp.diff,
+          fn.diff.a=line.a$fn.diff,
+          fp.diff.b=line.b$fp.diff,
+          fn.diff.b=line.b$fn.diff
         )
         intersection.points[nrow(intersection.points) + 1,] <- inter
       }
@@ -151,19 +165,43 @@ for (a in 1:nrow(some.diff)) {
 }
 # sort intersections by x value
 intersection.points <- distinct(intersection.points[order(intersection.points$x),])
+intersection.points$id <- seq_along(intersection.points[,1])
 
 aum.points <- data.frame(matrix(ncol = 2, nrow = 0))
 colnames(aum.points) <- c("x", "y")
 aum.slope <- 0
+
+
 for (i in 2:nrow(some.diff)) {
   slope.diff <- some.diff[i]$slope - some.diff[i-1]$slope
   aum.slope <- aum.slope + slope.diff * some.diff[i]$prediction.value.change
 }
 
-fp <- function(b) {
-  for (i in 1:b) {
-    some.diff[i,]$fp.diff
-  }
+# `dataframe$column == DoubleValue` doesn't work?
+doubleEquals <- function (table, column, value) {
+  table[column >= (value - 0.00005) & column <= (value + 0.00005)]
+}
+
+fp.vec <- list()
+fn.vec <- list()
+min.vec <- list()
+for (i in 2:nrow(some.diff)) {
+  fp.delta.delta <- some.diff[i]$fp.diff - some.diff[i-1]$fp.diff
+  fn.delta.delta <- some.diff[i]$fn.diff - some.diff[i-1]$fn.diff
+  fp.vec <- append(fp.vec, fp.delta.delta)
+  fn.vec <- append(fn.vec, fn.delta.delta)
+  min.vec <- append(min.vec, min(fp.delta.delta, fn.delta.delta))
+}
+
+for (i in 1:nrow(intersection.points)) {
+  point <- intersection.points[i,]
+  line.a <- doubleEquals(line.data, line.data$intercept, point$intercept.a)
+  line.b <- doubleEquals(line.data, line.data$intercept, point$intercept.b)
+  print(line.b)
+  print(paste("A fp.diff: ", line.a$fp.diff))
+  print(paste("A fn.diff: ", line.a$fn.diff))
+  print(paste("B fp.diff: ", line.b$fp.diff))
+  print(paste("B fn.diff: ", line.b$fn.diff))
 }
 
 initial.aum <- metrics.wide[step.size == 0]$aum
@@ -177,7 +215,8 @@ for (i in 1:nrow(intersection.points)) {
   
   # fake the slope update by using the next non-differentiable point
   # that lines up with the next intersection point
-  if (i < nrow(intersection.points)) {
+  if (i < nrow(intersection.points && i > 1)) {
+    previous.point
     next.point <- intersection.points[i+1,]
     closest.point <- metrics.wide[step.size >= (next.point$x - 0.00005) & step.size <= (next.point$x + 0.00005)]
     next.aum <- closest.point$aum
