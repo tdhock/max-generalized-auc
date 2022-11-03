@@ -104,7 +104,6 @@ metrics.wide[,step.size := initial.pred.diff - pred.diff]
 #jadon
 library(dplyr)
 library(Rcpp)
-aumLineSearchLib <- sourceCpp("RaumLineSearch.cpp")
 
 ##compute slope and intercept of each of the 6 T_b(s) functions, plot
 ##them using geom_abline, and geom_point to represent the 9
@@ -115,6 +114,8 @@ some.diff[, `:=`(
 # pred.log.lambda == v_b
 some.diff[, slope := -prediction.value.change]
 line.data <- data.table(some.diff)
+sorted.data <- some.diff[order(some.diff$intercept),]
+initial.aum <- metrics.wide[step.size == 0]$aum
 
 ggplot() +
   geom_point(aes(step.size, aum, color = differentiable), data = metrics.wide)
@@ -207,7 +208,6 @@ for (i in 1:nrow(intersection.points)) {
   print(paste("B fn.diff: ", line.b$fn.diff))
 }
 
-initial.aum <- metrics.wide[step.size == 0]$aum
 aum.points[1,] <- c(0, initial.aum)
 for (i in 1:nrow(intersection.points)) {
   point <- intersection.points[i,]
@@ -246,6 +246,9 @@ add.kind <- function(df, kind){
   data.frame(df, kind=factor(kind, c("aum", "inter")))
 }
 
+
+aumLineSearchLib <- sourceCpp("RaumLineSearch.cpp")
+line.search.result <- aumLineSearch(sorted.data, initial.aum)
 aum.plot <- ggplot() +
   ggtitle("AUM Intersection Points") +
   # light grey verticle lines showing the intersection x values
@@ -253,6 +256,8 @@ aum.plot <- ggplot() +
   geom_vline(data = add.kind(intersection.points, "inter"), aes(xintercept = x), color="grey") +
   # normal step size vs aum graph
   geom_point(data = add.kind(metrics.wide, "aum"), aes(step.size, aum, color = differentiable)) +
+  # calculated aum using the cpp line search
+  geom_point(data = add.kind(line.search.result, "aum"), aes(x=step.size, y=aum), color = "darkblue") +
   # threshold lines
   geom_abline(data = add.kind(some.diff, "inter"), aes(intercept = intercept, slope = slope)) +
   # intersection points on the threshold lines
