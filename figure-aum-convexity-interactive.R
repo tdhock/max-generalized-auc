@@ -103,6 +103,9 @@ metrics.wide[,step.size := initial.pred.diff - pred.diff]
 
 #jadon
 library(dplyr)
+library(Rcpp)
+aumLineSearchLib <- sourceCpp("RaumLineSearch.cpp")
+
 ##compute slope and intercept of each of the 6 T_b(s) functions, plot
 ##them using geom_abline, and geom_point to represent the 9
 ##intersection points.
