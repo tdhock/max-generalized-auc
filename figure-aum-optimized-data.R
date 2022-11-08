@@ -1,5 +1,6 @@
 source("packages.R")
 
+## need to clone https://github.com/tdhock/feature-learning-benchmark
 folds.dt <- fread("../feature-learning-benchmark/labeled_problems_folds.csv")
 addMeta <- function(dt){
   dt[, set.name := sub("/.*", "", prob.dir)]
@@ -43,8 +44,35 @@ possible.errors <- possible.dt[test.fold.errors, on=list(
 possible.errors[, possible.fn := possible.tp]
 test.fold.segs <- test.fold.errors[, .(
   min.log.lambda=min(min.log.lambda),
-  max.log.lambda=max(max.log.lambda)
+  max.log.lambda=max(max.log.lambda),
+  fp=fp[1],
+  fn=fn[1]
 ), by=.(prob.dir, seg.i)]
+prob.dir.ord <- unique(test.fold.segs$prob.dir)
+diff.fp.fn <- aum::aum_diffs_penalty(
+  test.fold.segs[, `:=`(example=prob.dir, min.lambda = exp(min.log.lambda))],
+  prob.dir.ord)
+pred.vec <- initial.pred[prob.dir.ord, pred.log.lambda, on="prob.dir"]
+aum.list <- aum::aum(diff.fp.fn, pred.vec)
+descent.direction.vec <- -rowMeans(aum.list$derivative_mat)
+direction.dt <- data.table(
+  example=seq(0, length(pred.vec)-1),
+  weight=pred.vec,
+  direction=descent.direction.vec)
+(diffs.with.direction <- direction.dt[diff.fp.fn, on="example"][, `:=`(
+  slope = -direction,
+  intercept=pred-weight
+)][])
+##TODO Jadon plug in your code.
+ggplot()+
+  geom_point(aes(
+    0, intercept),
+    data=diffs.with.direction)+
+  geom_abline(aes(
+    slope=slope, intercept=intercept),
+    data=diffs.with.direction)+
+  coord_cartesian(xlim=c(-5,5))
+
 test.fold.segs[, mid.log.lambda := (max.log.lambda+min.log.lambda)/2]
 test.fold.targets <- penaltyLearning::targetIntervals(
   test.fold.errors, "prob.dir")
@@ -92,6 +120,10 @@ while(1e-6 < improvement){
     step.list <- getROC(step.dt)
     roc.list$aum < step.list$aum
   }){
+    ## TODO Jadon replace step size halving with your algorithm,
+    ## either go all the way to the end of the path, quadratic
+    ## max_iterations=N*(N-1)/2 or just stop with log linear
+    ## algorithm, max_iterations=N.
     step.size <- step.size/2
   }
   cat(sprintf(
