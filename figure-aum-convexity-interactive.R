@@ -248,16 +248,16 @@ add.kind <- function(df, kind){
 
 
 aumLineSearchLib <- sourceCpp("RaumLineSearch.cpp")
-line.search.result <- aumLineSearch(sorted.data, initial.aum)
+line.search.result <- aumLineSearch(sorted.data, initial.aum, 20)
 aum.plot <- ggplot() +
   ggtitle("AUM Intersection Points") +
   # light grey verticle lines showing the intersection x values
   geom_vline(data = add.kind(intersection.points, "aum"), aes(xintercept = x), color="grey") +
   geom_vline(data = add.kind(intersection.points, "inter"), aes(xintercept = x), color="grey") +
   # normal step size vs aum graph
-  geom_point(data = add.kind(metrics.wide, "aum"), aes(step.size, aum, color = differentiable)) +
+  geom_point(data = add.kind(metrics.wide, "aum"), aes(step.size, aum, color = differentiable), size = 3) +
   # calculated aum using the cpp line search
-  geom_point(data = add.kind(line.search.result, "aum"), aes(x=step.size, y=aum), color = "darkblue") +
+  geom_point(data = add.kind(line.search.result, "aum"), aes(x=step.size, y=aum), color = "yellow") +
   # threshold lines
   geom_abline(data = add.kind(some.diff, "inter"), aes(intercept = intercept, slope = slope)) +
   # intersection points on the threshold lines
