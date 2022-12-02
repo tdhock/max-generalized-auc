@@ -48,11 +48,48 @@ test.fold.segs <- test.fold.errors[, .(
   fp=fp[1],
   fn=fn[1]
 ), by=.(prob.dir, seg.i)]
+test.fold.segs[, mid.log.lambda := (max.log.lambda+min.log.lambda)/2]
+test.fold.targets <- penaltyLearning::targetIntervals(
+  test.fold.errors, "prob.dir")
+test.fold.targets[, width := max.log.lambda-min.log.lambda]
+initial.pred <- test.fold.targets[order(width==Inf, -width), data.table(
+  prob.dir,
+  pred.log.lambda=ifelse(
+    max.log.lambda==Inf, min.log.lambda+1, ifelse(
+      min.log.lambda==-Inf, max.log.lambda-1,
+      (min.log.lambda+max.log.lambda)/2)
+  )
+)]
+initial.pred[!is.finite(pred.log.lambda), pred.log.lambda := 0]
 prob.dir.ord <- unique(test.fold.segs$prob.dir)
 diff.fp.fn <- aum::aum_diffs_penalty(
   test.fold.segs[, `:=`(example=prob.dir, min.lambda = exp(min.log.lambda))],
   prob.dir.ord)
-pred.vec <- initial.pred[prob.dir.ord, pred.log.lambda, on="prob.dir"]
+diff.fp.fn[example==0]
+test.fold.segs[prob.dir==prob.dir.ord[1], .(min.log.lambda, max.log.lambda, fp, fn)]
+pred.vec <- initial.pred[prob.dir.ord, -pred.log.lambda, on="prob.dir"]
+
+possible.segs <- possible.dt[test.fold.segs, on="prob.dir"][, `:=`(
+  errors = fp+fn,
+  possible.fn = possible.tp
+  )]
+roc.initial <- penaltyLearning::ROChange(
+  possible.segs, initial.pred, problem.vars="prob.dir")
+roc.initial$aum
+ls.out <- aum::aum_line_search_grid(
+  diff.fp.fn, pred.vec, maxIterations=30, n.grid=100)
+ls.out$aum
+plot(ls.out)
+
+pred.mat <- matrix(pred.vec, length(pred.vec), n.steps)
+grad.mat <- matrix(rowMeans(ls.out$derivative_mat), length(pred.vec), n.steps)
+n.steps <- length(ls.out$line_search_result$step.size)
+step.mat <- matrix(
+  ls.out$line_search_result$step.size, length(pred.vec), n.steps, byrow=TRUE)
+after.mat <- pred.mat-step.mat*grad.mat
+expected <- apply(after.mat, 2, function(pred)aum::aum(diff.fp.fn,pred)$aum)
+rbind(ls.out$line_search_result$aum, expected)
+
 aum.list <- aum::aum(diff.fp.fn, pred.vec)
 descent.direction.vec <- -rowMeans(aum.list$derivative_mat)
 direction.dt <- data.table(
@@ -73,19 +110,6 @@ ggplot()+
     data=diffs.with.direction)+
   coord_cartesian(xlim=c(-5,5))
 
-test.fold.segs[, mid.log.lambda := (max.log.lambda+min.log.lambda)/2]
-test.fold.targets <- penaltyLearning::targetIntervals(
-  test.fold.errors, "prob.dir")
-test.fold.targets[, width := max.log.lambda-min.log.lambda]
-initial.pred <- test.fold.targets[order(width==Inf, -width), data.table(
-  prob.dir,
-  pred.log.lambda=ifelse(
-    max.log.lambda==Inf, min.log.lambda+1, ifelse(
-      min.log.lambda==-Inf, max.log.lambda-1,
-      (min.log.lambda+max.log.lambda)/2)
-  )
-)]
-initial.pred[!is.finite(pred.log.lambda), pred.log.lambda := 0]
 
 test.fold.breaks <- test.fold.errors[, .(breaks=.N-1), by=prob.dir]
 test.fold.breaks[, .(
