@@ -1,4 +1,9 @@
 source("packages.R")
+library(ggplot2)
+library(data.table)
+library(aum)
+library(Rcpp)
+library(data.table)
 
 ## need to clone https://github.com/tdhock/feature-learning-benchmark
 folds.dt <- fread("../feature-learning-benchmark/labeled_problems_folds.csv")
@@ -52,26 +57,6 @@ prob.dir.ord <- unique(test.fold.segs$prob.dir)
 diff.fp.fn <- aum::aum_diffs_penalty(
   test.fold.segs[, `:=`(example=prob.dir, min.lambda = exp(min.log.lambda))],
   prob.dir.ord)
-pred.vec <- initial.pred[prob.dir.ord, pred.log.lambda, on="prob.dir"]
-aum.list <- aum::aum(diff.fp.fn, pred.vec)
-descent.direction.vec <- -rowMeans(aum.list$derivative_mat)
-direction.dt <- data.table(
-  example=seq(0, length(pred.vec)-1),
-  weight=pred.vec,
-  direction=descent.direction.vec)
-(diffs.with.direction <- direction.dt[diff.fp.fn, on="example"][, `:=`(
-  slope = -direction,
-  intercept=pred-weight
-)][])
-##TODO Jadon plug in your code.
-ggplot()+
-  geom_point(aes(
-    0, intercept),
-    data=diffs.with.direction)+
-  geom_abline(aes(
-    slope=slope, intercept=intercept),
-    data=diffs.with.direction)+
-  coord_cartesian(xlim=c(-5,5))
 
 test.fold.segs[, mid.log.lambda := (max.log.lambda+min.log.lambda)/2]
 test.fold.targets <- penaltyLearning::targetIntervals(
@@ -97,14 +82,97 @@ test.fold.breaks[, .(
 )]
 diff.counts[test.fold.info[1], on=c("set.name", "fold")]
 
-## initialization:
-pred.dt <- data.table(initial.pred)
 getROC <- function(p){
   L <- penaltyLearning::ROChange(possible.errors, p, "prob.dir")
   non.smooth <- L$aum.grad[lo != hi]
   if(nrow(non.smooth))print(non.smooth)
   L
 }
+
+#ggplot() +
+#  geom_point(aes(
+#    x=step.size, y=aum
+#  ), data = aum.df, color = "darkblue", size = 0.1) +
+#  geom_point(aes(
+#    x=step.size, y=aum
+#  ), data = smallest.aum, color = "darkorange", size = 2) +
+#  # center graph on the smallest point
+#  coord_cartesian(xlim=c(
+#    max(0, smallest.aum$step.size - 1),
+#    smallest.aum$step.size + 1
+#  ),ylim=c(smallest.aum$aum - 50, smallest.aum$aum + 50))
+##    coord_cartesian(xlim=c(0,1.5),ylim=c(0,200))
+
+# exact line search start
+current.pred <- data.table(initial.pred)
+current.pred <- current.pred[prob.dir.ord, prob.dir, pred.log.lambda, on="prob.dir"] # sort by example
+step.number <- 1
+improvement <- Inf
+aum.dt.list <- list()
+aum.smallest.dt.list <- list()
+aum.grid.search.dt.list <- list()
+(max.iterations <- nrow(diff.fp.fn) * (nrow(diff.fp.fn) - 1) / 2)
+#max.iterations <- nrow(diff.fp.fn) * 10
+aum.result <- aum::aum_line_search_grid(diff.fp.fn, pred.vec=current.pred$pred.log.lambda, maxIterations=max.iterations)
+while(1e-6 < improvement) {
+  aum.df <- as.data.frame(aum.result$line_search_result)
+  aum.df <- aum.df[aum.df$step.size != -1,] # filter bad values
+  smallest.aum <- aum.df[which.min(aum.df$aum),]
+  plot.aum_line_search_grid(aum.result)
+
+  aum.dt.list[[paste(step.number)]] <- data.table(step=step.number, step.size=aum.df$step.size, aum=aum.df$aum)
+  aum.smallest.dt.list[[paste(step.number)]] <- data.table(step=step.number, smallest.aum)
+  aum.grid.search.dt.list[[paste(step.number)]] <- data.table(step=step.number, aum.result$grid_aum)
+
+  # create a new prediction vector with all of the values going in the descent direction with the step size we've found
+  step.pred <- current.pred
+  step.pred$pred.log.lambda <- step.pred$pred.log.lambda - (smallest.aum$step.size * aum.result$gradient)
+  step.aum.result <- aum::aum_line_search_grid(diff.fp.fn, pred.vec=step.pred$pred.log.lambda, maxIterations=max.iterations)
+
+  cat(sprintf(
+    "step=%d size=%e aum=%f->%f\n",
+    step.number,
+    smallest.aum$step.size,
+    aum.result$aum,
+    step.aum.result$aum
+  ))
+
+  step.number <- step.number + 1
+  improvement <- aum.result$aum - step.aum.result$aum
+  current.pred <- step.pred
+  aum.result <- step.aum.result
+}
+aum.dt <- do.call(rbind, aum.dt.list)
+aum.smallest.dt <- do.call(rbind, aum.smallest.dt.list)
+aum.grid.search.dt <- do.call(rbind, aum.grid.search.dt.list)
+
+ggplot() +
+  geom_point(aes(
+    x=step.size, y=aum
+  ), data = aum.dt, color = "darkblue", size = 0.1) +
+  geom_point(aes(
+    x=step.size, y=aum
+  ), data = aum.smallest.dt, color = "darkorange", size = 2) +
+  geom_point(aes(
+    x=step.size, y=aum
+  ), data = aum.grid.search.dt, color = "darkcyan", size = 2) +
+  facet_wrap("step", scales="free")
+#  coord_cartesian(xlim=c(0,1),ylim=c(150,200))
+#  facet_grid(. ~ step) +
+ggplot() +
+  geom_point(aes(
+    x=log(step.size), y=aum
+  ), data = aum.dt, color = "darkblue", size = 0.1) +
+  geom_point(aes(
+    x=log(step.size), y=aum
+  ), data = aum.smallest.dt, color = "darkorange", size = 2) +
+    geom_point(aes(
+      x=log(step.size), y=aum
+    ), data = aum.grid.search.dt, color = "red", size = 2) +
+  facet_wrap("step", scales="free")
+
+## initialization:
+pred.dt <- data.table(initial.pred)
 step.number <- 1
 step.size <- 1
 roc.list <- getROC(pred.dt)
@@ -180,3 +248,4 @@ out.list <- list(
   auc=do.call(rbind, out.auc.list))
 
 saveRDS(out.list, "figure-aum-optimized-data.rds")
+
