@@ -32,7 +32,7 @@ clone the data repositories:
 [[file:figure-aum-convexity-interactive.png]] 
 
 Interactive version:
-https://bl.ocks.org/tdhock/raw/545d76ea8c0678785896e7dbe5ff5510/
+http://ml.nau.edu/viz/2021-11-12-aum-convexity/
 
 Source:
 [[file:figure-aum-convexity-interactive.R]] 
@@ -122,6 +122,7 @@ superior accuracy.
 [[file:figure-aum-convexity-interactive.png]]
 
 Interactive versions:
+- 2 Feb 2023, bigger text size http://ml.nau.edu/viz/2021-11-12-aum-convexity/
 - 7 Nov 2021, continuity in pred.diff interaction http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b
 - 6 Nov 2021, no continuity in pred.diff interaction http://bl.ocks.org/tdhock/raw/de3979318d5255dd6e21ff907e2f3fb4
 
