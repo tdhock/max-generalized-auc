@@ -36,10 +36,12 @@ nb.segs <- nb.some$profiles[, {
 }, by=label]
 
 some.err <- neuroblastomaProcessed$errors[select.dt, .(
+  profile.id, chromosome,
   segments=n.segments,
   fp, fn, possible.fp, possible.fn,
   min.log.lambda=-max.log.lambda,
   max.log.lambda=-min.log.lambda,
+  min.lambda,
   errors, labels,
   label
 ), on=list(profile.id, chromosome)]
@@ -105,8 +107,10 @@ metrics.wide <- pred.tall[, {
 metrics.wide[auc==max(auc)] #max auc => aum>0.
 metrics.wide[14:15, roc ]
 
-one.pred <- data.table(pos=-3.5, neg=3.5)
-aum::aum_diffs_penalty(some.err, TODO)
+one.pred <- c(neg=3.5, pos=-3.5)
+some.err[, example := label]
+diff.dt <- aum::aum_diffs_penalty(some.err, names(one.pred))
+aum::aum_line_search(diff.dt, pred.vec=one.pred)
 
 
 

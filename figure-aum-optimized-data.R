@@ -76,8 +76,10 @@ possible.segs <- possible.dt[test.fold.segs, on="prob.dir"][, `:=`(
 roc.initial <- penaltyLearning::ROChange(
   possible.segs, initial.pred, problem.vars="prob.dir")
 roc.initial$aum
+N.breaks <- nrow(diff.fp.fn)
+max.intersections <- N.breaks*(N.breaks-1)/2
 ls.out <- aum::aum_line_search_grid(
-  diff.fp.fn, pred.vec, maxIterations=30, n.grid=100)
+  diff.fp.fn, pred.vec, maxIterations=max.intersections, n.grid=100)
 ls.out$aum
 plot(ls.out)
 
