@@ -4,7 +4,10 @@ library(data.table)
 data(neuroblastomaProcessed, package="penaltyLearning")
 data(neuroblastoma, package="neuroblastoma")
 e <- function(label, profile.id, chromosome){
-  data.table(label, profile.id=factor(profile.id), chromosome=factor(chromosome))
+  data.table(
+    label, 
+    profile.id=factor(profile.id), 
+    chromosome=factor(chromosome))
 }
 select.dt <- rbind(
   e("pos", 4, 2),
@@ -56,8 +59,8 @@ some.err.tall <- melt(
 some.err.tall[, error.type := toupper(var.lower)]
 leg <- "Error type"
 
-dmin <- 4
-dmax <- 6.5
+dmin <- 2
+dmax <- 4
 some.err[, fp.diff := c(NA, diff(fp)), by=label]
 some.err[, fn.diff := c(NA, diff(fn)), by=label]
 some.diff <- some.err[fp.diff != 0 | fn.diff != 0, .(
@@ -73,18 +76,21 @@ border.pred <- with(dlist, pos[ #orange dots
     neg=i.pred.log.lambda),
   on="id",
   allow.cartesian=TRUE])
-grid.pred <- data.table( #black dots
-  differentiable=TRUE,
-  pos=0,
-  neg=seq(dmin, dmax, by=0.05))
+neg.seq <- seq(dmin, dmax, by=0.05)
+grid.pred <- CJ(
+  neg=neg.seq, pos=-neg.seq
+)[, differentiable := TRUE][]
+range(grid.dt[, neg-pos])
+
 both.pred <- rbind(border.pred, grid.pred)
-both.pred[, pred.diff := neg-pos]
 pred.tall <- melt(
   both.pred,
+  id.vars=names(both.pred),
   measure.vars=select.dt$label,
   variable.name="label",
-  value.name="pred.log.lambda")[select.dt, nomatch=0L, on="label"]
-metrics.wide <- pred.tall[order(pred.diff)][, {
+  value.name="pred.log.lambda"
+)[select.dt, nomatch=0L, on="label"]
+metrics.wide <- pred.tall[, {
   L <- penaltyLearning::ROChange(some.err, .SD, "label")
   pos <- pred.log.lambda[label=="pos"]
   with(L, data.table(
@@ -95,9 +101,14 @@ metrics.wide <- pred.tall[order(pred.diff)][, {
       max.thresh=max.thresh+pos
     )])
   ))
-}, by=list(pred.diff, differentiable)]
+}, keyby=list(pos, neg, differentiable)]
 metrics.wide[auc==max(auc)] #max auc => aum>0.
 metrics.wide[14:15, roc ]
+
+one.pred <- data.table(pos=-3.5, neg=3.5)
+aum::aum_diffs_penalty(some.err, TODO)
+
+
 
 ##compute slope and intercept of each of the 6 T_b(s) functions, plot
 ##them using geom_abline, and geom_point to represent the 9
@@ -121,10 +132,20 @@ show.roc.tall[, error.type := ifelse(
 
 metrics.tall <- melt(
   metrics.wide,
-  measure.vars=c("aum", "auc"),
+  measure.vars=c("aum", "auc", "SM"),
   variable.name="var.lower"
 )[order(-differentiable)]
 metrics.tall[, variable := toupper(var.lower)]
+
+metrics.tall[, norm := (value-min(value))/(max(value)-min(value))]
+
+ggplot()+
+  geom_tile(aes(
+    pos, neg, fill=norm),
+    data=metrics.tall[differentiable==TRUE])+
+  scale_fill_gradient(low="white", high="red")+
+  facet_grid(. ~ variable)+
+  coord_equal()
 
 show.roc.dt[, roc.point := rank(min.thresh), by=pred.diff]
 thresh.offset <- 0.1
