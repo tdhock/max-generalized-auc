@@ -107,12 +107,11 @@ metrics.wide <- pred.tall[, {
 metrics.wide[auc==max(auc)] #max auc => aum>0.
 metrics.wide[14:15, roc ]
 
+one.pred.diff <- one.pred[["neg"]]-one.pred[["pos"]]
 one.pred <- c(neg=3.5, pos=-3.5)
 some.err[, example := label]
 diff.dt <- aum::aum_diffs_penalty(some.err, names(one.pred))
-aum::aum_line_search(diff.dt, pred.vec=one.pred)
-
-
+ls.list <- aum::aum_line_search(diff.dt, pred.vec=one.pred, maxIterations = 10)
 
 ##compute slope and intercept of each of the 6 T_b(s) functions, plot
 ##them using geom_abline, and geom_point to represent the 9
@@ -121,26 +120,12 @@ some.diff[, `:=`(
   slope=ifelse(label=="pos", 0, -1),
   intercept=pred.log.lambda-ifelse(label=="pos", 0, 6.5))]
 
-##ignore rest.
-
-show.roc.dt <- metrics.wide[, data.table(
-  roc[[1]],
-  AUC=auc, AUM=round(aum,3)
-), by=pred.diff]
-show.roc.tall <- melt(
-  show.roc.dt,
-  measure=c("fp","fn","min.fp.fn"),
-  variable.name="lower.var")
-show.roc.tall[, error.type := ifelse(
-  lower.var=="min.fp.fn", "min(FP,FN)", toupper(lower.var))]
-
 metrics.tall <- melt(
   metrics.wide,
-  measure.vars=c("aum", "auc", "SM"),
+  measure.vars=c("aum", "auc"),
   variable.name="var.lower"
 )[order(-differentiable)]
 metrics.tall[, variable := toupper(var.lower)]
-
 metrics.tall[, norm := (value-min(value))/(max(value)-min(value))]
 
 ggplot()+
@@ -151,253 +136,46 @@ ggplot()+
   facet_grid(. ~ variable)+
   coord_equal()
 
-show.roc.dt[, roc.point := rank(min.thresh), by=pred.diff]
-thresh.offset <- 0.1
-show.roc.dt[, text.constant := ifelse(
-  min.thresh==-Inf, max.thresh-thresh.offset,
-  ifelse(
-    max.thresh==Inf,
-    min.thresh+thresh.offset,
-    (min.thresh+max.thresh)/2
-  ))]
-show.roc.dt[, text.roc.i := rank(roc.point), by=.(pred.diff, FPR, TPR)]
-show.roc.dt[, text.FPR := text.roc.i*0.04+FPR]
-text.size <- 15
-text.color <- "blue"
-both.pred.adj <- melt(both.pred[, .(
-  differentiable,
-  pos=0,
-  neg=pred.diff,
-  pred.diff
-)],
-measure.vars=select.dt$label,
-variable.name = "label",
-value.name="pred.log.lambda")
-pred.tall.thresh <- both.pred.adj[
-  show.roc.dt, on="pred.diff", allow.cartesian=TRUE]
-pred.tall.thresh[, pred.plus.constant := pred.log.lambda+text.constant]
-pred.tall.thresh.wide <- dcast(
-  pred.tall.thresh,
-  pred.diff + roc.point ~ label,
-  value.var="pred.plus.constant"
-)[, label := "neg"]
-nb.models <- nb.segs[start==1, .(label, segments)]
-nb.changes <- nb.segs[start>1]
-err.list <- penaltyLearning::labelError(
-  nb.models,
-  nb.some$annotations,
-  nb.changes,
-  model.vars="segments",
-  change.var="start.pos",
-  problem.vars="label")
-selected.dt <- pred.tall.thresh[
-  some.err,
-  data.table(label, pred.diff, roc.point, segments),
-  nomatch=NULL,
-  on=.(
-    label,
-    pred.plus.constant < max.log.lambda,
-    pred.plus.constant > min.log.lambda
-  )]
-selected.segs <- nb.segs[selected.dt, on=.(
-  label, segments), allow.cartesian=TRUE]
-type.abbrev <- c(
-  "false negative"="FN",
-  "false positive"="FP",
-  correct="correct")
-selected.err <- err.list$label.errors[selected.dt, on=.(
-  label, segments)][, error.type := type.abbrev[status] ]
-viz <- animint(
-  title="Simple non-monotonic ROC curve",
-  out.dir="2021-11-12-aum-convexity",
-  overview=ggplot()+
-    ggtitle("Overview, select difference")+
-    theme_bw()+
-    theme(panel.margin=grid::unit(1, "lines"))+
-    theme_animint(width=300, height=300)+
-    facet_grid(variable ~ ., scales="free")+
-    scale_fill_manual(values=c(
-      "TRUE"="black",
-      "FALSE"="orange"))+
-    geom_point(aes(
-      pred.diff, value, fill=differentiable),
-      size=4,
-      shape=21,
-      data=metrics.tall)+
-    make_tallrect(metrics.tall, "pred.diff")+ 
-    xlab("Prediction difference, f(neg) - f(pos)")+
-    coord_cartesian(xlim=c(dmin,dmax))+
-    scale_y_continuous("", breaks=seq(0, 3, by=1)),
-  data=ggplot()+
-    ggtitle("Data, labels, predicted changepoint models")+
-    theme_bw()+
-    theme(legend.position="none")+
-    theme_animint(width=600, height=300)+
-    geom_tallrect(aes(
-      xmin=min/1e6, xmax=max/1e6, fill=annotation),
-      alpha=0.5,
-      data=nb.some$annotations)+
-    scale_fill_manual(
-      "label",
-      values=c(
-        breakpoint="violet",
-        normal="orange"))+
-    geom_point(aes(
-      position/1e6, logratio),
-      color="grey50",
-      data=nb.some$profiles)+
-    geom_tallrect(aes(
-      xmin=min/1e6, xmax=max/1e6,
-      color=error.type),
-      data=selected.err,
-      showSelected=c("pred.diff", "roc.point"),
-      size=5,
-      fill="transparent")+
-    geom_segment(aes(
-      start.pos/1e6, mean,
-      xend=end.pos/1e6, yend=mean),
-      data=selected.segs,
-      size=3,
-      color=text.color,
-      showSelected=c("pred.diff", "roc.point"))+
-    geom_vline(aes(
-      xintercept=start.pos/1e6),
-      data=selected.segs[start>1],
-      size=2,
-      color=text.color,
-      showSelected=c("pred.diff", "roc.point"))+
-    scale_color_manual(leg,values=err.colors)+
-    facet_grid(label ~ ., labeller=label_both)+
-    scale_y_continuous(
-      "DNA copy number (logratio)")+
-    scale_x_continuous(
-      "Position on chromosome"),
-  obsErr=ggplot()+
-    ggtitle("Example error functions")+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "lines"))+
-    theme(legend.position="none")+
-    theme_animint(width=300, height=300)+
-    facet_grid(label ~ ., labeller=label_both)+
-    geom_vline(aes(
-      xintercept=pred.plus.constant),
-      data=pred.tall.thresh,
-      showSelected=c("pred.diff", "roc.point"))+
-    geom_segment(aes(
-      min.log.lambda, value,
-      xend=max.log.lambda, yend=value,
-      color=error.type, size=error.type),
-      showSelected="error.type",
-      data=some.err.tall)+
-    geom_segment(aes(
-      pos, -Inf,
-      xend=neg, yend=-Inf),
-      data=pred.tall.thresh.wide,
-      showSelected=c("pred.diff", "roc.point"))+
-    geom_text(aes(
-      neg-0.1, -0.3,
-      label=sprintf("pred.diff=%.2f", pred.diff)),
-      hjust=1,
-      data=pred.tall.thresh.wide,
-      showSelected=c("pred.diff", "roc.point"))+
-    scale_y_continuous(
-      "Label errors",
-      breaks=c(0,1),
-      limits=c(-0.4, 1.4))+
-    scale_color_manual(leg,values=err.colors)+
-    scale_size_manual(leg,values=err.sizes)+
-    scale_x_continuous(
-      "Predicted value f(x)"),
-  totals=ggplot()+
-    ggtitle("Total error, select interval")+
-    theme_bw()+
-    theme(panel.grid.minor=element_blank())+
-    theme_animint(width=300, height=300)+
-    geom_rect(aes(
-      xmin=min.thresh, xmax=max.thresh,
-      ymin=0, ymax=min.fp.fn),
-      fill="grey50",
-      color=NA,
-      alpha=0.5,
-      showSelected="pred.diff",
-      show.roc.dt)+
-    geom_segment(aes(
-      min.thresh, value,
-      xend=max.thresh, yend=value,
-      color=error.type, size=error.type),
-      showSelected="pred.diff",
-      data=show.roc.tall)+
-    geom_vline(aes(
-      xintercept=text.constant),
-      showSelected=c("pred.diff", "roc.point"),
-      color=text.color,
-      alpha=0.5,
-      data=show.roc.dt)+
-    geom_text(aes(
-      text.constant, -0.25, label=roc.point),
-      showSelected="pred.diff",
-      size=text.size,
-      color=text.color,
-      data=show.roc.dt)+
-    geom_text(aes(
-      -1.5, 0.25, label=sprintf("AUM=%.2f", aum)),
-      data=metrics.wide,
-      showSelected="pred.diff")+
-    geom_tallrect(aes(
-      xmin=min.thresh, xmax=max.thresh),
-      data=show.roc.dt,
-      fill=text.color,
-      clickSelects="roc.point",
-      showSelected="pred.diff",
-      color="transparent",
-      alpha=0.1)+
-    scale_y_continuous(
-      "Label errors",
-      breaks=c(0,1))+
-    scale_color_manual(leg,values=err.colors)+
-    scale_size_manual(leg,values=err.sizes)+
-    geom_blank(aes(
-      x, y),
-      data=data.table(x=0, y=c(-0.4,1.4)))+
-    scale_x_continuous(
-      "Constant added to pred. values"),
-  roc=ggplot()+
-    ggtitle("ROC curve, select point")+
-    theme_bw()+
-    theme(panel.grid.minor=element_blank())+
-    theme_animint(width=300, height=300)+
-    geom_path(aes(
-      FPR, TPR),
-      showSelected="pred.diff",
-      data=show.roc.dt)+
-    geom_text(aes(
-      0.5, 0.5, label=paste0("AUC=", auc)),
-      data=metrics.wide,
-      showSelected="pred.diff")+
-    scale_x_continuous(
-      "False Positive Rate",
-      breaks=seq(0,1,by=0.5))+
-    scale_y_continuous(
-      "True Positive Rate",
-      breaks=seq(0,1,by=0.5))+
-    geom_point(aes(
-      FPR, TPR),
-      data=show.roc.dt,
-      size=4,
-      alpha=0.5,
-      color=text.color,
-      showSelected=c("pred.diff", "roc.point"))+
-    geom_text(aes(
-      text.FPR, TPR+0.01, label=roc.point),
-      size=text.size,
-      color=text.color,
-      showSelected="pred.diff",
-      clickSelects="roc.point",
-      data=show.roc.dt),
-  time=list(
-    variable="pred.diff",
-    ms=500)
-)
-##viz
-##animint2gist(viz)
-
+ls.points.tall <- melt(
+  ls.list$line_search_result,
+  id="step.size",
+  measure=c("aum","auc"),
+  variable.name="var.lower")
+ls.points.tall[, variable := toupper(var.lower)]
+metrics.tall[, pred.diff := neg-pos]
+metrics.tall[, step.size := (one.pred.diff-pred.diff)/2]
+extra <- 0.5
+ls.segs.tall <- rbind(
+  ls.list$line_search_result[, .(
+    variable="AUC", 
+    step.min=step.size, step.max=c(step.size[-1], step.size[.N]+extra), 
+    value.min=auc.after, value.max=auc.after)],
+  ls.list$line_search_result[, .(
+    variable="AUM", 
+    step.min=step.size, step.max=c(step.size[-1], step.size[.N]+extra), 
+    value.min=aum, value.max=c(aum[-1], aum[.N]))])
+ggplot()+
+  ggtitle("Overview, select difference")+
+  theme_bw()+
+  theme(panel.margin=grid::unit(1, "lines"))+
+  theme_animint(width=300, height=300)+
+  facet_grid(variable ~ ., scales="free")+
+  scale_fill_manual(values=c(
+    "TRUE"="black",
+    "FALSE"="orange"))+
+  geom_point(aes(
+    step.size, value, fill=differentiable),
+    size=3,
+    shape=21,
+    data=metrics.tall)+
+  geom_point(aes(
+    step.size, value),
+    data=ls.points.tall,
+    color="red")+
+  geom_segment(aes(
+    step.min, value.min,
+    xend=step.max, yend=value.max),
+    data=ls.segs.tall,
+    color="red")+
+  xlab("Prediction difference, f(neg) - f(pos)")+
+  scale_y_continuous("", breaks=seq(0, 3, by=1))
