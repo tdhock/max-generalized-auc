@@ -1,4 +1,19 @@
 library(data.table)
+##TODO add for loop over auc/aum, what to optimize in line search?
+totals <- colSums(error.diff.df[, .(fp_diff, fn_diff)])
+grid.dt.list <- list()
+for(pred.col in 1:ncol(pred.mat)){
+  pred <- pred.mat[,pred.col]
+  grid.aum <- aum::aum(error.diff.df, pred)
+  before.dt <- data.table(grid.aum$total_error, key="thresh")[, `:=`(
+    TPR_before=1-fn_before/-totals[["fn_diff"]],
+    FPR_before=fp_before/totals[["fp_diff"]])]
+  auc <- before.dt[, .(
+    FPR=c(FPR_before, 1),
+    TPR=c(TPR_before, 1)
+  )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
+
+
 ## > mb[per.set, on=list(set)][order(labels)]
 ##     megabytes                      set labels
 ##  1:       554       H3K36me3_TDH_other    200
@@ -125,8 +140,8 @@ OneFold <- function(testFold.path){
       prev.aum <- Inf
       new.aum <- -Inf
       step.number <- 0
-      ##while(new.aum < prev.aum){
-      while(step.number<2){
+      while(new.aum < prev.aum){
+      ##while(step.number<2){
         step.number <- step.number+1
         summary.dt.list <- list()
         for(set in names(seqs.list)){
