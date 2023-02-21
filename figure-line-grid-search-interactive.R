@@ -1,18 +1,27 @@
+library(ggplot2)
 library(data.table)
-##TODO add for loop over auc/aum, what to optimize in line search?
-totals <- colSums(error.diff.df[, .(fp_diff, fn_diff)])
-grid.dt.list <- list()
-for(pred.col in 1:ncol(pred.mat)){
-  pred <- pred.mat[,pred.col]
-  grid.aum <- aum::aum(error.diff.df, pred)
-  before.dt <- data.table(grid.aum$total_error, key="thresh")[, `:=`(
-    TPR_before=1-fn_before/-totals[["fn_diff"]],
-    FPR_before=fp_before/totals[["fp_diff"]])]
-  auc <- before.dt[, .(
-    FPR=c(FPR_before, 1),
-    TPR=c(TPR_before, 1)
-  )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
+cache.name <- "figure-line-grid-search-interactive-cache.rds"
+if(FALSE){
+  unlink(file.path(testFold.vec, cache.name), recursive=TRUE)
+}
 
+##TODO add for loop over auc/aum, what to optimize in line search?
+##TODO add for loop over stopping criterion, subtrain or validation?
+if(FALSE){
+  totals <- colSums(error.diff.df[, .(fp_diff, fn_diff)])
+  grid.dt.list <- list()
+  for(pred.col in 1:ncol(pred.mat)){
+    pred <- pred.mat[,pred.col]
+    grid.aum <- aum::aum(error.diff.df, pred)
+    before.dt <- data.table(grid.aum$total_error, key="thresh")[, `:=`(
+      TPR_before=1-fn_before/-totals[["fn_diff"]],
+      FPR_before=fp_before/totals[["fp_diff"]])]
+    auc <- before.dt[, .(
+      FPR=c(FPR_before, 1),
+      TPR=c(TPR_before, 1)
+    )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
+  }
+}
 
 ## > mb[per.set, on=list(set)][order(labels)]
 ##     megabytes                      set labels
@@ -140,7 +149,7 @@ OneFold <- function(testFold.path){
       prev.aum <- Inf
       new.aum <- -Inf
       step.number <- 0
-      while(new.aum < prev.aum){
+      while(new.aum+1e-6 < prev.aum){
       ##while(step.number<2){
         step.number <- step.number+1
         summary.dt.list <- list()
@@ -197,11 +206,6 @@ OneFold <- function(testFold.path){
       data.name, cv.type, test.fold))
 }
 
-cache.name <- "figure-line-grid-search-interactive-cache.rds"
-if(FALSE){
-  unlink(file.path(testFold.vec, cache.name), recursive=TRUE)
-}
-
 all.it.list <- list()
 for(testFold.i in seq_along(testFold.vec)){
   fdir <- testFold.vec[testFold.i]
@@ -216,3 +220,29 @@ for(testFold.i in seq_along(testFold.vec)){
   }
 }
 
+cache.vec <- Sys.glob(file.path(
+  "../neuroblastoma-data/data/*/cv/*/testFolds/*",
+  cache.name))
+for(cache.i in seq_along(cache.vec)){
+  cache.rds <- cache.vec[[cache.i]]
+  L <- readRDS(cache.rds)
+  algo.cols <- c("seed","init.name","algo")
+  step.cols <- c(algo.cols,"step.number")
+  best.steps <- L$steps[, .SD[which.min(aum)], by=step.cols][,c(step.cols,"search"),with=FALSE]
+  join.dt <- L$sets[set != "test"][best.steps, on=step.cols]
+  min.dt <- join.dt[set=="validation", .SD[which.min(aum)], by=.(seed,init.name,set)]
+
+  ggplot()+
+    geom_line(aes(
+      step.number, aum, color=algo),
+      data=join.dt)+
+    geom_point(aes(
+      step.number, aum, color=algo),
+      shape=1,
+      data=join.dt[search=="exact"])+
+    geom_point(aes(
+      step.number, aum, color=algo),
+      data=min.dt)+
+    facet_wrap(~seed+ init.name + set,scales="free")
+  
+}
