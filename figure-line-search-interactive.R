@@ -3,15 +3,15 @@ library(data.table)
 
 data(neuroblastomaProcessed, package="penaltyLearning")
 data(neuroblastoma, package="neuroblastoma")
-e <- function(label, profile.id, chromosome){
+ex <- function(label, profile.id, chromosome){
   data.table(
     label, 
     profile.id=factor(profile.id), 
     chromosome=factor(chromosome))
 }
 select.dt <- rbind(
-  e("pos", 4, 2),
-  e("neg", 513, 3))
+  ex("pos", 4, 2),
+  ex("neg", 513, 3))
 nb.list <- lapply(neuroblastoma, data.table)
 nb.some <- lapply(nb.list, "[", select.dt, on=.NATURAL)
 max.segments <- max(neuroblastomaProcessed$errors$n.segments)
@@ -62,7 +62,7 @@ some.err.tall[, error.type := toupper(var.lower)]
 leg <- "Error type"
 
 dmin <- 2
-dmax <- 4
+dmax <- 3.25
 some.err[, fp.diff := c(NA, diff(fp)), by=label]
 some.err[, fn.diff := c(NA, diff(fn)), by=label]
 some.diff <- some.err[fp.diff != 0 | fn.diff != 0, .(
@@ -73,22 +73,30 @@ dlist <- split(some.diff, some.diff[["label"]])
 border.pred <- with(dlist, pos[ #orange dots
   neg,
   data.table(
-    differentiable=FALSE,
     pos=pred.log.lambda,
     neg=i.pred.log.lambda),
   on="id",
-  allow.cartesian=TRUE])
-neg.seq <- seq(dmin, dmax, by=0.05)
+  allow.cartesian=TRUE]
+)[, diff := neg-pos]
+neg.seq <- seq(dmin, dmax, by=0.025)
 grid.pred <- CJ(
-  neg=neg.seq, pos=-neg.seq
-)[, differentiable := TRUE][]
-range(grid.dt[, neg-pos])
+  pos=-neg.seq, 
+  neg=neg.seq
+)[, diff := neg-pos]
+range(grid.pred[, neg-pos])
 
-both.pred <- rbind(border.pred, grid.pred)
+grid.uniq.diff <- grid.pred[, .(
+  pos=0,
+  neg=unique(diff)
+)][, diff := neg-pos]
+both.pred <- rbind(
+  data.table(differentiable=FALSE, border.pred), 
+  data.table(differentiable=TRUE, grid.uniq.diff)
+)
 pred.tall <- melt(
   both.pred,
-  id.vars=names(both.pred),
-  measure.vars=select.dt$label,
+  id.vars=c("diff","differentiable"),
+  measure.vars=c("neg","pos"),
   variable.name="label",
   value.name="pred.log.lambda"
 )[select.dt, nomatch=0L, on="label"]
@@ -103,12 +111,17 @@ metrics.wide <- pred.tall[, {
       max.thresh=max.thresh+pos
     )])
   ))
-}, keyby=list(pos, neg, differentiable)]
-metrics.wide[auc==max(auc)] #max auc => aum>0.
-metrics.wide[14:15, roc ]
+}, keyby=list(diff, differentiable)]
+myjoin <- function(d.val, dt.pred){
+  metrics.wide[differentiable==d.val][dt.pred, on="diff"]
+}
+both.roc <- rbind(
+  myjoin(TRUE, grid.pred),
+  myjoin(FALSE, border.pred))
 
-one.pred.diff <- one.pred[["neg"]]-one.pred[["pos"]]
 one.pred <- c(neg=3.5, pos=-3.5)
+one.pred <- c(neg=2, pos=-3.5)
+one.pred.diff <- one.pred[["neg"]]-one.pred[["pos"]]
 some.err[, example := label]
 diff.dt <- aum::aum_diffs_penalty(some.err, names(one.pred))
 ls.list <- aum::aum_line_search(diff.dt, pred.vec=one.pred, maxIterations = 10)
@@ -121,7 +134,7 @@ some.diff[, `:=`(
   intercept=pred.log.lambda-ifelse(label=="pos", 0, 6.5))]
 
 metrics.tall <- melt(
-  metrics.wide,
+  both.roc,
   measure.vars=c("aum", "auc"),
   variable.name="var.lower"
 )[order(-differentiable)]
@@ -154,8 +167,11 @@ ls.segs.tall <- rbind(
     variable="AUM", 
     step.min=step.size, step.max=c(step.size[-1], step.size[.N]+extra), 
     value.min=aum, value.max=c(aum[-1], aum[.N]))])
+diff.grid <- unique(metrics.tall[, .(
+  pred.diff, step.size, differentiable, variable, value
+)])
 ggplot()+
-  ggtitle("Overview, select difference")+
+  ggtitle("Overview, select step size")+
   theme_bw()+
   theme(panel.margin=grid::unit(1, "lines"))+
   theme_animint(width=300, height=300)+
@@ -163,19 +179,39 @@ ggplot()+
   scale_fill_manual(values=c(
     "TRUE"="black",
     "FALSE"="orange"))+
+  scale_color_manual(values=c(
+    exact="red",
+    grid="black"))+
   geom_point(aes(
-    step.size, value, fill=differentiable),
+    step.size, value, fill=differentiable, color=search),
     size=3,
     shape=21,
-    data=metrics.tall)+
+    data=data.table(search="grid", diff.grid))+
   geom_point(aes(
-    step.size, value),
-    data=ls.points.tall,
-    color="red")+
+    step.size, value, color=search),
+    data=data.table(search="exact", ls.points.tall))+
   geom_segment(aes(
     step.min, value.min,
+    color=search,
     xend=step.max, yend=value.max),
-    data=ls.segs.tall,
-    color="red")+
-  xlab("Prediction difference, f(neg) - f(pos)")+
+    data=data.table(search="exact", ls.segs.tall))+
+  xlab("Step size")+
+  scale_y_continuous("", breaks=seq(0, 3, by=1))
+
+ggplot()+
+  theme_bw()+
+  theme(panel.margin=grid::unit(1, "lines"))+
+  theme_animint(width=300, height=300)+
+  facet_grid(variable ~ ., scales="free")+
+  scale_fill_manual(values=c(
+    "TRUE"="black",
+    "FALSE"="orange"))+
+  scale_color_manual(values=c(
+    exact="red",
+    grid="black"))+
+  geom_point(aes(
+    pred.diff, value, fill=differentiable, color=search),
+    size=3,
+    shape=21,
+    data=data.table(search="grid", diff.grid))+
   scale_y_continuous("", breaks=seq(0, 3, by=1))
