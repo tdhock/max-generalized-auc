@@ -16,7 +16,6 @@ class MySubset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.indices)
 
-
 data_dict = {}
 data_name_tup = ("MNIST", "FashionMNIST")
 set_tf_dict = {"train":True, "test":False}
@@ -37,6 +36,7 @@ for data_name in data_name_tup:
                 lab:(train_labels==lab).nonzero() for lab in skip_dict}
             index_list = [
                 index_dict[lab][::skip] for lab,skip in skip_dict.items()]
+            print([len(i) for i in index_list])
             indices = torch.cat(index_list)
             imbalanced = MySubset(data_set, indices)
             length_dict={"subtrain":int(0.8*len(imbalanced))}
@@ -52,6 +52,9 @@ dl = torch.utils.data.DataLoader(
 for x,y in dl:
     pass
 print(x.shape)
+for data_name,set_dict in data_dict.items():
+    for set_name,data_set in set_dict.items():
+        print((data_name,set_name,len(data_set)))
 
 class LeNet5(torch.nn.Module):
     def __init__(self):
@@ -107,7 +110,7 @@ def AUM(pred_tensor, label_tensor, rate=False):
     uniq_fp_after = sorted_fp_cum[sorted_fp_end]
     uniq_fn_before = sorted_fn_cum[sorted_fn_end]
     uniq_min = torch.minimum(uniq_fn_before[1:], uniq_fp_after[:-1])
-    return torch.mean(uniq_min * uniq_thresh.diff())
+    return torch.sum(uniq_min * uniq_thresh.diff())
 
 def AUM_rate(pred_tensor, label_tensor):
     """Area Under Min(FPR,FNR)"""
@@ -141,12 +144,13 @@ def one_trial(loss_name, seed_str, lr_str, data_name, batch_size_str):
     batch_size = int(batch_size_str)
     set_dict = data_dict[data_name]
     subtrain_label_list = [y for x,y in set_dict["subtrain"]]
+    N_subtrain = len(subtrain_label_list)
     subtrain_label_tensor = torch.tensor(subtrain_label_list)
     label_count_dict = {
         lab:torch.sum(subtrain_label_tensor==lab) for lab in (0,1)}
     print(label_count_dict)
     label_weight_dict = {
-        lab:1/count for lab,count in label_count_dict.items()}
+        lab:N_subtrain/count for lab,count in label_count_dict.items()}
     def get_weight_tensor(lab_tensor):
         return torch.where(
             lab_tensor==0,
@@ -177,8 +181,8 @@ def one_trial(loss_name, seed_str, lr_str, data_name, batch_size_str):
         }
     torch.manual_seed(seed) 
     model = LeNet5()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    for epoch in range(100):
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    for epoch in range(200):
         step = 0
         print(epoch)
         # first update weights.

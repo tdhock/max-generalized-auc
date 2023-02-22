@@ -1,7 +1,7 @@
 param.dt <- data.table::CJ(
   loss_name=c("logistic","balanced","AUM","AUM_rate"),
   seed=1:4,
-  lr=10^seq(-5, 0),
+  lr=10^seq(-4, 2),
   data_name=c("MNIST", "FashionMNIST"),
   batch_size=1000)
 MyFun <- function(loss_name, seed, lr, data_name, batch_size){
@@ -33,8 +33,8 @@ jt <- batchtools::getJobTable(reg=reg)
 jt[!is.na(error)]
 
 "figure-aum-neural-networks-data/AUM/1/1e-06/FashionMNIST/1000/steps.csv"
-steps.csv.vec <- Sys.glob(
-  "figure-aum-neural-networks-data/*/*/*/*/*/steps.csv")
+(steps.csv.vec <- Sys.glob(
+  "figure-aum-neural-networks-data/*/*/*/*/*/steps.csv"))
 system(paste("wc -l", paste(steps.csv.vec, collapse=" ")))
 unlink(grep("_count", steps.csv.vec, value=TRUE))
 
@@ -60,13 +60,20 @@ steps.dt <- data.table(steps.csv=steps.csv.vec)[, {
     "/steps.csv")
   data.table(meta, steps)
 }, by=steps.csv]
-
 library(ggplot2)
-steps.dt[, iteration := epoch*max(na.omit(step))+step]
+steps.dt[, iteration := epoch*(1+max(step))+step]
+steps.dt[, step.size := as.numeric(lr)]
 one <- steps.dt[
   data_set=="MNIST" & out_name=="AUC" & set_name=="validation"]
 ggplot()+
-  facet_grid(lr ~ seed, labeller=label_both)+
+  facet_grid(step.size ~ seed, labeller=label_both)+
+  geom_line(aes(
+    iteration/(1+max(step)), out_value, color=loss),
+    data=one)+
+  scale_x_continuous("epoch")
+
+ggplot()+
+  facet_grid(step.size ~ seed, labeller=label_both)+
   geom_line(aes(
     iteration, out_value, color=loss),
-    data=one)
+    data=one[epoch < 10])
