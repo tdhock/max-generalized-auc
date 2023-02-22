@@ -1,5 +1,6 @@
 source("packages.R")
 
+## need to clone https://github.com/tdhock/feature-learning-benchmark
 folds.dt <- fread("../feature-learning-benchmark/labeled_problems_folds.csv")
 addMeta <- function(dt){
   dt[, set.name := sub("/.*", "", prob.dir)]
@@ -43,7 +44,9 @@ possible.errors <- possible.dt[test.fold.errors, on=list(
 possible.errors[, possible.fn := possible.tp]
 test.fold.segs <- test.fold.errors[, .(
   min.log.lambda=min(min.log.lambda),
-  max.log.lambda=max(max.log.lambda)
+  max.log.lambda=max(max.log.lambda),
+  fp=fp[1],
+  fn=fn[1]
 ), by=.(prob.dir, seg.i)]
 test.fold.segs[, mid.log.lambda := (max.log.lambda+min.log.lambda)/2]
 test.fold.targets <- penaltyLearning::targetIntervals(
@@ -58,6 +61,57 @@ initial.pred <- test.fold.targets[order(width==Inf, -width), data.table(
   )
 )]
 initial.pred[!is.finite(pred.log.lambda), pred.log.lambda := 0]
+prob.dir.ord <- unique(test.fold.segs$prob.dir)
+diff.fp.fn <- aum::aum_diffs_penalty(
+  test.fold.segs[, `:=`(example=prob.dir, min.lambda = exp(min.log.lambda))],
+  prob.dir.ord)
+diff.fp.fn[example==0]
+test.fold.segs[prob.dir==prob.dir.ord[1], .(min.log.lambda, max.log.lambda, fp, fn)]
+pred.vec <- initial.pred[prob.dir.ord, -pred.log.lambda, on="prob.dir"]
+
+possible.segs <- possible.dt[test.fold.segs, on="prob.dir"][, `:=`(
+  errors = fp+fn,
+  possible.fn = possible.tp
+  )]
+roc.initial <- penaltyLearning::ROChange(
+  possible.segs, initial.pred, problem.vars="prob.dir")
+roc.initial$aum
+N.breaks <- nrow(diff.fp.fn)
+max.intersections <- N.breaks*(N.breaks-1)/2
+ls.out <- aum::aum_line_search_grid(
+  diff.fp.fn, pred.vec, maxIterations=max.intersections, n.grid=100)
+ls.out$aum
+plot(ls.out)
+
+pred.mat <- matrix(pred.vec, length(pred.vec), n.steps)
+grad.mat <- matrix(rowMeans(ls.out$derivative_mat), length(pred.vec), n.steps)
+n.steps <- length(ls.out$line_search_result$step.size)
+step.mat <- matrix(
+  ls.out$line_search_result$step.size, length(pred.vec), n.steps, byrow=TRUE)
+after.mat <- pred.mat-step.mat*grad.mat
+expected <- apply(after.mat, 2, function(pred)aum::aum(diff.fp.fn,pred)$aum)
+rbind(ls.out$line_search_result$aum, expected)
+
+aum.list <- aum::aum(diff.fp.fn, pred.vec)
+descent.direction.vec <- -rowMeans(aum.list$derivative_mat)
+direction.dt <- data.table(
+  example=seq(0, length(pred.vec)-1),
+  weight=pred.vec,
+  direction=descent.direction.vec)
+(diffs.with.direction <- direction.dt[diff.fp.fn, on="example"][, `:=`(
+  slope = -direction,
+  intercept=pred-weight
+)][])
+##TODO Jadon plug in your code.
+ggplot()+
+  geom_point(aes(
+    0, intercept),
+    data=diffs.with.direction)+
+  geom_abline(aes(
+    slope=slope, intercept=intercept),
+    data=diffs.with.direction)+
+  coord_cartesian(xlim=c(-5,5))
+
 
 test.fold.breaks <- test.fold.errors[, .(breaks=.N-1), by=prob.dir]
 test.fold.breaks[, .(
@@ -92,6 +146,10 @@ while(1e-6 < improvement){
     step.list <- getROC(step.dt)
     roc.list$aum < step.list$aum
   }){
+    ## TODO Jadon replace step size halving with your algorithm,
+    ## either go all the way to the end of the path, quadratic
+    ## max_iterations=N*(N-1)/2 or just stop with log linear
+    ## algorithm, max_iterations=N.
     step.size <- step.size/2
   }
   cat(sprintf(

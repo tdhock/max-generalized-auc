@@ -7,8 +7,8 @@ e <- function(label, profile.id, chromosome){
   data.table(label, profile.id=factor(profile.id), chromosome=factor(chromosome))
 }
 select.dt <- rbind(
-  e("positive", 4, 2),
-  e("negative", 513, 3))
+  e("pos", 4, 2),
+  e("neg", 513, 3))
 nb.list <- lapply(neuroblastoma, data.table)
 nb.some <- lapply(nb.list, "[", select.dt, on=.NATURAL)
 max.segments <- max(neuroblastomaProcessed$errors$n.segments)
@@ -65,20 +65,20 @@ some.diff <- some.err[fp.diff != 0 | fn.diff != 0, .(
 some.diff[, fp.cum := cumsum(fp.diff), by=label]
 some.diff[, fn.cum := rev(cumsum(rev(-fn.diff))), by=label]
 dlist <- split(some.diff, some.diff[["label"]])
-border.pred <- with(dlist, positive[
-  negative,
+border.pred <- with(dlist, pos[ #orange dots
+  neg,
   data.table(
     differentiable=FALSE,
-    positive=pred.log.lambda,
-    negative=i.pred.log.lambda),
+    pos=pred.log.lambda,
+    neg=i.pred.log.lambda),
   on="id",
   allow.cartesian=TRUE])
-grid.pred <- data.table(
+grid.pred <- data.table( #black dots
   differentiable=TRUE,
-  positive=0,
-  negative=seq(dmin, dmax, by=0.05))
+  pos=0,
+  neg=seq(dmin, dmax, by=0.05))
 both.pred <- rbind(border.pred, grid.pred)
-both.pred[, pred.diff := negative-positive]
+both.pred[, pred.diff := neg-pos]
 pred.tall <- melt(
   both.pred,
   measure.vars=select.dt$label,
@@ -86,18 +86,27 @@ pred.tall <- melt(
   value.name="pred.log.lambda")[select.dt, nomatch=0L, on="label"]
 metrics.wide <- pred.tall[order(pred.diff)][, {
   L <- penaltyLearning::ROChange(some.err, .SD, "label")
-  positive <- pred.log.lambda[label=="positive"]
+  pos <- pred.log.lambda[label=="pos"]
   with(L, data.table(
     aum, auc,
     SM=roc[min.thresh < max.thresh, sum(min.fp.fn)],
     roc=list(roc[, `:=`(
-      min.thresh=min.thresh+positive,
-      max.thresh=max.thresh+positive
+      min.thresh=min.thresh+pos,
+      max.thresh=max.thresh+pos
     )])
   ))
 }, by=list(pred.diff, differentiable)]
 metrics.wide[auc==max(auc)] #max auc => aum>0.
 metrics.wide[14:15, roc ]
+
+##compute slope and intercept of each of the 6 T_b(s) functions, plot
+##them using geom_abline, and geom_point to represent the 9
+##intersection points.
+some.diff[, `:=`(
+  slope=ifelse(label=="pos", 0, -1),
+  intercept=pred.log.lambda-ifelse(label=="pos", 0, 6.5))]
+
+##ignore rest.
 
 show.roc.dt <- metrics.wide[, data.table(
   roc[[1]],
@@ -132,8 +141,8 @@ text.size <- 15
 text.color <- "blue"
 both.pred.adj <- melt(both.pred[, .(
   differentiable,
-  positive=0,
-  negative=pred.diff,
+  pos=0,
+  neg=pred.diff,
   pred.diff
 )],
 measure.vars=select.dt$label,
@@ -146,7 +155,7 @@ pred.tall.thresh.wide <- dcast(
   pred.tall.thresh,
   pred.diff + roc.point ~ label,
   value.var="pred.plus.constant"
-)[, label := "negative"]
+)[, label := "neg"]
 nb.models <- nb.segs[start==1, .(label, segments)]
 nb.changes <- nb.segs[start>1]
 err.list <- penaltyLearning::labelError(
@@ -175,10 +184,11 @@ selected.err <- err.list$label.errors[selected.dt, on=.(
   label, segments)][, error.type := type.abbrev[status] ]
 viz <- animint(
   title="Simple non-monotonic ROC curve",
+  out.dir="2021-11-12-aum-convexity",
   overview=ggplot()+
     ggtitle("Overview, select difference")+
+    theme_bw()+
     theme(panel.margin=grid::unit(1, "lines"))+
-    theme(text=element_text(size = 15))+
     theme_animint(width=300, height=300)+
     facet_grid(variable ~ ., scales="free")+
     scale_fill_manual(values=c(
@@ -190,7 +200,7 @@ viz <- animint(
       shape=21,
       data=metrics.tall)+
     make_tallrect(metrics.tall, "pred.diff")+ 
-    xlab("Prediction difference, f(negative) - f(positive)")+
+    xlab("Prediction difference, f(neg) - f(pos)")+
     coord_cartesian(xlim=c(dmin,dmax))+
     scale_y_continuous("", breaks=seq(0, 3, by=1)),
   data=ggplot()+
@@ -234,7 +244,7 @@ viz <- animint(
     scale_color_manual(leg,values=err.colors)+
     facet_grid(label ~ ., labeller=label_both)+
     scale_y_continuous(
-      "DNA copy number (microarray logratio)")+
+      "DNA copy number (logratio)")+
     scale_x_continuous(
       "Position on chromosome"),
   obsErr=ggplot()+
@@ -255,12 +265,12 @@ viz <- animint(
       showSelected="error.type",
       data=some.err.tall)+
     geom_segment(aes(
-      positive, -Inf,
-      xend=negative, yend=-Inf),
+      pos, -Inf,
+      xend=neg, yend=-Inf),
       data=pred.tall.thresh.wide,
       showSelected=c("pred.diff", "roc.point"))+
     geom_text(aes(
-      negative-0.1, -0.3,
+      neg-0.1, -0.3,
       label=sprintf("pred.diff=%.2f", pred.diff)),
       hjust=1,
       data=pred.tall.thresh.wide,
@@ -325,7 +335,7 @@ viz <- animint(
       x, y),
       data=data.table(x=0, y=c(-0.4,1.4)))+
     scale_x_continuous(
-      "Constant added to predicted values"),
+      "Constant added to pred. values"),
   roc=ggplot()+
     ggtitle("ROC curve, select point")+
     theme_bw()+
@@ -363,4 +373,6 @@ viz <- animint(
     variable="pred.diff",
     ms=500)
 )
+##viz
 ##animint2gist(viz)
+

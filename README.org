@@ -1,7 +1,15 @@
-** Figures from [[https://arxiv.org/abs/2107.01285][arXiv:2107.01285]]
+Jonathan Hillman and Toby Dylan Hocking, Optimizing ROC Curves with a Sort-Based Surrogate Loss Function for Binary Classification and Changepoint Detection,  [[https://arxiv.org/abs/2107.01285][arXiv:2107.01285]]
+** Replication materials
+This paper proposed a new surrogate loss function, Area Under Min of
+FP and FN (AUM). Minimizing AUM was shown to result in maximizing Area
+Under the ROC Curve (AUC). Reference implementation of Algorithm 1
+(AUM and directional derivative computation) in C++ can be found in [[https://github.com/tdhock/aum/blob/main/src/aum_sort.cpp][R
+package aum]]. AUM implementation in pytorch can be found in
+[[file:figure-aum-neural-networks-data.py]].
 
-Before running some of the scripts you will need to clone the data
-repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
+Before running some of the replication scripts below, you will need to
+clone the data repositories:
+[[https://github.com/tdhock/feature-learning-benchmark]] and
 [[https://github.com/tdhock/neuroblastoma-data]].
 
 - Figure 1: Example changepoint data with non-monotonic FP. [[file:figure-fn-not-monotonic.png][Left PNG]]
@@ -15,31 +23,67 @@ repositories: [[https://github.com/tdhock/feature-learning-benchmark]] and
 - Figure 5: Test AUM/AUC comparison across multiple seeds and datasets[[file:figure-test-auc-comparison.png][Top PNG]], [[file:figure-test-aum-comparison.png][Bottom PNG]], [[file:figure-test-comparison.R][R code]]
 - Figure 6: binary classification test AUC. [[file:figure-unbalanced-grad-desc-aum.png][Left PNG]] (Comparing AUM
   variants), [[file:figure-unbalanced-grad-desc.png][Right PNG]] (AUM compared to baselines), [[file:figure-aum-grad-speed-random.png][Right PNG]], [[file:figure-unbalanced-grad-desc.R][R code]].
-- Figure 7: speed comparison. [[file:figure-aum-grad-speed-both.png][PNG]], [[file:figure-aum-grad-speed.R][R code]].
-- Figure showing 2d loss functions.
-- Figure showing 1d loss functions.
+- Figure 7: [[file:figure-aum-neural-networks-test-auc.png][PNG]] (Test AUC of neural network for image classification),
+  [[file:figure-aum-neural-networks.R][R code]].
+- Figure 8: speed comparison. [[file:figure-aum-grad-speed-both.png][PNG]], [[file:figure-aum-grad-speed.R][R code]].
 
 ** Interactive figures
 
 [[file:figure-aum-convexity-interactive.png]] 
 
 Interactive version:
-[[http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b]] 
+http://ml.nau.edu/viz/2021-11-12-aum-convexity/
 
 Source:
 [[file:figure-aum-convexity-interactive.R]] 
-
 
 - [[http://ml.nau.edu/viz/2019-08-19-curveAlignment-aub-deriv/][Aligning two error curves (peak detection)]].
 - [[http://ml.nau.edu/viz/2021-10-21-neuroblastomaProcessed-complex/][8 error curves with 2 different alignments]].
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 7 Nov 2022
+
+[[file:figure-auc-improved.R]] makes figure below which shows one way to
+measure irregularity of ROC curves, via difference with AUC of
+monotonic version.
+
+[[file:figure-auc-improved.png]]
+
+** 19 Aug 2022
+
+[[file:HOCKING-slides-prescott.tex]] makes [[file:HOCKING-slides-prescott.pdf]]
+
+with new figure code [[file:figure-aum-grad-speed-binary.R]] which makes
+
+[[file:figure-aum-grad-speed-binary.png]]
+
+** 19 July 2022
+
+[[file:figure-compare-hinge-loss.R]] makes
+
+[[file:figure-compare-hinge-loss-pairwise-line.png]]
+
+[[file:figure-compare-hinge-loss-squared-pairwise-relative.png]]
+   
+
+[[file:figure-compare-hinge-loss-squared-pairwise.png]]
+   
+
+[[file:figure-compare-hinge-loss-hinge-pairwise-relative.png]]
+   
+
+[[file:figure-compare-hinge-loss-hinge-pairwise.png]]
+   
 ** 19 May 2022
 
 New image classification experiment
 [[file:figure-aum-neural-networks-data.py]] adapted from torch AUM code,
 https://tdhock.github.io/blog/2022/aum-learning/
+
+[[file:figure-aum-neural-networks.R]] makes
+
+[[file:figure-aum-neural-networks-test-auc.png]]
 
 ** 2 May 2022
 
@@ -78,6 +122,7 @@ superior accuracy.
 [[file:figure-aum-convexity-interactive.png]]
 
 Interactive versions:
+- 2 Feb 2023, bigger text size http://ml.nau.edu/viz/2021-11-12-aum-convexity/
 - 7 Nov 2021, continuity in pred.diff interaction http://bl.ocks.org/tdhock/raw/e3f56fa419a6638f943884a3abe1dc0b
 - 6 Nov 2021, no continuity in pred.diff interaction http://bl.ocks.org/tdhock/raw/de3979318d5255dd6e21ff907e2f3fb4
 
@@ -315,6 +360,8 @@ Initial results on two data sets (ATAC, CTCF) show that
 [[file:figure-compare-hinge-loss.R]] makes
 
 [[file:figure-compare-hinge-loss.png]]
+
+[[file:figure-compare-hinge-loss-contours.png]]
 
 ** 18 May 2020
 
