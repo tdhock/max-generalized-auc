@@ -5,23 +5,7 @@ if(FALSE){
   unlink(file.path(testFold.vec, cache.name), recursive=TRUE)
 }
 
-##TODO add for loop over auc/aum, what to optimize in line search?
-##TODO add for loop over stopping criterion, subtrain or validation?
-if(FALSE){
-  totals <- colSums(error.diff.df[, .(fp_diff, fn_diff)])
-  grid.dt.list <- list()
-  for(pred.col in 1:ncol(pred.mat)){
-    pred <- pred.mat[,pred.col]
-    grid.aum <- aum::aum(error.diff.df, pred)
-    before.dt <- data.table(grid.aum$total_error, key="thresh")[, `:=`(
-      TPR_before=1-fn_before/-totals[["fn_diff"]],
-      FPR_before=fp_before/totals[["fp_diff"]])]
-    auc <- before.dt[, .(
-      FPR=c(FPR_before, 1),
-      TPR=c(TPR_before, 1)
-    )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
-  }
-}
+##TODO add for loop over line search set, subtrain or validation?
 
 ## > mb[per.set, on=list(set)][order(labels)]
 ##     megabytes                      set labels
@@ -39,9 +23,10 @@ if(FALSE){
 ## 12:      3017       H3K4me3_PGP_immune   3780
 ## 13:      2902       H3K4me3_TDH_immune   3807
 ## 14:      5421 H3K27ac-H3K4me3_TDHAM_BP  15961
-testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*")
+(testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*"))
 testFold.path <- "../neuroblastoma-data/data/H3K27ac-H3K4me3_TDHAM_BP/cv/equal_labels/testFolds/4"
-OneFold <- function(testFold.path){
+aum.type="rate"
+OneBatch <- function(testFold.path, aum.type){
   cv.path <- dirname(dirname(testFold.path))
   folds.csv <- file.path(cv.path, "folds.csv")
   cv.type <- basename(cv.path)
@@ -94,7 +79,7 @@ OneFold <- function(testFold.path){
     seqs.diff <- aum::aum_diffs_penalty(
       data.list$aum.input,
       seqs.set,
-      denominator="count")
+      denominator=aum.type)
     diffs.list[[s]] <- seqs.diff
     zero <- rep(0, length(seqs.set))
     aum.vec.list[[s]] <- rbind(
@@ -129,11 +114,13 @@ OneFold <- function(testFold.path){
   )
   iteration.dt.list <- list()
   considered.dt.list <- list()
+  obj.sign.list <- list(auc=-1, aum=1)
   for(seed in 1:4)for(init.name in names(init.fun.list)){
     init.fun <- init.fun.list[[init.name]]
     set.seed(seed)
     int.weights <- init.fun()
-    for(algo in c("grid","exact","hybrid")){
+    for(algo in c("grid","exact","hybrid"))for(objective in names(obj.sign.list)){
+      obj.sign <- obj.sign.list[[objective]]
       weight.vec <- int.weights[-1]
       intercept <- int.weights[1]
       computeROC <- function(w, i, set){
@@ -146,10 +133,10 @@ OneFold <- function(testFold.path){
         penaltyLearning::ROChange(
           data.list$evaluation, set.dt, "sequenceID")
       }
-      prev.aum <- Inf
-      new.aum <- -Inf
+      prev.obj <- Inf*obj.sign
+      new.obj <- -Inf*obj.sign
       step.number <- 0
-      while(new.aum+1e-6 < prev.aum){
+      while(obj.sign*(new.obj-prev.obj) < 1e-6){
       ##while(step.number<2){
         step.number <- step.number+1
         summary.dt.list <- list()
@@ -161,10 +148,12 @@ OneFold <- function(testFold.path){
             auc,
             aum))
         }
-        prev.aum <- summary.dt.list$subtrain$aum
+        prev.obj <- summary.dt.list$subtrain[[objective]]
         summary.dt <- do.call(rbind, summary.dt.list)
-        iteration.dt.list[[paste(seed, init.name, algo, step.number)]] <- data.table(
-          seed, init.name, algo, step.number, summary.dt)
+        iteration.dt.list[[paste(
+          seed, init.name, algo, step.number, objective
+        )]] <- data.table(
+          seed, init.name, algo, step.number, objective, summary.dt)
         LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec)
         pred.vec <- X.subtrain %*% weight.vec
         aum.list <- aum::aum(diffs.list$subtrain, pred.vec)
@@ -174,28 +163,39 @@ OneFold <- function(testFold.path){
         take.step <- function(s){
           weight.vec+s*direction.vec
         }
-        grid.dt <- data.table(step.size=step.grid, aum=sapply(step.grid, function(step){
-          step.weight <- take.step(step)
-          aum::aum(diffs.list$subtrain, X.subtrain %*% step.weight)$aum
-        }))
+        totals <- colSums(diffs.list$subtrain[, .(fp_diff, fn_diff)])
+        grid.dt <- data.table(step.size=step.grid)[, {
+          step.weight <- take.step(step.size)
+          grid.aum <- aum::aum(diffs.list$subtrain, X.subtrain %*% step.weight)
+          before.dt <- data.table(grid.aum$total_error, key="thresh")[, `:=`(
+            TPR_before=1-fn_before/-totals[["fn_diff"]],
+            FPR_before=fp_before/totals[["fp_diff"]])]
+          auc <- before.dt[, .(
+            FPR=c(FPR_before, 1),
+            TPR=c(TPR_before, 1)
+          )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
+          data.table(auc, aum=grid.aum$aum)
+        }, by=step.size]
         steps.considered <- rbind(
-          if(algo!="grid")LS$line_search_result[, .(search="exact", step.size, aum)],
-          if(algo!="exact")grid.dt[, .(search="grid", step.size, aum)]
+          if(algo!="grid")LS$line_search_result[, .(search="exact", step.size, auc, aum)],
+          if(algo!="exact")grid.dt[, .(search="grid", step.size, auc, aum)]
         )[, step.prop := seq(1, .N)/.N, by=search][]
-        considered.dt.list[[paste(seed, init.name, algo, step.number)]] <- data.table(
-          seed, init.name, algo, step.number, steps.considered)
-        best.step <- steps.considered[which.min(aum)]
+        considered.dt.list[[paste(
+          seed, init.name, algo, objective, step.number
+        )]] <- data.table(
+          seed, init.name, algo, objective, step.number, steps.considered)
+        best.step <- steps.considered[which.min(obj.sign*get(objective))]
         new.weight.vec <- take.step(best.step$step.size)
         after.roc <- computeROC(new.weight.vec, 0, "subtrain")
-        new.aum <- after.roc$aum
+        new.obj <- after.roc[[objective]]
         cat(sprintf(
-          "seed=%d init.name=%s algo=%s step=%d aum %f->%f\n",
-          seed, init.name, algo, step.number, prev.aum, new.aum))
+          "seed=%d init.name=%s algo=%s step=%d %s %f->%f\n",
+          seed, init.name, algo, step.number, objective, prev.obj, new.obj))
         intercept <- after.roc$thresholds[
           threshold=="min.error", (max.thresh+min.thresh)/2]
         weight.vec <- new.weight.vec
       }#step.number
-    }#algo
+    }#algo/objective
   }#seed/init.name
   list(
     sets=data.table(
