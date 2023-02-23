@@ -24,12 +24,11 @@ if(FALSE){
 ## 13:      2902       H3K4me3_TDH_immune   3807
 ## 14:      5421 H3K27ac-H3K4me3_TDHAM_BP  15961
 (testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*"))
-testFold.path <- "../neuroblastoma-data/data/ATAC_JV_adipose/cv/equal_labels/testFolds/2"
+testFold.path <- "../neuroblastoma-data/data/H3K27ac-H3K4me3_TDHAM_BP/cv/equal_labels/testFolds/3"
 seed <- 1
 init.name="IntervalRegressionCV"
-aum.type="rate"
+aum.type="count"
 OneBatch <- function(testFold.path, aum.type){
-  AUM.name <- if(aum.type=="rate")"AUM.rate" else "aum"
   library(data.table)
   cv.path <- dirname(dirname(testFold.path))
   folds.csv <- file.path(cv.path, "folds.csv")
@@ -88,6 +87,7 @@ OneBatch <- function(testFold.path, aum.type){
       denominator=aum.type)
     diffs.list[[s]] <- seqs.diff
   }
+  totals <- colSums(diffs.list$subtrain[, .(fp_diff, fn_diff)])
   X.subtrain <- X.finite[set.vec=="subtrain",]
   neg.t.X.subtrain <- -t(X.subtrain)
   seqs.train <- with(seqs.list, c(subtrain, validation))
@@ -97,16 +97,21 @@ OneBatch <- function(testFold.path, aum.type){
     on="sequenceID"]
   keep <- apply(is.finite(y.train), 1, any)
   X.train <- X.finite[seqs.train, ]
+  N.param <- ncol(X.finite)+1
+  init.param <- structure(
+    rep(0, N.param),
+    names=c("(Intercept)",colnames(X.finite)))
   init.fun.list <- list(
     IntervalRegressionCV=function(){
       fit <- penaltyLearning::IntervalRegressionCV(
         X.train[keep, ],
-        y.train[keep, ])  
-      fit[["param.mat"]]
+        y.train[keep, ])
+      some.param <- fit[["param.mat"]]
+      init.param[names(some.param)] <- some.param
+      init.param
     },
     zero=function(){
-      N.param <- ncol(X.finite)+1
-      rep(0, N.param)+rnorm(N.param)
+      init.param+rnorm(N.param)
     }
   )
   iteration.dt.list <- list()
@@ -117,9 +122,6 @@ OneBatch <- function(testFold.path, aum.type){
     set.seed(seed)
     int.weights <- init.fun()
     for(algo in c("grid","exact","hybrid"))for(objective in names(obj.sign.list)){
-      obj.sign <- obj.sign.list[[objective]]
-      weight.vec <- int.weights[-1]
-      intercept <- int.weights[1]
       computeROC <- function(w, i, set){
         pred.pen.vec <- (X.finite %*% w) + i
         pred.dt <- data.table(
@@ -129,43 +131,49 @@ OneBatch <- function(testFold.path, aum.type){
         set.dt <- pred.dt[is.set]
         L <- penaltyLearning::ROChange(
           data.list$evaluation, set.dt, "sequenceID")
-        ## not the same as aum::aum because max.fp not always equal to possible.fp.
-        L$AUM.rate <- L$roc[, sum((max.thresh-min.thresh)*pmin(FPR,1-TPR), na.rm=TRUE)]
+        alist <- aum_auc(diffs.list[[set]], pred.pen.vec[ seqs.list[[set]], ])
+        L$aum.diffs <- alist$aum
+        L$auc.diffs <- alist$auc
         L
       }
-      myROC <- function(w, i, set){
-        pred.pen.vec <- (X.finite %*% w) + i
-        pred.dt <- data.table(
-          sequenceID=rownames(pred.pen.vec),
-          pred.log.lambda=-as.numeric(pred.pen.vec))
-        is.set <- set.vec==set
-        set.dt <- pred.dt[is.set]
-        L <- penaltyLearning::ROChange(
-          data.list$aum.input, set.dt, "sequenceID")
-        L$AUM.rate <- L$roc[, sum((max.thresh-min.thresh)*pmin(FPR,1-TPR), na.rm=TRUE)]
-        L
+      aum_auc <- function(diffs.dt, pred.vec){
+        aum.list <- aum::aum(diffs.dt, pred.vec)
+        before.dt <- data.table(aum.list$total_error, key="thresh")[, `:=`(
+          TPR_before=1-fn_before/-totals[["fn_diff"]],
+          FPR_before=fp_before/totals[["fp_diff"]])]
+        aum.list$auc <- before.dt[, .(
+          FPR=c(FPR_before, 1),
+          TPR=c(TPR_before, 1)
+        )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
+        aum.list
       }
+      obj.sign <- obj.sign.list[[objective]]
+      weight.vec <- int.weights[-1]
+      intercept <- int.weights[1]
       prev.obj <- Inf*obj.sign
-      new.obj <- -Inf*obj.sign
       step.number <- 0
-      while(obj.sign*(new.obj-prev.obj) < 1e-6){
-      ##while(step.number<2){
-        step.number <- step.number+1
+      while({
         summary.dt.list <- list()
         for(set in names(seqs.list)){
           set.PL <- computeROC(weight.vec, intercept, set)
           summary.dt.list[[set]] <- with(set.PL, data.table(
             set,
             thresholds[threshold=="predicted"],
-            auc,
-            aum))
+            auc, aum, auc.diffs, aum.diffs))
         }
-        prev.obj <- summary.dt.list$subtrain[[objective]]
         summary.dt <- do.call(rbind, summary.dt.list)
         iteration.dt.list[[paste(
           seed, init.name, algo, step.number, objective
         )]] <- data.table(
           seed, init.name, algo, step.number, objective, summary.dt)
+        new.obj <- summary.dt.list$subtrain[[paste0(objective,".diffs")]]
+        improvement <- obj.sign*(prev.obj-new.obj)
+        cat(sprintf(
+          "seed=%d init=%s algo=%s step=%d %s %f->%f\n",
+          seed, init.name, algo, step.number, objective, prev.obj, new.obj))
+        1e-5 < improvement
+      }){
+        ##while(step.number<2){
         LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec)
         pred.vec <- X.subtrain %*% weight.vec
         aum.list <- aum::aum(diffs.list$subtrain, pred.vec)
@@ -175,24 +183,10 @@ OneBatch <- function(testFold.path, aum.type){
         take.step <- function(s){
           weight.vec+s*direction.vec
         }
-        totals <- colSums(diffs.list$subtrain[, .(fp_diff, fn_diff)])
         grid.dt <- data.table(step.size=step.grid)[, {
           step.weight <- take.step(step.size)
-          browser(expr=step.size==0.1)
-          my.roc <- myROC(step.weight, 0, "subtrain")
-          grid.aum <- aum::aum(diffs.list$subtrain, X.subtrain %*% step.weight)
-          my.roc$roc[seq(.N, .N-5), .(thresh=-min.thresh, FPR, FNR=1-TPR)]
-          data.table(grid.aum$total_error, key="thresh")[seq(1, 6)]
-          sum(data.list$evaluation[sequenceID%in%seqs.list$subtrain, possible.fp[1], by=sequenceID]$V1)
-          sum(diffs.list$subtrain$fp_diff)
-          before.dt <- data.table(grid.aum$total_error, key="thresh")[, `:=`(
-            TPR_before=1-fn_before/-totals[["fn_diff"]],
-            FPR_before=fp_before/totals[["fp_diff"]])]
-          auc <- before.dt[, .(
-            FPR=c(FPR_before, 1),
-            TPR=c(TPR_before, 1)
-          )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
-          data.table(auc, aum=grid.aum$aum)
+          grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
+          with(grid.aum, data.table(auc, aum))
         }, by=step.size]
         steps.considered <- rbind(
           if(algo!="grid")LS$line_search_result[, .(search="exact", step.size, auc, aum)],
@@ -203,15 +197,17 @@ OneBatch <- function(testFold.path, aum.type){
         )]] <- data.table(
           seed, init.name, algo, objective, step.number, steps.considered)
         best.step <- steps.considered[which.min(obj.sign*get(objective))]
-        new.weight.vec <- take.step(best.step$step.size)
-        after.roc <- computeROC(new.weight.vec, 0, "subtrain")
-        new.obj <- after.roc[[objective]]
-        cat(sprintf(
-          "seed=%d init.name=%s algo=%s step=%d %s %f->%f\n",
-          seed, init.name, algo, step.number, objective, prev.obj, new.obj))
-        intercept <- after.roc$thresholds[
-          threshold=="min.error", (max.thresh+min.thresh)/2]
-        weight.vec <- new.weight.vec
+        weight.vec <- take.step(best.step$step.size)
+        new.aum <- aum::aum(diffs.list$subtrain, X.subtrain %*% weight.vec)
+        err.thresh <- data.table(
+          new.aum$total_error,key="thresh"
+        )[, err_before := fp_before+fn_before][, .(
+          thresh=c(thresh[1]-1,thresh[-1]-diff(thresh)/2,thresh[.N]+1),
+          err=c(err_before,sum(diffs.list$subtrain$fp_diff))
+        )]
+        intercept <- err.thresh[which.min(err), thresh]
+        step.number <- step.number+1
+        prev.obj <- new.obj
       }#step.number
     }#algo/objective
   }#seed/init.name
@@ -230,7 +226,8 @@ args.dt <- data.table::CJ(
 )
 
 ## Run on SLURM.
-registry.dir <- "figure-line-grid-search-interactive-registry"
+registry.dir <- "figure-line-grid-search-interactive-registry-fixed"
+reg=batchtools::loadRegistry(registry.dir)
 if(FALSE){
   unlink(registry.dir, recursive=TRUE)
 }
@@ -244,20 +241,21 @@ batchtools::submitJobs(chunks, resources=list(
   ncpus=1,  #>1 for multicore/parallel jobs.
   ntasks=1, #>1 for MPI jobs.
   chunks.as.arrayjobs=TRUE), reg=reg)
+
 batchtools::getStatus(reg=reg)
 status.dt <- batchtools::getJobStatus(reg=reg)
 status.dt[!is.na(error)]
 
 batchtools::testJob(4, reg=reg)
-args.dt[4]
+args.dt[21]
 
-##job.id=376 Error in penaltyLearning::ROChange(data.list$evaluation, data.table(sequenceID = seqs.set,  : \n  no positive labels
+##job.id=376 Error in penaltyLearning::ROChange(data.list$evaluation, data.table(sequenceID = seqs.set,  : \n  no positive labels => fix by excluding data?
 
-##job.id=354 Error in X.finite %*% w : non-conformable arguments
+##job.id=354 Error in X.finite %*% w : non-conformable arguments => fixed by processing output of IRCV, which returns w that may be smaller than number of features.
 
-##job.id=4,12 Error in aum_sort_interface(error.diff.df, pred.vec) : \n  fp should be non-negative
+##job.id=4,12 Error in aum_sort_interface(error.diff.df, pred.vec) : \n  fp should be non-negative => fixed by updating check in aum C++ code.
 
-##job.id=21 Error in while (obj.sign * (new.obj - prev.obj) < 1e-06) { : \n  missing value where TRUE/FALSE needed
+##job.id=21 Error in while (obj.sign * (new.obj - prev.obj) < 1e-06) { : \n  missing value where TRUE/FALSE needed => fixed by using aum package which always gives finite aum.
 
 ## Run locally.
 for(args.i in 1:nrow(args.dt)){
