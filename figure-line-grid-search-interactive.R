@@ -226,8 +226,38 @@ args.dt <- data.table::CJ(
 )
 
 ## Run on SLURM.
+registry.dir <- "figure-line-grid-search-interactive-registry"
 registry.dir <- "figure-line-grid-search-interactive-registry-fixed"
 reg=batchtools::loadRegistry(registry.dir)
+batchtools::getStatus(reg=reg)
+batchtools::findExpired(reg=reg)
+status.dt <- batchtools::getJobStatus(reg=reg)
+status.dt[!is.na(error)]
+status.dt[!is.na(done)]
+
+#analyze.
+done.ids <- status.dt[is.na(error), job.id]
+for(done.i in done.ids){
+  job.id <- done.ids[[done.i]]
+  args.row <- args.dt[job.id]
+  ls.dir <- file.path(args.row$testFold.path, "line_search", "sets")
+  dir.create(ls.dir, showWarnings = FALSE, recursive = TRUE)
+  ls.csv <- file.path(ls.dir, paste0(args.row$aum.type, ".csv"))
+  if(!file.exists(ls.csv)){
+    cat(sprintf("%4d / %4d %s\n", done.i, length(done.ids), ls.csv))
+    res <- batchtools::loadResult(job.id)
+    best.steps <- res$steps[
+    , .SD[which.min(aum)], by=.(
+      seed,init.name,algo,objective,step.number
+    )][,.(seed,init.name,algo,objective,step.number=step.number+1,search)]
+    join.dt <- best.steps[res$sets, on=.(
+      seed,init.name,algo,objective,step.number
+    )]
+    join.dt[is.na(search), table(step.number)]
+    fwrite(join.dt, ls.csv)
+  }  
+}
+
 if(FALSE){
   unlink(registry.dir, recursive=TRUE)
 }
@@ -245,9 +275,17 @@ batchtools::submitJobs(chunks, resources=list(
 batchtools::getStatus(reg=reg)
 status.dt <- batchtools::getJobStatus(reg=reg)
 status.dt[!is.na(error)]
+status.dt[!is.na(done)]
 
 batchtools::testJob(4, reg=reg)
 args.dt[21]
+
+## seed=1 init.name=IntervalRegressionCV algo=exact step=33146 auc 0.955147->0.955147
+##  *** caught bus error ***
+## address 0x153dc1917f40, cause 'non-existent physical address'
+## Traceback:
+##  1: aum_sort_interface(error.diff.df, pred.vec)
+
 
 ##job.id=376 Error in penaltyLearning::ROChange(data.list$evaluation, data.table(sequenceID = seqs.set,  : \n  no positive labels => fix by excluding data?
 
