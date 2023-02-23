@@ -24,9 +24,13 @@ if(FALSE){
 ## 13:      2902       H3K4me3_TDH_immune   3807
 ## 14:      5421 H3K27ac-H3K4me3_TDHAM_BP  15961
 (testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*"))
-testFold.path <- "../neuroblastoma-data/data/H3K27ac-H3K4me3_TDHAM_BP/cv/equal_labels/testFolds/4"
+testFold.path <- "../neuroblastoma-data/data/ATAC_JV_adipose/cv/equal_labels/testFolds/2"
+seed <- 1
+init.name="IntervalRegressionCV"
 aum.type="rate"
 OneBatch <- function(testFold.path, aum.type){
+  AUM.name <- if(aum.type=="rate")"AUM.rate" else "aum"
+  library(data.table)
   cv.path <- dirname(dirname(testFold.path))
   folds.csv <- file.path(cv.path, "folds.csv")
   cv.type <- basename(cv.path)
@@ -44,8 +48,9 @@ OneBatch <- function(testFold.path, aum.type){
     data.list[[f]] <- f.dt
   }
   ## replace positive fn at end with 0 to avoid AUM=Inf.
-  data.list$evaluation[, min.fn := min(fn), by=sequenceID]
   data.list$evaluation[, `:=`(
+    min.fn=min(fn),
+    max.fp=max(fp),
     min.lambda = exp(min.log.lambda),
     example=sequenceID
   ), by=sequenceID]
@@ -58,7 +63,8 @@ OneBatch <- function(testFold.path, aum.type){
   ## data sets, but it could theoretically in some data.
   data.list$aum.input <- data.table(data.list$evaluation)[, `:=`(
     possible.fn=possible.fn-min.fn,
-    fn=fn-min.fn
+    fn=fn-min.fn,
+    possible.fp=max.fp
   ), by=sequenceID]
   ## read folds.  
   folds.dt <- data.table::fread(folds.csv)
@@ -77,20 +83,11 @@ OneBatch <- function(testFold.path, aum.type){
     seqs.set <- folds.dt[s==set, sequenceID]
     seqs.list[[s]] <- seqs.set
     seqs.diff <- aum::aum_diffs_penalty(
-      data.list$aum.input,
+      data.list$evaluation,
       seqs.set,
       denominator=aum.type)
     diffs.list[[s]] <- seqs.diff
-    zero <- rep(0, length(seqs.set))
-    aum.vec.list[[s]] <- rbind(
-      "aum::aum"=aum::aum(seqs.diff, zero)$aum,
-      "penaltyLearning::ROChange"=penaltyLearning::ROChange(
-        data.list$evaluation,
-        data.table(sequenceID=seqs.set, pred.log.lambda=zero),
-        problem.vars="sequenceID")$aum
-    )
   }
-  print(do.call(data.frame, aum.vec.list))
   X.subtrain <- X.finite[set.vec=="subtrain",]
   neg.t.X.subtrain <- -t(X.subtrain)
   seqs.train <- with(seqs.list, c(subtrain, validation))
@@ -130,8 +127,23 @@ OneBatch <- function(testFold.path, aum.type){
           pred.log.lambda=-as.numeric(pred.pen.vec))
         is.set <- set.vec==set
         set.dt <- pred.dt[is.set]
-        penaltyLearning::ROChange(
+        L <- penaltyLearning::ROChange(
           data.list$evaluation, set.dt, "sequenceID")
+        ## not the same as aum::aum because max.fp not always equal to possible.fp.
+        L$AUM.rate <- L$roc[, sum((max.thresh-min.thresh)*pmin(FPR,1-TPR), na.rm=TRUE)]
+        L
+      }
+      myROC <- function(w, i, set){
+        pred.pen.vec <- (X.finite %*% w) + i
+        pred.dt <- data.table(
+          sequenceID=rownames(pred.pen.vec),
+          pred.log.lambda=-as.numeric(pred.pen.vec))
+        is.set <- set.vec==set
+        set.dt <- pred.dt[is.set]
+        L <- penaltyLearning::ROChange(
+          data.list$aum.input, set.dt, "sequenceID")
+        L$AUM.rate <- L$roc[, sum((max.thresh-min.thresh)*pmin(FPR,1-TPR), na.rm=TRUE)]
+        L
       }
       prev.obj <- Inf*obj.sign
       new.obj <- -Inf*obj.sign
@@ -166,7 +178,13 @@ OneBatch <- function(testFold.path, aum.type){
         totals <- colSums(diffs.list$subtrain[, .(fp_diff, fn_diff)])
         grid.dt <- data.table(step.size=step.grid)[, {
           step.weight <- take.step(step.size)
+          browser(expr=step.size==0.1)
+          my.roc <- myROC(step.weight, 0, "subtrain")
           grid.aum <- aum::aum(diffs.list$subtrain, X.subtrain %*% step.weight)
+          my.roc$roc[seq(.N, .N-5), .(thresh=-min.thresh, FPR, FNR=1-TPR)]
+          data.table(grid.aum$total_error, key="thresh")[seq(1, 6)]
+          sum(data.list$evaluation[sequenceID%in%seqs.list$subtrain, possible.fp[1], by=sequenceID]$V1)
+          sum(diffs.list$subtrain$fp_diff)
           before.dt <- data.table(grid.aum$total_error, key="thresh")[, `:=`(
             TPR_before=1-fn_before/-totals[["fn_diff"]],
             FPR_before=fp_before/totals[["fp_diff"]])]
@@ -206,20 +224,56 @@ OneBatch <- function(testFold.path, aum.type){
       data.name, cv.type, test.fold))
 }
 
-all.it.list <- list()
-for(testFold.i in seq_along(testFold.vec)){
-  fdir <- testFold.vec[testFold.i]
-  cache.rds <- file.path(fdir, cache.name)
-  all.it.list[[testFold.i]] <- if(file.exists(cache.rds)){
+args.dt <- data.table::CJ(
+  testFold.path=testFold.vec,
+  aum.type=c("rate","count")
+)
+
+## Run on SLURM.
+registry.dir <- "figure-line-grid-search-interactive-registry"
+if(FALSE){
+  unlink(registry.dir, recursive=TRUE)
+}
+reg <- batchtools::makeRegistry(registry.dir)
+batchtools::batchMap(OneBatch, args=args.dt, reg=reg)
+job.table <- batchtools::getJobTable(reg=reg)
+chunks <- data.frame(job.table, chunk=1)
+batchtools::submitJobs(chunks, resources=list(
+  walltime = 24*60*60,#seconds
+  memory = 32000,#megabytes per cpu
+  ncpus=1,  #>1 for multicore/parallel jobs.
+  ntasks=1, #>1 for MPI jobs.
+  chunks.as.arrayjobs=TRUE), reg=reg)
+batchtools::getStatus(reg=reg)
+status.dt <- batchtools::getJobStatus(reg=reg)
+status.dt[!is.na(error)]
+
+batchtools::testJob(4, reg=reg)
+args.dt[4]
+
+##job.id=376 Error in penaltyLearning::ROChange(data.list$evaluation, data.table(sequenceID = seqs.set,  : \n  no positive labels
+
+##job.id=354 Error in X.finite %*% w : non-conformable arguments
+
+##job.id=4,12 Error in aum_sort_interface(error.diff.df, pred.vec) : \n  fp should be non-negative
+
+##job.id=21 Error in while (obj.sign * (new.obj - prev.obj) < 1e-06) { : \n  missing value where TRUE/FALSE needed
+
+## Run locally.
+for(args.i in 1:nrow(args.dt)){
+  args.row <- args.dt[args.i]
+  cache.rds <- args.row[, file.path(testFold.path, paste0(aum.type, ".rds"))]
+  all.it.list[[args.i]] <- if(file.exists(cache.rds)){
     readRDS(cache.rds)
   }else{
-    cat(sprintf("%4d / %4d %s\n", testFold.i, length(testFold.vec), fdir))
-    iteration.list <- OneFold(fdir)
+    cat(sprintf("%4d / %4d\n", args.i, length(args.dt)))
+    print(args.row)
+    iteration.list <- do.call(OneBatch, args.row)
     saveRDS(iteration.list, cache.rds)
-    iteration.list
   }
 }
 
+## analyze.
 cache.vec <- Sys.glob(file.path(
   "../neuroblastoma-data/data/*/cv/*/testFolds/*",
   cache.name))
