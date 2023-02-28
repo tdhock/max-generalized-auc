@@ -336,3 +336,38 @@ for(cache.i in seq_along(cache.vec)){
     facet_wrap(~seed+ init.name + set,scales="free")
   
 }
+
+#analyze 2
+type.csv.vec <- Sys.glob(file.path(testFold.vec, "line_search","sets", "*.csv"))
+selected.dt.list <- list()
+for(type.csv.i in seq_along(type.csv.vec)){
+  meta.dt <- type.dt[1, .(
+    data.name, cv.type, test.fold,
+    gradient=sub(".csv","",basename(type.csv)))]
+  type.csv <- type.csv.vec[[type.csv.i]]
+  type.dt <- fread(type.csv)
+  ## does max auc get better auc than min aum?
+  valid.dt <- type.dt[
+    set=="validation"
+  ][, step.prop := step.number/max(step.number), by=.(seed,init.name,algo,objective)]
+  compare.obj.dt <- valid.dt[
+  , .SD[which.max(auc), .(step.number,step.prop,valid.auc=auc)], by=.(seed,init.name,algo,objective)]
+  not.zero <- valid.dt[0 < step.number]
+  search.counts <- dcast(
+    compare.obj.dt[not.zero, on=.(seed,init.name,algo,objective,step.number>=step.number),nomatch=0L],
+    seed+init.name+algo+objective~search,
+    length)
+  selected.dt.list[[type.csv]] <- data.table(
+    meta.dt, search.counts[compare.obj.dt, on=.(seed,init.name,algo,objective)])
+}
+selected.dt <- rbindlist(selected.dt.list)
+fwrite(selected.dt, "figure-line-grid-search-interactive-selected.csv")
+
+ggplot()+
+  facet_grid(init.name + objective ~ ., labeller=label_both, scales="free")+
+  geom_point(aes(
+    auc, algo),
+    data=compare.obj.dt)+
+  scale_x_continuous(
+    "Best validation AUC")
+
