@@ -1,9 +1,9 @@
 source("packages.R")
+install.packages("~/projects/nau/ml/aum", repos = NULL, type="source")
 library(ggplot2)
 library(data.table)
 library(aum)
 library(Rcpp)
-library(data.table)
 
 ## need to clone https://github.com/tdhock/feature-learning-benchmark
 folds.dt <- fread("../feature-learning-benchmark/labeled_problems_folds.csv")
@@ -89,20 +89,6 @@ getROC <- function(p){
   L
 }
 
-#ggplot() +
-#  geom_point(aes(
-#    x=step.size, y=aum
-#  ), data = aum.df, color = "darkblue", size = 0.1) +
-#  geom_point(aes(
-#    x=step.size, y=aum
-#  ), data = smallest.aum, color = "darkorange", size = 2) +
-#  # center graph on the smallest point
-#  coord_cartesian(xlim=c(
-#    max(0, smallest.aum$step.size - 1),
-#    smallest.aum$step.size + 1
-#  ),ylim=c(smallest.aum$aum - 50, smallest.aum$aum + 50))
-##    coord_cartesian(xlim=c(0,1.5),ylim=c(0,200))
-
 # exact line search start
 current.pred <- data.table(initial.pred)
 current.pred <- current.pred[prob.dir.ord, prob.dir, pred.log.lambda, on="prob.dir"] # sort by example
@@ -112,13 +98,15 @@ aum.dt.list <- list()
 aum.smallest.dt.list <- list()
 aum.grid.search.dt.list <- list()
 (max.iterations <- nrow(diff.fp.fn) * (nrow(diff.fp.fn) - 1) / 2)
-#max.iterations <- nrow(diff.fp.fn) * 10
-aum.result <- aum::aum_line_search_grid(diff.fp.fn, pred.vec=current.pred$pred.log.lambda, maxIterations=max.iterations)
+(max.iterations <- nrow(diff.fp.fn) * 100)
+aum.result <- aum::aum_line_search_grid(diff.fp.fn, pred.vec=-current.pred$pred.log.lambda, maxIterations=max.iterations)
+aum.result.list <- list()
+aum.result.list[[paste(1)]] <- aum.result
 while(1e-6 < improvement) {
   aum.df <- as.data.frame(aum.result$line_search_result)
   aum.df <- aum.df[aum.df$step.size != -1,] # filter bad values
   smallest.aum <- aum.df[which.min(aum.df$aum),]
-  plot.aum_line_search_grid(aum.result)
+  plot(aum.result)
 
   aum.dt.list[[paste(step.number)]] <- data.table(step=step.number, step.size=aum.df$step.size, aum=aum.df$aum)
   aum.smallest.dt.list[[paste(step.number)]] <- data.table(step=step.number, smallest.aum)
@@ -126,8 +114,9 @@ while(1e-6 < improvement) {
 
   # create a new prediction vector with all of the values going in the descent direction with the step size we've found
   step.pred <- current.pred
-  step.pred$pred.log.lambda <- step.pred$pred.log.lambda - (smallest.aum$step.size * aum.result$gradient)
-  step.aum.result <- aum::aum_line_search_grid(diff.fp.fn, pred.vec=step.pred$pred.log.lambda, maxIterations=max.iterations)
+  step.pred$pred.log.lambda <- step.pred$pred.log.lambda - (smallest.aum$step.size * -aum.result$gradient)
+  step.aum.result <- aum::aum_line_search_grid(diff.fp.fn, pred.vec=-step.pred$pred.log.lambda, maxIterations=max.iterations)
+  aum.result.list[[paste(step.number+1)]] <- step.aum.result
 
   cat(sprintf(
     "step=%d size=%e aum=%f->%f\n",
@@ -171,6 +160,13 @@ ggplot() +
     ), data = aum.grid.search.dt, color = "red", size = 2) +
   facet_wrap("step", scales="free")
 
+
+bad.input <- aum.result.list[[6]]$line_search_input
+data.table(step = 6, x=seq(bad.input$fp.diff), y=cumsum(bad.input$fp.diff))
+ggplot(bad.input) +
+  geom_point(aes(x=seq(bad.input$fp.diff), y=cumsum(bad.input$fp.diff)), color="blue") +
+  geom_point(aes(x=seq(bad.input$fp.diff), y=cumsum(bad.input$fn.diff)), color="red")
+
 ## initialization:
 pred.dt <- data.table(initial.pred)
 step.number <- 1
@@ -180,7 +176,7 @@ iterations.dt.list <- list()
 improvement <- Inf
 while(1e-6 < improvement){
   ## these depend on predictions:
-  while({
+  while({ 
     step.dt <- pred.dt[roc.list$aum.grad, .(
       prob.dir,
       pred.log.lambda = pred.log.lambda-step.size*lo
