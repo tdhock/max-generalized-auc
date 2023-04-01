@@ -66,7 +66,6 @@ works_with_R(
   R.utils="2.10.1",
   "tdhock/penaltyLearning@558be4c28702396e37477d7fc01bad17d456fd82",
   "tdhock/directlabels@5f8ba1ae60c2a87b96d09a6f9ccaadd6f3859c57",
-  "tdhock/aum@ef6c5b851345bc67808f1ceee25b2ac74a03b07b",
   jointseg="1.0.2",
   gridExtra="2.3",
   neuroblastoma="1.0",
@@ -74,6 +73,7 @@ works_with_R(
   microbenchmark="1.4.7",
   ##"tdhock/animint2@8a7327e66fa65f31ccc17508f914aaaee41909ef"
   ggplot2="3.3.3")
+library(aum)
 ## requireGitHub::requireGitHub_package(
 ##   "great-northern-diver",
 ##   "loon/R",
