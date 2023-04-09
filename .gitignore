@@ -18,3 +18,5 @@ README.html
 *.aux
 *.log
 .httr-oauth
+.Rproj.user
+.RData

@@ -4,6 +4,118 @@ library(aum)
 library(Rcpp)
 library(dplyr)
 
+folds.dt <- fread("../feature-learning-benchmark/labeled_problems_folds.csv")
+addMeta <- function(dt){
+  dt[, set.name := sub("/.*", "", prob.dir)]
+  dt[, problem := sub(".*/", "", prob.dir)]
+  dt[folds.dt, on=list(set.name, problem)]
+}
+errors.dt <- addMeta(fread("../feature-learning-benchmark/labeled_problems_errors.csv"))
+possible.dt <- addMeta(fread("../feature-learning-benchmark/labeled_problems_possible_errors.csv"))
+
+
+auc.improved.list <- list()
+
+fold.possible <- unique(folds.dt[, .(set.name, fold)])
+i.possible <- 1:nrow(fold.possible)
+N.possible <- paste(i.possible, "improved")
+i.todo <- i.possible[!N.possible %in% names(auc.improved.list)]
+biggest.step <- 0.1
+completed.datasets.list <- list()
+for(i in seq_along(i.todo)){
+  test.fold.i <- i.todo[[i]]
+  cat(sprintf("%4d / %4d test folds TODO=%d\n", i, length(i.todo), test.fold.i))
+  test.fold.info <- fold.possible[test.fold.i]
+  dataset <- paste0(test.fold.info$set.name, test.fold.info$fold)
+  test.fold.errors <- errors.dt[test.fold.info, on=.(set.name, fold)]
+  test.fold.errors[, min.log.lambda := min.log.penalty]
+  test.fold.errors[, max.log.lambda := max.log.penalty]
+  test.fold.errors[, seg.i := cumsum(
+    c(1, diff(fp)!=0 | diff(fn) != 0)), by=.(prob.dir)]
+  possible.errors <- possible.dt[test.fold.errors, on=list(
+    set.name, fold, prob.dir)][, possible.fn := possible.tp]
+  possible.segs <- possible.errors[, .(
+    min.log.lambda=min(min.log.lambda),
+    max.log.lambda=max(max.log.lambda)
+  ), by=.(
+    prob.dir, seg.i, fp, fn, errors, possible.fp, possible.fn, labels
+  )][, `:=`(
+    min.lambda = exp(min.log.lambda),
+    example=prob.dir
+  )]
+  ## Check for non-zero at end of err fun.
+  possible.segs[min.log.lambda == -Inf & fn > 0]
+  possible.segs[min.log.lambda == Inf & fp > 0]
+  test.fold.targets <- penaltyLearning::targetIntervals(
+    possible.segs, "prob.dir")
+  prob.ord <- test.fold.targets$prob.dir
+  aum.diffs <- aum::aum_diffs_penalty(possible.segs, prob.ord)
+  min.err.pred.dt <- test.fold.targets[, data.table(
+    prob.dir,
+    pred.log.lambda=fcase(
+      min.log.lambda>-Inf & max.log.lambda==Inf, min.log.lambda+1, 
+      min.log.lambda==-Inf & max.log.lambda<Inf, max.log.lambda-1,
+      min.log.lambda>-Inf & max.log.lambda<Inf, (min.log.lambda+max.log.lambda)/2,
+      min.log.lambda==-Inf & max.log.lambda==Inf, 0)
+  )]
+  possible.segs[prob.dir==prob.ord[1], .(fp,fn,min.log.lambda)]
+  aum.diffs[example==0]
+  init.list <- list(
+    min.error=-min.err.pred.dt$pred.log.lambda,
+    zero=rep(0, nrow(min.err.pred.dt)))
+  
+  current.pred <- initial.pred <- init.list$min.error
+  
+  maxIterations <- nrow(aum.diffs)*(nrow(aum.diffs)-1) / 2
+  improvement <- 1
+  initial.aum <- aum::aum(aum.diffs, initial.pred)$aum
+  # while we're still improving the total AUM
+  steps <- 0
+  iterations.list <- list()
+  while (improvement > 0.00001) {
+    # line search for where we're at
+    weight.search <- aum::aum_line_search(
+      aum.diffs,
+      pred.vec=current.pred
+      #maxIterations=maxIterations
+    )
+    # plot(weight.search)
+    line.search.result <- data.table(weight.search$line_search_result)
+    gradient <- weight.search$gradient
+    best.row <- line.search.result[which.min(aum)]
+
+    most.intersections <- max(weight.search$line_search_result$intersections)
+    if (most.intersections > 1) {
+      cat(sprintf("      most.intersections=%d on step=%d\n", most.intersections, steps))
+    }
+    
+    # take a step in the descent direction
+    step.pred <- current.pred - best.row$step.size * gradient
+    # calculate new aum and check the difference
+    step.aum <- aum::aum(aum.diffs, step.pred)
+    improvement <- weight.search$aum - step.aum$aum
+
+    steps <- steps + 1
+    current.pred <- step.pred
+    iterations.list[[paste0(steps)]] <- data.table(
+      step=steps,
+      aum=best.row$aum,
+      auc=best.row$auc,
+      set.name=test.fold.info$set.name,
+      fold=as.factor(test.fold.info$fold)
+    )
+  }
+  cat(sprintf("      aum=%f->%f in %d steps\n", initial.aum, step.aum$aum, steps))
+  completed.datasets.list[[paste0(dataset)]] <- do.call(rbind, iterations.list)
+}
+completed.datasets <- do.call(rbind, completed.datasets.list)
+
+ggplot(completed.datasets) +
+  geom_line(aes(x=step, y=aum, color=fold)) +
+  facet_wrap(set.name ~., scales="free")
+
+
+# OLD CODE from aum-line-search-comparison.R
 data(neuroblastomaProcessed, package="penaltyLearning", envir=environment())
 data(notConverging, package="penaltyLearning", envir=environment())
 nb.err <- with(neuroblastomaProcessed$errors, data.frame(
@@ -32,7 +144,7 @@ final.max.iterations <- nrow(diff.list$subtrain) * (nrow(diff.list$subtrain) - 1
 loss.dt.list <- list()
 best.dt.list <- list()
 10^c(2, 2.5, 3, 3.5, 4, 4.5, 5, 6)
-for (factor in 10^c(3, 3.5, 4, 4.5, 5)) {
+for (factor in 10^c(3, 4, 5, 6)) {
   last.iteration <- factor == 10^6
   for (search.type in c("exact", "hybrid03", "grid")) {
     if (search.type != "exact" && search.type != "hybrid" && last.iteration) break
@@ -95,7 +207,7 @@ for (factor in 10^c(3, 3.5, 4, 4.5, 5)) {
           factor.label <- max.iterations
         }
         
-        nb.weight.search <- aum::aum_line_search(
+        nb.weight.search <- aum::aum_line_search_grid(
           diff.list$subtrain,
           feature.mat=X.keep[index.list$subtrain,],
           weight.vec=weight.vec,
