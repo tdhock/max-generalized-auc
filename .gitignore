@@ -20,3 +20,5 @@ README.html
 .httr-oauth
 .Rproj.user
 .RData
+*.Rproj
+
