@@ -148,7 +148,7 @@ OneBatch <- function(testFold.path, aum.type, init.name){
     init.fun <- init.fun.list[[init.name]]
     set.seed(seed)
     int.weights <- init.fun()
-    for(algo in c("grid","exact","exactq","hybridA","hybridB"))for(objective in names(obj.sign.list)){
+    for(algo in c("grid","exact","exactq","hybridA","hybridB","hybridC"))for(objective in names(obj.sign.list)){
       start.time <- microbenchmark::get_nanotime()
       computeROC <- function(w, i, set){
         pred.pen.vec <- (X.finite %*% w) + i
@@ -275,6 +275,25 @@ OneBatch <- function(testFold.path, aum.type, init.name){
             grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
             best.grid.row <- grid.result[which.min(aum)]
           }
+        } else if (algo == "hybridC") {
+          LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
+          exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
+          search.result <- data.table(LS$line_search_result)
+          search.result[, kink := .I/.N]
+          best.row <- search.result[which.min(aum)]
+          
+          if (best.row$kink == 1) {
+            # if kink == 1, we have chosen the very last step size we looked at.
+            # run a grid search where we're at to find a larger step.size
+            step.grid <- best.row$step.size * 10^(1:4)
+            grid.dt <- data.table(step.size=step.grid)[, {
+              step.weight <- take.step(step.size)
+              grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
+              with(grid.aum, data.table(auc, aum))
+            }, by=step.size]
+            grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
+            best.grid.row <- grid.result[which.min(aum)]
+          }
         }
         elapsed.time <- (proc.time() - ptm)[["elapsed"]] # timer end
         
@@ -327,6 +346,7 @@ registry.dir <- "figure-line-grid-search-interactive-registry-8"#70 datasets (20
 registry.dir <- "figure-line-grid-search-interactive-registry-9"#109 datasets (28mb)
 registry.dir <- "figure-line-grid-search-interactive-registry-10"#[1:109] datasets w/ init.name=c("zero", "IntervalRegressionCV")
 registry.dir <- "figure-line-grid-search-interactive-registry-11"#[1:181]
+registry.dir <- "figure-line-grid-search-interactive-registry-12"# new hybridC
 
 if (FALSE) {
   reg=batchtools::loadRegistry(registry.dir, writeable = TRUE)
@@ -545,7 +565,7 @@ results.with.dataset.size.and.init <- merge(algo.time.by.dataset.with.inits, dat
 
 
 # name for the folder for the images below to go in
-experiment.name <- "new-hybridB"
+experiment.name <- "hybridC"
 dir.create(file.path(experiment.name))
 
 
