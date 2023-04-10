@@ -266,7 +266,7 @@ OneBatch <- function(testFold.path, aum.type, init.name){
           if (best.row$kink == 1) {
             # if kink == 1, we have chosen the very last step size we looked at.
             # run a grid search where we're at to find a larger step.size
-            step.grid <- best.row$step.size * c(2,8,32)
+            step.grid <- best.row$step.size * 10^(2:7)
             grid.dt <- data.table(step.size=step.grid)[, {
               step.weight <- take.step(step.size)
               grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
@@ -347,6 +347,7 @@ registry.dir <- "figure-line-grid-search-interactive-registry-9"#109 datasets (2
 registry.dir <- "figure-line-grid-search-interactive-registry-10"#[1:109] datasets w/ init.name=c("zero", "IntervalRegressionCV")
 registry.dir <- "figure-line-grid-search-interactive-registry-11"#[1:181]
 registry.dir <- "figure-line-grid-search-interactive-registry-12"# new hybridC
+registry.dir <- "figure-line-grid-search-interactive-registry-13"# better params for hybridB (it's like hybridC now but searches more grid points)
 
 if (FALSE) {
   reg=batchtools::loadRegistry(registry.dir, writeable = TRUE)
@@ -565,7 +566,7 @@ results.with.dataset.size.and.init <- merge(algo.time.by.dataset.with.inits, dat
 
 
 # name for the folder for the images below to go in
-experiment.name <- "hybridC"
+experiment.name <- "hybridB-bigger-grid"
 dir.create(file.path(experiment.name))
 
 
