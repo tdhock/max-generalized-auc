@@ -266,7 +266,7 @@ OneBatch <- function(testFold.path, aum.type, init.name){
           if (best.row$kink == 1) {
             # if kink == 1, we have chosen the very last step size we looked at.
             # run a grid search where we're at to find a larger step.size
-            step.grid <- best.row$step.size * 2
+            step.grid <- best.row$step.size * c(2,8,32)
             grid.dt <- data.table(step.size=step.grid)[, {
               step.weight <- take.step(step.size)
               grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
@@ -310,10 +310,13 @@ OneBatch <- function(testFold.path, aum.type, init.name){
   #  data.name, cv.type, test.fold))
 }
 
+# Set of Jobs to run
+# aum.type is FPR/FNR or FP/FN count
+# init.name is the starting weight matrix
 args.dt <- data.table::CJ(
-  testFold.path=datasets.by.size$name[1:109],#testFold.vec,
+  testFold.path=datasets.by.size$name[1:181],#testFold.vec,
   aum.type=c("rate"),#,"count")
-  init.name=c("zero", "IntervalRegressionCV")
+  init.name=c("zero")#, "IntervalRegressionCV")
 )
 
 ## Run on SLURM.
@@ -322,7 +325,8 @@ registry.dir <- "figure-line-grid-search-interactive-registry-6"#4 datasets w hy
 registry.dir <- "figure-line-grid-search-interactive-registry-7"#23 datasets (1.6mb)
 registry.dir <- "figure-line-grid-search-interactive-registry-8"#70 datasets (20mb)
 registry.dir <- "figure-line-grid-search-interactive-registry-9"#109 datasets (28mb)
-registry.dir <- "figure-line-grid-search-interactive-registry-10"#109 datasets w/ init.name=c("zero", "IntervalRegressionCV")
+registry.dir <- "figure-line-grid-search-interactive-registry-10"#[1:109] datasets w/ init.name=c("zero", "IntervalRegressionCV")
+registry.dir <- "figure-line-grid-search-interactive-registry-11"#[1:181]
 
 if (FALSE) {
   reg=batchtools::loadRegistry(registry.dir, writeable = TRUE)
@@ -435,58 +439,60 @@ all.it.list <-
   }
 
 ## analyze.
-cache.vec <- Sys.glob(file.path(
-  "../neuroblastoma-data/data/*/cv/*/testFolds/*",
-  cache.name))
-for(cache.i in seq_along(cache.vec)){
-  cache.rds <- cache.vec[[cache.i]]
-  L <- readRDS(cache.rds)
-  algo.cols <- c("seed","init.name","algo")
-  step.cols <- c(algo.cols,"step.number")
-  best.steps <- L$steps[, .SD[which.min(aum)], by=step.cols][,c(step.cols,"search"),with=FALSE]
-  join.dt <- L$sets[set != "test"][best.steps, on=step.cols]
-  min.dt <- join.dt[set=="validation", .SD[which.min(aum)], by=.(seed,init.name,set)]
+if (FALSE){
+  cache.vec <- Sys.glob(file.path(
+    "../neuroblastoma-data/data/*/cv/*/testFolds/*",
+    cache.name))
+  for(cache.i in seq_along(cache.vec)){
+    cache.rds <- cache.vec[[cache.i]]
+    L <- readRDS(cache.rds)
+    algo.cols <- c("seed","init.name","algo")
+    step.cols <- c(algo.cols,"step.number")
+    best.steps <- L$steps[, .SD[which.min(aum)], by=step.cols][,c(step.cols,"search"),with=FALSE]
+    join.dt <- L$sets[set != "test"][best.steps, on=step.cols]
+    min.dt <- join.dt[set=="validation", .SD[which.min(aum)], by=.(seed,init.name,set)]
+    
+    ggplot()+
+      geom_line(aes(
+        step.number, aum, color=algo),
+        data=join.dt)+
+      geom_point(aes(
+        step.number, aum, color=algo),
+        shape=1,
+        data=join.dt[search=="exact"])+
+      geom_point(aes(
+        step.number, aum, color=algo),
+        data=min.dt)+
+      facet_wrap(~seed+ init.name + set,scales="free")
+    
+  }
   
-  ggplot()+
-    geom_line(aes(
-      step.number, aum, color=algo),
-      data=join.dt)+
-    geom_point(aes(
-      step.number, aum, color=algo),
-      shape=1,
-      data=join.dt[search=="exact"])+
-    geom_point(aes(
-      step.number, aum, color=algo),
-      data=min.dt)+
-    facet_wrap(~seed+ init.name + set,scales="free")
-  
+  #analyze 2
+  type.csv.vec <- Sys.glob(file.path(testFold.vec, "line_search","sets", "*.csv"))
+  selected.dt.list <- list()
+  for(type.csv.i in seq_along(type.csv.vec)){
+    meta.dt <- type.dt[1, .(
+      data.name, cv.type, test.fold,
+      gradient=sub(".csv","",basename(type.csv)))]
+    type.csv <- type.csv.vec[[type.csv.i]]
+    type.dt <- fread(type.csv)
+    ## does max auc get better auc than min aum?
+    valid.dt <- type.dt[
+      set=="validation"
+    ][, step.prop := step.number/max(step.number), by=.(seed,init.name,algo,objective)]
+    compare.obj.dt <- valid.dt[
+      , .SD[which.max(auc), .(step.number,step.prop,valid.auc=auc)], by=.(seed,init.name,algo,objective)]
+    not.zero <- valid.dt[0 < step.number]
+    search.counts <- dcast(
+      compare.obj.dt[not.zero, on=.(seed,init.name,algo,objective,step.number>=step.number),nomatch=0L],
+      seed+init.name+algo+objective~search,
+      length)
+    selected.dt.list[[type.csv]] <- data.table(
+      meta.dt, search.counts[compare.obj.dt, on=.(seed,init.name,algo,objective)])
+  }
+  selected.dt <- rbindlist(selected.dt.list)
+  fwrite(selected.dt, "figure-line-grid-search-interactive-selected.csv")
 }
-
-#analyze 2
-type.csv.vec <- Sys.glob(file.path(testFold.vec, "line_search","sets", "*.csv"))
-selected.dt.list <- list()
-for(type.csv.i in seq_along(type.csv.vec)){
-  meta.dt <- type.dt[1, .(
-    data.name, cv.type, test.fold,
-    gradient=sub(".csv","",basename(type.csv)))]
-  type.csv <- type.csv.vec[[type.csv.i]]
-  type.dt <- fread(type.csv)
-  ## does max auc get better auc than min aum?
-  valid.dt <- type.dt[
-    set=="validation"
-  ][, step.prop := step.number/max(step.number), by=.(seed,init.name,algo,objective)]
-  compare.obj.dt <- valid.dt[
-    , .SD[which.max(auc), .(step.number,step.prop,valid.auc=auc)], by=.(seed,init.name,algo,objective)]
-  not.zero <- valid.dt[0 < step.number]
-  search.counts <- dcast(
-    compare.obj.dt[not.zero, on=.(seed,init.name,algo,objective,step.number>=step.number),nomatch=0L],
-    seed+init.name+algo+objective~search,
-    length)
-  selected.dt.list[[type.csv]] <- data.table(
-    meta.dt, search.counts[compare.obj.dt, on=.(seed,init.name,algo,objective)])
-}
-selected.dt <- rbindlist(selected.dt.list)
-fwrite(selected.dt, "figure-line-grid-search-interactive-selected.csv")
 
 ggplot()+
   facet_grid(init.name + objective ~ ., labeller=label_both, scales="free")+
@@ -531,18 +537,54 @@ algo.time.by.dataset <- data.table(result.sets[init.name=="zero"][objective=="au
 colnames(algo.time.by.dataset)[colnames(algo.time.by.dataset) == "testFold.path"] <- "name"
 results.with.dataset.size <- merge(algo.time.by.dataset, datasets.by.size, on=.(name))
 
+algo.time.by.dataset.with.inits <- data.table(result.sets[objective=="aum"][set=="validation"] %>%
+                                                group_by(result.id, algo, testFold.path, init.name) %>%
+                                                reframe(total.time = sum(elapsed.time)))
+colnames(algo.time.by.dataset.with.inits)[colnames(algo.time.by.dataset.with.inits) == "testFold.path"] <- "name"
+results.with.dataset.size.and.init <- merge(algo.time.by.dataset.with.inits, datasets.by.size, on=.(name))
 
-# graph the complete results
+
+# name for the folder for the images below to go in
+experiment.name <- "100Datasets.IntervalRegressionCV"
+dir.create(file.path(experiment.name))
+
+
+# palette for everything below
 cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#DA72B2", "#D55E00", "#CC79A7")
 
 # plot elapsed time per step of gradient descent for each algo/dataset
-ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
+ggplot(result.sets[objective=="aum"][set=="validation"]) +
   geom_point(aes(x=step.number, y=elapsed.time, color=algo, linetype=as.factor(set))) +
   facet_grid(init.name ~ result.id, scale="free") +
   #scale_x_log10() +
   scale_y_log10() +
   scale_colour_manual(values=cbPalette)
-ggsave("elapsed.time.png", width=1920*3, height=1080*3, units="px")
+ggsave(paste(sep="/", experiment.name, "elapsed.time.png"), width=1920*3, height=1080*3, units="px")
+
+ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"],
+       aes(x=step.number, y=elapsed.time, color=algo, linetype=as.factor(set))) +
+  geom_point() +
+  geom_smooth() +
+  facet_wrap(vars(result.id), scale="free") +
+  #facet_grid(init.name, scale="free") +
+  #scale_x_log10() +
+  scale_y_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette)
+ggsave(paste(sep="/", experiment.name, "elapsed.time2.png"), width=1920*3, height=1080*3, units="px")
+
+# histogram version of the above
+ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
+  geom_histogram(aes(x=elapsed.time, fill=algo), binwidth = 0.05, color="black") +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  ggtitle("Time per step of Gradient Descent") +
+  ylab("Count") +
+  xlab("Time (seconds)")
+ggsave(paste(sep="/", experiment.name, "elapsed.time3.png"), width=1920*3, height=1080*3, units="px")
+
 
 # plot aum for each dataset
 ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
@@ -551,7 +593,7 @@ ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
   scale_x_log10() +
   scale_y_log10() +
   scale_colour_manual(values=cbPalette)
-ggsave("aum.png", width=1920*3, height=1080*3, units="px")
+ggsave(paste(sep="/", experiment.name, "aum.png"), width=1920*3, height=1080*3, units="px")
 
 
 ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
@@ -560,7 +602,7 @@ ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
   scale_x_log10() +
   scale_y_log10() +
   scale_colour_manual(values=cbPalette)
-ggsave("auc.png", width=1920*3, height=1080*3, units="px")
+ggsave(paste(sep="/", experiment.name, "auc.png"), width=1920*3, height=1080*3, units="px")
 
 # total time by algo (bar chart)
 result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
@@ -572,7 +614,7 @@ result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
   geom_text(aes(x=algo, y=total.time, label=round(total.time,digits=1)), position=position_dodge(width=0.9), vjust=-0.25) +
   facet_grid(. ~ result.id) +
   scale_colour_manual(values=cbPalette)
-ggsave("total.time.png", width=1920*3, height=1080*3, units="px")
+ggsave(paste(sep="/", experiment.name, "total.time.png"), width=1920*3, height=1080*3, units="px")
 
 ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
   geom_line(aes(x=time, y=aum, color=algo, linetype=as.factor(set))) +
@@ -580,21 +622,24 @@ ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
   scale_x_log10() +
   scale_y_log10() +
   scale_colour_manual(values=cbPalette)
-ggsave("aum.over.time.png", width=1920*3, height=1080*3, units="px")
+ggsave(paste(sep="/", experiment.name, "aum.over.time.png"), width=1920*3, height=1080*3, units="px")
 
 # boxplot total time by algo
-result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
-  group_by(result.id, algo) %>%
+result.sets[objective=="aum"][set=="validation"] %>%
+  group_by(result.id, algo, init.name) %>%
   reframe(total.time = sum(elapsed.time)) %>%
   ggplot() +
   #geom_violin(aes(x=algo, y=total.time, fill=algo)) +
   geom_boxplot(aes(x=algo, y=total.time, fill=algo)) +
   scale_y_log10() +
   #geom_text(aes(x=algo, y=total.time, label=round(total.time,digits=3)), position=position_dodge(width=0.9), vjust=-0.25) +
-  #facet_grid(. ~ result.id) +
+  facet_grid(. ~ init.name) +
   scale_colour_manual(values=cbPalette) +
-  scale_fill_manual(values=cbPalette)
-ggsave("total.time.across.datasets.png", width=1920*3, height=1080*3, units="px")
+  scale_fill_manual(values=cbPalette) + 
+  xlab("Algorithm") +
+  ylab("Total time (seconds)") +
+  ggtitle("Total time across datasets")
+ggsave(paste(sep="/", experiment.name, "total.time.across.datasets.png"), width=1920*3, height=1080*3, units="px")
 
 results.with.dataset.size %>%
   ggplot() +
@@ -602,7 +647,7 @@ results.with.dataset.size %>%
   scale_y_log10() +
   scale_x_log10() +
   scale_colour_manual(values=cbPalette)
-ggsave("size.affects.time.png", width=1920*2, height=1080*2, units="px")
+ggsave(paste(sep="/", experiment.name, "size.affects.time.png"), width=1920*2, height=1080*2, units="px")
 
 results.with.dataset.size %>%
   #group_by(algo, s=signif(size, 3)) %>%
@@ -614,7 +659,23 @@ results.with.dataset.size %>%
   scale_x_log10() +
   scale_colour_manual(values=cbPalette) +
   scale_fill_manual(values=cbPalette) +
-  xlab("Size of Dataset (MB)") +
+  xlab("Size of Dataset (bytes)") +
   ylab("Total time (seconds)") +
-  ggtitle("something")
-ggsave("size.affects.time.png", width=1920*3, height=1080*3, units="px")
+  ggtitle("Dataset size vs. Algorithm time")
+ggsave(paste(sep="/", experiment.name, "size.affects.time2.png"), width=1920*3, height=1080*3, units="px")
+
+results.with.dataset.size.and.init %>%
+  #group_by(algo, s=signif(size, 3)) %>%
+  #reframe(t=mean(total.time)) %>%
+  ggplot(aes(x=size, y=total.time, color=algo, fill=algo)) +
+  geom_point(size=0.5) +
+  geom_smooth(level=0.70,span=0.6) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  facet_grid(init.name ~ .) +
+  xlab("Size of Dataset (bytes)") +
+  ylab("Total time (seconds)") +
+  ggtitle("Dataset size vs. Algorithm time")
+ggsave(paste(sep="/", experiment.name, "size.affects.time3.png"), width=1920*3, height=1080*3, units="px")
