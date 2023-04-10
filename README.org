@@ -42,6 +42,17 @@ Source:
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+
+** 10 Apr 2023
+
+[[file:figure-line-search-complexity.R]] is a more systematic version of
+this experiment, computing how many iterations it takes to get to a
+min aum step isze, https://github.com/tdhock/aum/issues/5
+
+[[file:figure-line-grid-search-interactive.R]] compares grid search to
+line search with linear number of iterations (same as number of input
+diffs/breakpoints B).
+
 ** 7 Nov 2022
 
 [[file:figure-auc-improved.R]] makes figure below which shows one way to
