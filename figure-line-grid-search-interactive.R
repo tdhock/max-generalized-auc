@@ -545,7 +545,7 @@ results.with.dataset.size.and.init <- merge(algo.time.by.dataset.with.inits, dat
 
 
 # name for the folder for the images below to go in
-experiment.name <- "100Datasets.IntervalRegressionCV"
+experiment.name <- "new-hybridB"
 dir.create(file.path(experiment.name))
 
 
@@ -585,6 +585,17 @@ ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
   xlab("Time (seconds)")
 ggsave(paste(sep="/", experiment.name, "elapsed.time3.png"), width=1920*3, height=1080*3, units="px")
 
+ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
+  geom_boxplot(aes(x=elapsed.time, fill=algo), binwidth = 0.05, color="black") +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  ggtitle("Time per step of Gradient Descent") +
+  ylab("Count") +
+  xlab("Time (seconds)")
+ggsave(paste(sep="/", experiment.name, "elapsed.time4.png"), width=1920*3, height=1080*3, units="px")
+
 
 # plot aum for each dataset
 ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
@@ -616,12 +627,17 @@ result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
   scale_colour_manual(values=cbPalette)
 ggsave(paste(sep="/", experiment.name, "total.time.png"), width=1920*3, height=1080*3, units="px")
 
-ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
-  geom_line(aes(x=time, y=aum, color=algo, linetype=as.factor(set))) +
-  facet_wrap(vars(result.id), scale="free") +
+ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"][result.id %in% c(1:8, 16:19)]) +
+  geom_line(aes(x=step.number, y=aum, color=algo),size=1.1) +
+  #geom_smooth(aes(x=time, y=aum, color=algo, fill=algo)) +
+  facet_grid(data.name ~ test.fold, scale="free", labeller = label_both) +
   scale_x_log10() +
   scale_y_log10() +
-  scale_colour_manual(values=cbPalette)
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  ggtitle("Validation AUM over steps of gradient descent for select datasets") +
+  #xlab("timestamp") +
+  ylab("AUM")
 ggsave(paste(sep="/", experiment.name, "aum.over.time.png"), width=1920*3, height=1080*3, units="px")
 
 # boxplot total time by algo
@@ -640,6 +656,23 @@ result.sets[objective=="aum"][set=="validation"] %>%
   ylab("Total time (seconds)") +
   ggtitle("Total time across datasets")
 ggsave(paste(sep="/", experiment.name, "total.time.across.datasets.png"), width=1920*3, height=1080*3, units="px")
+
+result.sets[objective=="aum"][set=="validation"] %>%
+  group_by(result.id, algo, init.name) %>%
+  reframe(total.time = sum(elapsed.time)) %>%
+  ggplot() +
+  geom_violin(aes(x=algo, y=total.time, fill=algo)) +
+  #geom_boxplot(aes(x=algo, y=total.time, fill=algo)) +
+  scale_y_log10() +
+  #geom_text(aes(x=algo, y=total.time, label=round(total.time,digits=3)), position=position_dodge(width=0.9), vjust=-0.25) +
+  facet_grid(. ~ init.name) +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) + 
+  xlab("Algorithm") +
+  ylab("Total time (seconds)") +
+  ggtitle("Total time across datasets")
+ggsave(paste(sep="/", experiment.name, "total.time.across.datasets2.png"), width=1920*3, height=1080*3, units="px")
+
 
 results.with.dataset.size %>%
   ggplot() +
@@ -669,7 +702,7 @@ results.with.dataset.size.and.init %>%
   #reframe(t=mean(total.time)) %>%
   ggplot(aes(x=size, y=total.time, color=algo, fill=algo)) +
   geom_point(size=0.5) +
-  geom_smooth(level=0.70,span=0.6) +
+  geom_smooth(level=0.95)+#geom_smooth(level=0.70,span=0.6) +
   scale_y_log10() +
   scale_x_log10() +
   scale_colour_manual(values=cbPalette) +
