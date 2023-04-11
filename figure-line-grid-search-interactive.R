@@ -148,7 +148,7 @@ OneBatch <- function(testFold.path, aum.type, init.name){
     init.fun <- init.fun.list[[init.name]]
     set.seed(seed)
     int.weights <- init.fun()
-    for(algo in c("grid","exact","exactq","hybridA","hybridB","hybridC"))for(objective in names(obj.sign.list)){
+    for(algo in c("grid","exact","exactq","hybridC","hybridD"))for(objective in names(obj.sign.list)){
       start.time <- microbenchmark::get_nanotime()
       computeROC <- function(w, i, set){
         pred.pen.vec <- (X.finite %*% w) + i
@@ -294,6 +294,32 @@ OneBatch <- function(testFold.path, aum.type, init.name){
             grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
             best.grid.row <- grid.result[which.min(aum)]
           }
+        } else if (algo == "hybridD") {
+          LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
+          exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
+          search.result <- data.table(LS$line_search_result)
+          search.result[, kink := .I/.N]
+          best.row <- search.result[which.min(aum)]
+          
+          if (best.row$kink == 1) {
+            # if kink == 1, we have chosen the very last step size we looked at.
+            # run a grid search where we're at to find a larger step.size
+            steps.list <- list()
+            for (s in 10^seq(1,4)) {
+              step.size <- best.row$step.size * s
+              step.weight <- take.step(step.size)
+              step.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
+              if (step.aum$aum < best.row$aum) { # TODO AUC check
+                step.result <- data.table(search="grid", step.size, auc=step.aum$auc, aum=step.aum$aum)
+                steps.list[[paste(s)]] <- step.result
+              } else {
+                break
+              }
+            }
+            if (length(steps.list) > 0) {
+              grid.result <- rbindlist(steps.list)
+            }
+          }
         }
         elapsed.time <- (proc.time() - ptm)[["elapsed"]] # timer end
         
@@ -348,6 +374,7 @@ registry.dir <- "figure-line-grid-search-interactive-registry-10"#[1:109] datase
 registry.dir <- "figure-line-grid-search-interactive-registry-11"#[1:181]
 registry.dir <- "figure-line-grid-search-interactive-registry-12"# new hybridC
 registry.dir <- "figure-line-grid-search-interactive-registry-13"# better params for hybridB (it's like hybridC now but searches more grid points)
+registry.dir <- "figure-line-grid-search-interactive-registry-15"# testing hybridD
 
 if (FALSE) {
   reg=batchtools::loadRegistry(registry.dir, writeable = TRUE)
@@ -426,8 +453,7 @@ status.dt <- batchtools::getJobStatus(reg=reg)
 status.dt[!is.na(error)]
 status.dt[!is.na(done)]
 
-batchtools::testJob(4, reg=reg)
-args.dt[21]
+
 
 ## seed=1 init.name=IntervalRegressionCV algo=exact step=33146 auc 0.955147->0.955147
 ##  *** caught bus error ***
@@ -566,12 +592,12 @@ results.with.dataset.size.and.init <- merge(algo.time.by.dataset.with.inits, dat
 
 
 # name for the folder for the images below to go in
-experiment.name <- "hybridB-bigger-grid"
+experiment.name <- "hybridD-testing"
 dir.create(file.path(experiment.name))
 
 
 # palette for everything below
-cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#DA72B2", "#D55E00", "#CC79A7")
+cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#DA72B2", "#D55E00", "#F2D0A4")
 
 # plot elapsed time per step of gradient descent for each algo/dataset
 ggplot(result.sets[objective=="aum"][set=="validation"]) +
@@ -607,8 +633,8 @@ ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
 ggsave(paste(sep="/", experiment.name, "elapsed.time3.png"), width=1920*3, height=1080*3, units="px")
 
 ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
-  geom_boxplot(aes(x=elapsed.time, fill=algo), binwidth = 0.05, color="black") +
-  scale_x_log10() +
+  geom_boxplot(aes(x=algo, y=elapsed.time, fill=algo),color="black") +
+  #scale_x_log10() +
   scale_y_log10() +
   scale_colour_manual(values=cbPalette) +
   scale_fill_manual(values=cbPalette) +
