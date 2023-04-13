@@ -46,7 +46,38 @@ datasets.by.size <- rbindlist(lapply(datasets.by.size$name, function(testFold.pa
   test.fold <- basename(testFold.path)
   data.dir <- dirname(dirname(cv.path))
   data.name <- basename(data.dir)
-  data.table(size, name=testFold.path, data.name, test.fold)
+  
+  data.list <- list()
+  for(f in c("inputs", "outputs", "evaluation")){
+    f.csv.xz <- file.path(data.dir, paste0(f, ".csv.xz"))
+    if(file.exists(f.csv.xz)){
+      system(paste("unxz", f.csv.xz))
+    }
+    f.csv <- file.path(data.dir, paste0(f, ".csv"))
+    f.dt <- data.table::fread(f.csv)
+    data.list[[f]] <- f.dt
+  }
+  ## replace positive fn at end with 0 to avoid AUM=Inf.
+  data.list$evaluation[, `:=`(
+    min.fn=min(fn),
+    max.fp=max(fp),
+    min.lambda = exp(min.log.lambda),
+    example=sequenceID
+  ), by=sequenceID]
+  
+  folds.dt <- data.table::fread(folds.csv)
+  folds.dt[fold == test.fold, set := "test"]
+  folds.dt[fold != test.fold, set := rep(
+    c("subtrain", "validation"), l=.N)]
+  folds.dt[, table(fold, set)]
+  X.all <- scale(data.list$inputs[, -1])#rm seqID.
+  rownames(X.all) <- data.list$inputs$sequenceID
+  
+  X.finite <- X.all[, apply(is.finite(X.all), 2, all)]
+  set.vec <- folds.dt[rownames(X.finite), set, on="sequenceID"]
+  X.subtrain <- X.finite[set.vec=="subtrain",]
+  
+  data.table(size, name=testFold.path, data.name, test.fold, observations=nrow(X.finite))
 }))
 
 (testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*"))
@@ -148,7 +179,7 @@ OneBatch <- function(testFold.path, aum.type, init.name){
     init.fun <- init.fun.list[[init.name]]
     set.seed(seed)
     int.weights <- init.fun()
-    for(algo in c("grid","exact","exactq","hybridC","hybridD"))for(objective in names(obj.sign.list)){
+    for(algo in c("grid","exact","exactq","hybridD"))for(objective in names(obj.sign.list)){
       start.time <- microbenchmark::get_nanotime()
       computeROC <- function(w, i, set){
         pred.pen.vec <- (X.finite %*% w) + i
@@ -305,7 +336,7 @@ OneBatch <- function(testFold.path, aum.type, init.name){
             # if kink == 1, we have chosen the very last step size we looked at.
             # run a grid search where we're at to find a larger step.size
             steps.list <- list()
-            for (s in 10^seq(1,4)) {
+            for (s in 10^seq(1,5)) {
               step.size <- best.row$step.size * s
               step.weight <- take.step(step.size)
               step.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
@@ -597,7 +628,7 @@ dir.create(file.path(experiment.name))
 
 
 # palette for everything below
-cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#DA72B2", "#D55E00", "#F2D0A4")
+cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#DA72B2", "#D55E00", "#F2D0A4")
 
 # plot elapsed time per step of gradient descent for each algo/dataset
 ggplot(result.sets[objective=="aum"][set=="validation"]) +
@@ -639,9 +670,20 @@ ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
   scale_colour_manual(values=cbPalette) +
   scale_fill_manual(values=cbPalette) +
   ggtitle("Time per step of Gradient Descent") +
-  ylab("Count") +
-  xlab("Time (seconds)")
+  ylab("Time (seconds)") +
+  xlab("Algorithm")
 ggsave(paste(sep="/", experiment.name, "elapsed.time4.png"), width=1920*3, height=1080*3, units="px")
+
+ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"]) +
+  geom_violin(aes(x=algo, y=elapsed.time, fill=algo),color="black") +
+  #scale_x_log10() +
+  scale_y_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  ggtitle("Time per step of Gradient Descent") +
+  ylab("Time (seconds)") +
+  xlab("Algorithm")
+ggsave(paste(sep="/", experiment.name, "elapsed.time5.png"), width=1920*3, height=1080*3, units="px")
 
 
 # plot aum for each dataset
@@ -687,6 +729,33 @@ ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"][resul
   ylab("AUM")
 ggsave(paste(sep="/", experiment.name, "aum.over.time.png"), width=1920*3, height=1080*3, units="px")
 
+ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"][result.id %in% c(1:8, 16:19)]) +
+  geom_line(aes(x=step.number, y=aum, color=algo),size=1.1) +
+  #geom_smooth(aes(x=time, y=aum, color=algo, fill=algo)) +
+  facet_grid(data.name ~ test.fold, scale="free", labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  ggtitle("Validation AUM over steps of gradient descent for select datasets") +
+  xlab("step number") +
+  ylab("AUM")
+ggsave(paste(sep="/", experiment.name, "aum.over.time2.png"), width=1920*2, height=1080*2, units="px")
+
+ggplot(result.sets[init.name=="zero"][objective=="aum"][set=="validation"][result.id %in% c(1:8, 16:19)]) +
+  geom_line(aes(x=step.number, y=auc, color=algo),size=1.1) +
+  #geom_smooth(aes(x=time, y=aum, color=algo, fill=algo)) +
+  facet_grid(data.name ~ test.fold, scale="free", labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  ggtitle("Validation AUC over steps of gradient descent for select datasets") +
+  xlab("step number") +
+  ylab("AUC")
+ggsave(paste(sep="/", experiment.name, "auc.over.time2.png"), width=1920*2, height=1080*2, units="px")
+
+
 # boxplot total time by algo
 result.sets[objective=="aum"][set=="validation"] %>%
   group_by(result.id, algo, init.name) %>%
@@ -719,6 +788,22 @@ result.sets[objective=="aum"][set=="validation"] %>%
   ylab("Total time (seconds)") +
   ggtitle("Total time across datasets")
 ggsave(paste(sep="/", experiment.name, "total.time.across.datasets2.png"), width=1920*3, height=1080*3, units="px")
+
+result.sets[objective=="aum"][init.name=="zero"][set=="validation"] %>%
+  group_by(result.id, algo, init.name) %>%
+  reframe(total.time = sum(elapsed.time)) %>%
+  ggplot() +
+  #geom_violin(aes(x=algo, y=total.time, fill=algo)) +
+  geom_boxplot(aes(x=algo, y=total.time, fill=algo)) +
+  scale_y_log10() +
+  #geom_text(aes(x=algo, y=total.time, label=round(total.time,digits=3)), position=position_dodge(width=0.9), vjust=-0.25) +
+  #facet_grid(. ~ init.name) +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) + 
+  xlab("Algorithm") +
+  ylab("Total time (seconds)") +
+  ggtitle("Total time across datasets")
+ggsave(paste(sep="/", experiment.name, "total.time.across.datasets3.png"), width=1920*2, height=1080*2, units="px")
 
 
 results.with.dataset.size %>%
@@ -759,3 +844,49 @@ results.with.dataset.size.and.init %>%
   ylab("Total time (seconds)") +
   ggtitle("Dataset size vs. Algorithm time")
 ggsave(paste(sep="/", experiment.name, "size.affects.time3.png"), width=1920*3, height=1080*3, units="px")
+
+results.with.dataset.size %>%
+  #group_by(algo, s=signif(size, 3)) %>%
+  #reframe(t=mean(total.time)) %>%
+  ggplot(aes(x=observations, y=total.time, color=algo, fill=algo)) +
+  geom_point() +
+  geom_smooth(span=1) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  xlab("# of observations") +
+  ylab("Total time (seconds)") +
+  ggtitle("Dataset size vs. Algorithm time")
+ggsave(paste(sep="/", experiment.name, "size.affects.time4.png"), width=1920*2, height=1080*2, units="px")
+
+result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
+  group_by(result.id, algo) %>%
+  summarize(total.time = sum(elapsed.time)) %>%
+  ggplot() +
+  geom_col(aes(x=algo, y=total.time, fill=algo)) +
+  #scale_y_log10() +
+  geom_text(aes(x=algo, y=total.time, label=round(total.time,digits=1)), position=position_dodge(width=0.9), vjust=-0.25) +
+  facet_grid(. ~ result.id) +
+  scale_colour_manual(values=cbPalette)
+ggsave(paste(sep="/", experiment.name, "total.time.png"), width=1920*3, height=1080*3, units="px")
+
+result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
+  group_by(result.id, algo) %>%
+  summarize(total.time = sum(elapsed.time)) %>%
+  ggplot() +
+  geom_vline(data=result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
+               group_by(data.name) %>%
+               summarize(total.time = sum(elapsed.time), max.id = max(result.id)),
+             aes(xintercept=max.id+0.5),color="grey") +
+  geom_point(aes(x=result.id, y=total.time, color=algo),size=1.3) +
+  #geom_smooth(aes(x=result.id, y=total.time, color=algo,fill=algo)) +
+  #geom_col(aes(x=result.id, y=total.time, fill=algo)) +
+  #geom_segment(aes(x=result.id,xend=result.id,y=0,yend=total.time,color=algo)) +
+  scale_y_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  xlab("Fold/Job ID") +
+  ylab("Total time (seconds)") +
+  ggtitle("Total time for every dataset fold")
+ggsave(paste(sep="/", experiment.name, "total.time2.png"), width=1920*1.5, height=1080*1.5, units="px")
