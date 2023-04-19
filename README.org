@@ -47,7 +47,11 @@ Source:
 
 [[file:figure-line-search-complexity.R]] is a more systematic version of
 this experiment, computing how many iterations it takes to get to a
-min aum step isze, https://github.com/tdhock/aum/issues/5
+min aum step size, https://github.com/tdhock/aum/issues/5
+
+result CSV: [[file:figure-line-search-complexity.csv]] and figure below,
+
+[[file:figure-line-search-complexity.png]]
 
 [[file:figure-line-grid-search-interactive.R]] compares grid search to
 line search with linear number of iterations (same as number of input
