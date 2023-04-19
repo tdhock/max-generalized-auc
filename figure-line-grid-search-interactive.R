@@ -1,5 +1,6 @@
 library(ggplot2)
 library(data.table)
+  obj.sign.list <- list(auc=-1, aum=1)
 cache.name <- "figure-line-grid-search-interactive-cache.rds"
 if(FALSE){
   unlink(file.path(testFold.vec, cache.name), recursive=TRUE)
@@ -24,9 +25,9 @@ if(FALSE){
 ## 13:      2902       H3K4me3_TDH_immune   3807
 ## 14:      5421 H3K27ac-H3K4me3_TDHAM_BP  15961
 (testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*"))
-testFold.path <- "../neuroblastoma-data/data/H3K27ac-H3K4me3_TDHAM_BP/cv/equal_labels/testFolds/3"
+testFold.path <- "../neuroblastoma-data/data/CTCF_TDH_ENCODE/cv/equal_labels/testFolds/1" 
 seed <- 1
-init.name="IntervalRegressionCV"
+init.name="zero"
 aum.type="count"
 OneBatch <- function(testFold.path, aum.type){
   library(data.table)
@@ -116,12 +117,14 @@ OneBatch <- function(testFold.path, aum.type){
   )
   iteration.dt.list <- list()
   considered.dt.list <- list()
-  obj.sign.list <- list(auc=-1, aum=1)
   for(seed in 1:4)for(init.name in names(init.fun.list)){
     init.fun <- init.fun.list[[init.name]]
     set.seed(seed)
     int.weights <- init.fun()
-    for(algo in c("grid","exact","hybrid"))for(objective in names(obj.sign.list)){
+    ##for(algo in c("grid","exact","hybrid"))
+    for(algo in c("grid","hybrid"))
+      ##for(objective in names(obj.sign.list)){
+      for(objective in "aum"){
       computeROC <- function(w, i, set){
         pred.pen.vec <- (X.finite %*% w) + i
         pred.dt <- data.table(
@@ -236,8 +239,9 @@ status.dt[!is.na(error)]
 status.dt[!is.na(done)]
 
 #analyze.
+job.id <- 9#join.dt[init.name=="zero" & seed==1 & objective=="aum" & search != "exact"]
 done.ids <- status.dt[is.na(error), job.id]
-for(done.i in done.ids){
+for(done.i in seq_along(done.ids)){
   job.id <- done.ids[[done.i]]
   args.row <- args.dt[job.id]
   ls.dir <- file.path(args.row$testFold.path, "line_search", "sets")
@@ -247,7 +251,7 @@ for(done.i in done.ids){
     cat(sprintf("%4d / %4d %s\n", done.i, length(done.ids), ls.csv))
     res <- batchtools::loadResult(job.id)
     best.steps <- res$steps[
-    , .SD[which.min(aum)], by=.(
+    , .SD[which.min(obj.sign.list[[objective]]*get(objective))], by=.(
       seed,init.name,algo,objective,step.number
     )][,.(seed,init.name,algo,objective,step.number=step.number+1,search)]
     join.dt <- best.steps[res$sets, on=.(
@@ -341,11 +345,11 @@ for(cache.i in seq_along(cache.vec)){
 type.csv.vec <- Sys.glob(file.path(testFold.vec, "line_search","sets", "*.csv"))
 selected.dt.list <- list()
 for(type.csv.i in seq_along(type.csv.vec)){
+  type.csv <- type.csv.vec[[type.csv.i]]
+  type.dt <- fread(type.csv)
   meta.dt <- type.dt[1, .(
     data.name, cv.type, test.fold,
     gradient=sub(".csv","",basename(type.csv)))]
-  type.csv <- type.csv.vec[[type.csv.i]]
-  type.dt <- fread(type.csv)
   ## does max auc get better auc than min aum?
   valid.dt <- type.dt[
     set=="validation"
@@ -371,3 +375,43 @@ ggplot()+
   scale_x_continuous(
     "Best validation AUC")
 
+
+selected.dt <- data.table::fread("figure-line-grid-search-interactive-selected.csv")
+exact.used <- selected.dt[algo=="hybrid" & 0<exact]
+exact.used[, table(objective, gradient)]
+grid.only <- selected.dt[algo=="grid"]
+exact.used[grid.only, grid.auc = i.valid.auc, on=.(
+  data.name, cv.type, test.fold, gradient, seed, init.name, objective
+)]
+exact.used[, hist(valid.auc-grid.auc)]
+
+ggplot()+
+  geom_point(aes(
+    valid.auc, grid.auc),
+    shape=1,
+    data=exact.used)+
+  coord_equal()
+
+selected.wide <- dcast(
+  selected.dt[step.number>0],
+  data.name + cv.type + test.fold + gradient + seed + init.name + objective ~ algo,
+  value.var=c('step.number','valid.auc','exact')
+)[!is.na(exact_hybrid)][, hybrid_used_exact := ifelse(exact_hybrid==0, "no", "yes")]
+ggplot()+
+  facet_grid(. ~ hybrid_used_exact)+
+  geom_point(aes(
+    valid.auc_grid, valid.auc_hybrid),
+    data=selected.wide)
+##Shouldn't grid=hybrid when exact=0?
+one <- selected.wide[exact_hybrid==0 & valid.auc_hybrid != valid.auc_grid & objective=="aum"][1]
+selected.dt[one, on=.(
+  data.name, cv.type, test.fold, gradient, seed, init.name, objective
+)]
+##type.csv.i=1 [seed==1 & init.name=="zero" & objective=="auc"]
+##type.csv="../neuroblastoma-data/data/ATAC_JV_adipose/cv/equal_labels/testFolds/1/line_search/sets/count.csv"
+best.algos <- selected.dt[
+, .SD[which.max(valid.auc)],
+  by=.(data.name, cv.type, test.fold, gradient, seed, init.name, objective)]
+best.algos[, .(count=.N), by=algo]
+best.algos[, .(count=.N), keyby=.(algo, objective)]
+best.algos[objective=="auc", .(count=.N), keyby=.(algo, gradient)]

@@ -1,5 +1,6 @@
 library(ggplot2)
 library(data.table)
+setDTthreads(1)
 cache.name <- "figure-line-search-complexity-cache.rds"
 if(FALSE){
   unlink(file.path(testFold.vec, cache.name), recursive=TRUE)
@@ -232,25 +233,17 @@ status.dt[!is.na(error)]
 status.dt[!is.na(done)]
 
 #analyze.
-done.ids <- status.dt[is.na(error), job.id]
-for(done.i in done.ids){
+done.ids <- status.dt[is.na(error) & !is.na(done), job.id]
+for(done.i in seq_along(done.ids)){
   job.id <- done.ids[[done.i]]
   args.row <- args.dt[job.id]
-  ls.dir <- file.path(args.row$testFold.path, "line_search", "sets")
+  ls.dir <- file.path(args.row$testFold.path, "line_search", "complexity")
   dir.create(ls.dir, showWarnings = FALSE, recursive = TRUE)
   ls.csv <- file.path(ls.dir, paste0(args.row$aum.type, ".csv"))
   if(!file.exists(ls.csv)){
     cat(sprintf("%4d / %4d %s\n", done.i, length(done.ids), ls.csv))
     res <- batchtools::loadResult(job.id)
-    best.steps <- res$steps[
-    , .SD[which.min(aum)], by=.(
-      seed,init.name,maxIterations,step.number
-    )][,.(seed,init.name,maxIterations,step.number=step.number+1,search)]
-    join.dt <- best.steps[res$sets, on=.(
-      seed,init.name,maxIterations,step.number
-    )]
-    join.dt[is.na(search), table(step.number)]
-    fwrite(join.dt, ls.csv)
+    fwrite(res$steps, ls.csv)
   }  
 }
 
@@ -319,36 +312,250 @@ for(cache.i in seq_along(cache.vec)){
 }
 
 #analyze 2
-type.csv.vec <- Sys.glob(file.path(testFold.vec, "line_search","sets", "*.csv"))
-selected.dt.list <- list()
+type.csv.vec <- Sys.glob(file.path(testFold.vec, "line_search","complexity", "*.csv"))
+total.dt.list <- list()
 for(type.csv.i in seq_along(type.csv.vec)){
-  meta.dt <- type.dt[1, .(
-    data.name, cv.type, test.fold,
-    gradient=sub(".csv","",basename(type.csv)))]
   type.csv <- type.csv.vec[[type.csv.i]]
+  aum.type <- sub(".csv","",basename(type.csv))
   type.dt <- fread(type.csv)
-  ## does max auc get better auc than min aum?
-  valid.dt <- type.dt[
-    set=="validation"
-  ][, step.prop := step.number/max(step.number), by=.(seed,init.name,algo,maxIterations)]
-  compare.obj.dt <- valid.dt[
-  , .SD[which.max(auc), .(step.number,step.prop,valid.auc=auc)], by=.(seed,init.name,algo,maxIterations)]
-  not.zero <- valid.dt[0 < step.number]
-  search.counts <- dcast(
-    compare.obj.dt[not.zero, on=.(seed,init.name,algo,maxIterations,step.number>=step.number),nomatch=0L],
-    seed+init.name+algo+maxIterations~search,
-    length)
-  selected.dt.list[[type.csv]] <- data.table(
-    meta.dt, search.counts[compare.obj.dt, on=.(seed,init.name,algo,maxIterations)])
+  type.total.dt <- type.dt[, .(
+    aum.type, steps=.N, sum.iterations=sum(q.size), mean.iterations=mean(q.size)
+  ), by=.(
+    data.name, cv.type, test.fold, seed, init.name, maxIterations, n.subtrain.diffs
+  )]
+  total.dt.list[[type.csv]] <- type.total.dt
 }
-selected.dt <- rbindlist(selected.dt.list)
-fwrite(selected.dt, "figure-line-grid-search-interactive-selected.csv")
+total.dt <- rbindlist(total.dt.list)
+fwrite(total.dt, "figure-line-search-complexity.csv")
+rfac <- 10
+total.dt[, N:= 10^(round(log10(n.subtrain.diffs)*rfac)/rfac)]
 
-ggplot()+
-  facet_grid(init.name + maxIterations ~ ., labeller=label_both, scales="free")+
-  geom_point(aes(
-    auc, algo),
-    data=compare.obj.dt)+
-  scale_x_continuous(
-    "Best validation AUC")
+L <- list(measurements=total.dt[maxIterations=="min.aum", data.table(
+  iterations=mean(sum.iterations),
+  min=min(sum.iterations),
+  max=max(sum.iterations)
+), by=.(expr.name=paste(aum.type, init.name), N)])
+my_funs <- list(
+  N=function(N)log10(N),
+  "N \\log N"=function(N)log10(N) + log10(log(N)),
+  "N^2"=function(N)2*log10(N))
+best <- atime::references_best(L, unit.col.vec="iterations", fun.list=my_funs)
+meas <- best[["measurements"]]
+ref.dt <- best[["references"]]
+ref.color <- "violet"
+emp.color <- "black"
+gg <- ggplot2::ggplot()+
+  ggplot2::facet_grid(unit ~ expr.name, scales="free")+
+  ggplot2::theme_bw()+
+  ggplot2::geom_ribbon(ggplot2::aes(
+    N, ymin=min, ymax=max),
+    data=meas,
+    fill=emp.color,
+    alpha=0.5)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, empirical),
+    size=2,
+    color=emp.color,
+    data=meas)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, reference, group=fun.name),
+    color=ref.color,
+    size=1,
+    data=ref.dt)+
+  ggplot2::scale_y_log10("")+
+  ggplot2::scale_x_log10()
+if(requireNamespace("directlabels")){
+  gg+
+    directlabels::geom_dl(ggplot2::aes(
+      N, reference, label=fun.name),
+      data=ref.dt,
+      color=ref.color,
+      method="bottom.polygons")
+}else{
+  gg
+}
 
+L <- list(measurements=total.dt[maxIterations=="min.aum", data.table(
+  iterations=mean(sum.iterations),
+  min=min(sum.iterations),
+  max=max(sum.iterations)
+), by=.(expr.name=paste(init.name), N)])
+my_funs <- list(
+  "N^2"=function(N)2*log10(N))
+best <- atime::references_best(L, unit.col.vec="iterations", fun.list=my_funs)
+meas <- best[["measurements"]]
+ref.dt <- best[["references"]]
+ref.color <- "violet"
+emp.color <- "black"
+gg <- ggplot2::ggplot()+
+  ggplot2::facet_grid(unit ~ expr.name, scales="free")+
+  ggplot2::theme_bw()+
+  ggplot2::geom_ribbon(ggplot2::aes(
+    N, ymin=min, ymax=max),
+    data=meas,
+    fill=emp.color,
+    alpha=0.5)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, empirical),
+    size=2,
+    color=emp.color,
+    data=meas)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, reference, group=fun.name),
+    color=ref.color,
+    size=1,
+    data=ref.dt)+
+  ggplot2::scale_y_log10("")+
+  ggplot2::scale_x_log10()
+if(requireNamespace("directlabels")){
+  gg+
+    directlabels::geom_dl(ggplot2::aes(
+      N, reference, label=fun.name),
+      data=ref.dt,
+      color=ref.color,
+      method="bottom.polygons")
+}else{
+  gg
+}
+
+L <- list(measurements=total.dt[maxIterations=="min.aum", data.table(
+  sum.iterations=mean(sum.iterations),
+  mean.iterations=mean(mean.iterations)
+), by=.(expr.name=paste(aum.type, init.name), N)]
+my_funs <- list(
+  N=function(N)log10(N),
+  "N \\log N"=function(N)log10(N) + log10(log(N)),
+  "N^2"=function(N)2*log10(N))
+best <- atime::references_best(
+  L, unit.col.vec=c("sum.iterations", "mean.iterations"), fun.list=my_funs)
+meas <- best[["measurements"]]
+ref.dt <- best[["references"]]
+ref.color <- "violet"
+emp.color <- "black"
+gg <- ggplot2::ggplot()+
+  ggplot2::facet_grid(unit ~ expr.name, scales="free")+
+  ggplot2::theme_bw()+
+  ggplot2::geom_line(ggplot2::aes(
+    N, empirical),
+    size=2,
+    color=emp.color,
+    data=meas)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, reference, group=fun.name),
+    color=ref.color,
+    size=1,
+    data=ref.dt)+
+  ggplot2::scale_y_log10("")+
+  ggplot2::scale_x_log10()
+if(requireNamespace("directlabels")){
+  gg+
+    directlabels::geom_dl(ggplot2::aes(
+      N, reference, label=fun.name),
+      data=ref.dt,
+      color=ref.color,
+      method="bottom.polygons")
+}else{
+  gg
+}
+
+total.wide <- dcast(
+  total.dt,
+  N ~ .,
+  value.var=c("sum.iterations", "steps"),
+  fun.aggregate = list(median, min, max)
+)[, expr.name := "line.search"]
+L <- list(measurements=total.wide)
+my_funs <- list(
+  N=function(N)log10(N),
+  "N \\log N"=function(N)log10(N) + log10(log(N)),
+  "N^2"=function(N)2*log10(N))
+best <- atime::references_best(L, unit.col.vec=c("sum.iterations_median", "steps_median"), fun.list=my_funs)
+addUnit <- function(DT)DT[, Unit := sub("_median", "", unit)]
+meas <- addUnit(best[["measurements"]])
+ref.dt <- addUnit(best[["references"]])
+ref.color <- "violet"
+emp.color <- "black"
+ribbon.dt <- nc::capture_melt_multiple(total.wide, Unit=".*", "_", column="min|max")
+gg <- ggplot2::ggplot()+
+  ggplot2::facet_grid(Unit ~ ., scales="free")+
+  ggplot2::theme_bw()+
+  ggplot2::geom_ribbon(ggplot2::aes(
+    N, ymin=min, ymax=max),
+    data=ribbon.dt,
+    fill=emp.color,
+    alpha=0.5)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, empirical),
+    size=2,
+    color=emp.color,
+    data=meas)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, reference, group=fun.name),
+    color=ref.color,
+    size=1,
+    data=ref.dt)+
+  ggplot2::scale_y_log10("")+
+  ggplot2::scale_x_log10()
+if(requireNamespace("directlabels")){
+  gg+
+    directlabels::geom_dl(ggplot2::aes(
+      N, reference, label=fun.name),
+      data=ref.dt,
+      color=ref.color,
+      method="bottom.polygons")
+}else{
+  gg
+}
+
+
+value.var <- c("sum.iterations")
+unit.col.vec <- paste0(value.var,"_median")
+total.wide <- dcast(
+  total.dt[maxIterations=="min.aum"],
+  N + init.name ~ .,
+  value.var=value.var,
+  fun.aggregate = list(median, min, max, length)
+)[, expr.name := init.name]
+L <- list(measurements=total.wide)
+my_funs <- list(
+  "N^2"=function(N)2*log10(N))
+best <- atime::references_best(L, unit.col.vec=unit.col.vec, fun.list=my_funs)
+addUnit <- function(DT)DT[, Unit := sub("_median", "", unit)]
+meas <- addUnit(best[["measurements"]])
+ref.dt <- addUnit(best[["references"]])
+ref.color <- "violet"
+emp.color <- "black"
+ribbon.dt <- nc::capture_melt_multiple(total.wide, Unit=".*", "_", column="min|max")
+gg <- ggplot2::ggplot()+
+  ggplot2::facet_grid(Unit ~ expr.name, scales="free")+
+  ggplot2::theme_bw()+
+  ggplot2::geom_ribbon(ggplot2::aes(
+    N, ymin=min, ymax=max),
+    data=ribbon.dt,
+    fill=emp.color,
+    alpha=0.5)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, empirical),
+    size=2,
+    color=emp.color,
+    data=meas)+
+  ggplot2::geom_line(ggplot2::aes(
+    N, reference, group=fun.name),
+    color=ref.color,
+    size=1,
+    data=ref.dt)+
+  ggplot2::scale_y_log10("")+
+  ggplot2::scale_x_log10()
+dl <- if(requireNamespace("directlabels")){
+  gg+
+    directlabels::geom_dl(ggplot2::aes(
+      N, reference, label=fun.name),
+      data=ref.dt,
+      color=ref.color,
+      method="bottom.polygons")
+}else{
+  gg
+}
+png('figure-line-search-complexity.png', width=8, height=4, units="in", res=200)
+print(dl)
+dev.off()
