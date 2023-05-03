@@ -882,10 +882,10 @@ results.with.dataset.size.and.init[,data.table(min=min(total.time),max=max(total
   #group_by(algo, s=signif(size, 3)) %>%
   #reframe(t=mean(total.time)) %>%
   ggplot() +
-  geom_ribbon(aes(x=N, ymin=min, ymax=max, fill=algo), alpha=0.15) +
+  geom_ribbon(aes(x=N, ymin=min, ymax=max, fill=algo), alpha=0.10) +
   geom_line(aes(x=N, y=mean, color=algo), size=0.8) +
-  geom_point(aes(x=N, y=max, color=algo), size=0.7, alpha=0.15) +
-  geom_point(aes(x=N, y=min, color=algo), size=0.7, alpha=0.15) +
+  geom_point(aes(x=N, y=max, color=algo), size=0.7, alpha=0.10) +
+  geom_point(aes(x=N, y=min, color=algo), size=0.7, alpha=0.10) +
   geom_point(aes(x=N, y=mean, color=algo), size=1.2) +
   #geom_smooth(level=0.95)+#geom_smooth(level=0.70,span=0.6) +
   scale_y_log10() +
@@ -894,9 +894,9 @@ results.with.dataset.size.and.init[,data.table(min=min(total.time),max=max(total
   scale_fill_manual(values=cbPalette) +
   #facet_grid(init.name ~ .) +
   xlab("B = number of breakpoints in error functions") +
-  ylab("Total time (seconds)")
+  ylab("Total time (seconds)") + theme_bw()
 #ggtitle("Dataset size vs. Algorithm time")
-ggsave(paste(sep="/", experiment.name, "size.affects.time5.png"), width=1920*1.25, height=1080*1.25, units="px")
+ggsave(paste(sep="/", experiment.name, "size.affects.time5.png"), width=1920*0.75, height=1080*0.75, units="px")
 
 result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
   group_by(result.id, algo) %>%
@@ -933,10 +933,11 @@ selected.datasets <- c("H3K9me3_TDH_BP", "ATAC_JV_adipose", "H3K27ac-H3K4me3_TDH
 selected.datasets <- c("H3K9me3_TDH_BP", "detailed")
 
 (dataset.labels <- map(selected.datasets, function(x) {
-  size <- sum(datasets.by.size[data.name==x]$observations)
+  size <- mean(datasets.by.size[data.name==x]$observations)
   rounded.size <- round(10^(round(log10(size)*2)/2))
   paste0(x, " (n≃",rounded.size,")")
   paste0(x, " (n=",size,")")
+  paste0("B=",round(size))
 }))
 
 
@@ -949,7 +950,9 @@ result.sets[data.name %in% selected.datasets] %>%
   scale_x_log10() +
   scale_colour_manual(values=cbPalette) +
   scale_fill_manual(values=cbPalette) +
-  ylab("Algorithm") +
-  xlab("Total time (seconds)")
+  ylab("Line Search Algorithm") +
+  xlab("Total time (seconds)") +
+  theme_bw()
 #ggtitle("Time for selected datasets")
-ggsave(paste(sep="/", experiment.name, "boxplot.datasets.png"), width=1920*1.2, height=1080*1.0, units="px")
+ggsave(paste(sep="/", experiment.name, "boxplot.datasets.png"), width=1920*0.75, height=1080*0.75, units="px")
+
