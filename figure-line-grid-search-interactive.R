@@ -3,6 +3,7 @@ library(data.table)
 library(batchtools)
 library(aum)
 library(dplyr)
+library(purrr)
 cache.name <- "figure-line-grid-search-interactive-cache.rds"
 if(FALSE){
   unlink(file.path(testFold.vec, cache.name), recursive=TRUE)
@@ -77,7 +78,19 @@ datasets.by.size <- rbindlist(lapply(datasets.by.size$name, function(testFold.pa
   set.vec <- folds.dt[rownames(X.finite), set, on="sequenceID"]
   X.subtrain <- X.finite[set.vec=="subtrain",]
   
-  data.table(size, name=testFold.path, data.name, test.fold, observations=nrow(X.finite))
+  diffs.list <- list()
+  aum.vec.list <- list()
+  for(s in unique(folds.dt$set)){
+    seqs.set <- folds.dt[s==set, sequenceID]
+    seqs.list[[s]] <- seqs.set
+    seqs.diff <- aum::aum_diffs_penalty(
+      data.list$evaluation,
+      seqs.set,
+      denominator=aum.type)
+    diffs.list[[s]] <- seqs.diff
+  }
+  
+  data.table(size, name=testFold.path, data.name, test.fold, observations=nrow(diffs.list$subtrain))
 }))
 
 (testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*"))
@@ -85,7 +98,7 @@ testFold.path <- "../neuroblastoma-data/data/H3K27ac-H3K4me3_TDHAM_BP/cv/equal_l
 seed <- 1
 init.name="IntervalRegressionCV"
 aum.type="count"
-OneBatch <- function(testFold.path, aum.type, init.name){
+OneBatch <- function(testFold.path, aum.type, init.name, seed){
   library(data.table)
   cv.path <- dirname(dirname(testFold.path))
   folds.csv <- file.path(cv.path, "folds.csv")
@@ -174,209 +187,208 @@ OneBatch <- function(testFold.path, aum.type, init.name){
   iteration.dt.list <- list()
   considered.dt.list <- list()
   obj.sign.list <- list(aum=1)#list(auc=-1, aum=1)
-  seeds <- c(3) #4
-  for(seed in seeds) { #for(init.name in names(init.fun.list)){
-    init.fun <- init.fun.list[[init.name]]
-    set.seed(seed)
-    int.weights <- init.fun()
-    for(algo in c("grid","exact","exactq","hybridD"))for(objective in names(obj.sign.list)){
-      start.time <- microbenchmark::get_nanotime()
-      computeROC <- function(w, i, set){
-        pred.pen.vec <- (X.finite %*% w) + i
-        pred.dt <- data.table(
-          sequenceID=rownames(pred.pen.vec),
-          pred.log.lambda=-as.numeric(pred.pen.vec))
-        is.set <- set.vec==set
-        set.dt <- pred.dt[is.set]
-        L <- penaltyLearning::ROChange(
-          data.list$evaluation, set.dt, "sequenceID")
-        alist <- aum_auc(diffs.list[[set]], pred.pen.vec[ seqs.list[[set]], ])
-        L$aum.diffs <- alist$aum
-        L$auc.diffs <- alist$auc
-        L
+  #for(seed in seeds) { #for(init.name in names(init.fun.list)){
+  init.fun <- init.fun.list[[init.name]]
+  set.seed(seed)
+  int.weights <- init.fun()
+  for(algo in c("grid","exactL","exactQ","hybrid"))for(objective in names(obj.sign.list)){
+    start.time <- microbenchmark::get_nanotime()
+    computeROC <- function(w, i, set){
+      pred.pen.vec <- (X.finite %*% w) + i
+      pred.dt <- data.table(
+        sequenceID=rownames(pred.pen.vec),
+        pred.log.lambda=-as.numeric(pred.pen.vec))
+      is.set <- set.vec==set
+      set.dt <- pred.dt[is.set]
+      L <- penaltyLearning::ROChange(
+        data.list$evaluation, set.dt, "sequenceID")
+      alist <- aum_auc(diffs.list[[set]], pred.pen.vec[ seqs.list[[set]], ])
+      L$aum.diffs <- alist$aum
+      L$auc.diffs <- alist$auc
+      L
+    }
+    aum_auc <- function(diffs.dt, pred.vec){
+      aum.list <- aum::aum(diffs.dt, pred.vec)
+      before.dt <- data.table(aum.list$total_error, key="thresh")[, `:=`(
+        TPR_before=1-fn_before/-totals[["fn_diff"]],
+        FPR_before=fp_before/totals[["fp_diff"]])]
+      aum.list$auc <- before.dt[, .(
+        FPR=c(FPR_before, 1),
+        TPR=c(TPR_before, 1)
+      )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
+      aum.list
+    }
+    obj.sign <- obj.sign.list[[objective]]
+    weight.vec <- int.weights[-1]
+    intercept <- int.weights[1]
+    prev.obj <- Inf*obj.sign
+    step.number <- 0
+    elapsed.time <- 0
+    max.iterations <- if (algo == "exactQ") {
+      nrow(diffs.list$subtrain) * (nrow(diffs.list$subtrain)) - 1 / 2
+    } else {
+      nrow(diffs.list$subtrain)
+    }
+    
+    while({
+      summary.dt.list <- list()
+      for(set in names(seqs.list)){
+        set.PL <- computeROC(weight.vec, intercept, set)
+        summary.dt.list[[set]] <- with(set.PL, data.table(
+          set,
+          thresholds[threshold=="predicted"],
+          auc, aum, auc.diffs, aum.diffs))
       }
-      aum_auc <- function(diffs.dt, pred.vec){
-        aum.list <- aum::aum(diffs.dt, pred.vec)
-        before.dt <- data.table(aum.list$total_error, key="thresh")[, `:=`(
-          TPR_before=1-fn_before/-totals[["fn_diff"]],
-          FPR_before=fp_before/totals[["fp_diff"]])]
-        aum.list$auc <- before.dt[, .(
-          FPR=c(FPR_before, 1),
-          TPR=c(TPR_before, 1)
-        )][, sum((FPR[-1]-FPR[-.N])*(TPR[-1]+TPR[-.N])/2)]
-        aum.list
-      }
-      obj.sign <- obj.sign.list[[objective]]
-      weight.vec <- int.weights[-1]
-      intercept <- int.weights[1]
-      prev.obj <- Inf*obj.sign
-      step.number <- 0
-      elapsed.time <- 0
-      max.iterations <- if (algo == "exactq") {
-        nrow(diffs.list$subtrain) * (nrow(diffs.list$subtrain)) - 1 / 2
-      } else {
-        nrow(diffs.list$subtrain)
+      summary.dt <- do.call(rbind, summary.dt.list)
+      current.time <- microbenchmark::get_nanotime() - start.time
+      iteration.dt.list[[paste(
+        seed, init.name, algo, step.number, objective
+      )]] <- data.table(
+        seed, init.name, algo, step.number, objective, elapsed.time, time=current.time, summary.dt)
+      new.obj <- summary.dt.list$subtrain[[paste0(objective,".diffs")]]
+      improvement <- obj.sign*(prev.obj-new.obj)
+      cat(sprintf(
+        "seed=%d init=%s algo=%s step=%d %s %f->%f\n",
+        seed, init.name, algo, step.number, objective, prev.obj, new.obj))
+      1e-5 < improvement
+    }){
+      ##while(step.number<2){
+      pred.vec <- X.subtrain %*% weight.vec
+      aum.list <- aum::aum(diffs.list$subtrain, pred.vec)
+      pred.grad.vec <- rowMeans(aum.list$derivative_mat)
+      direction.vec <- neg.t.X.subtrain %*% pred.grad.vec
+      take.step <- function(s){
+        weight.vec+s*direction.vec
       }
       
-      while({
-        summary.dt.list <- list()
-        for(set in names(seqs.list)){
-          set.PL <- computeROC(weight.vec, intercept, set)
-          summary.dt.list[[set]] <- with(set.PL, data.table(
-            set,
-            thresholds[threshold=="predicted"],
-            auc, aum, auc.diffs, aum.diffs))
-        }
-        summary.dt <- do.call(rbind, summary.dt.list)
-        current.time <- microbenchmark::get_nanotime() - start.time
-        iteration.dt.list[[paste(
-          seed, init.name, algo, step.number, objective
-        )]] <- data.table(
-          seed, init.name, algo, step.number, objective, elapsed.time, time=current.time, summary.dt)
-        new.obj <- summary.dt.list$subtrain[[paste0(objective,".diffs")]]
-        improvement <- obj.sign*(prev.obj-new.obj)
-        cat(sprintf(
-          "seed=%d init=%s algo=%s step=%d %s %f->%f\n",
-          seed, init.name, algo, step.number, objective, prev.obj, new.obj))
-        1e-5 < improvement
-      }){
-        ##while(step.number<2){
-        pred.vec <- X.subtrain %*% weight.vec
-        aum.list <- aum::aum(diffs.list$subtrain, pred.vec)
-        pred.grad.vec <- rowMeans(aum.list$derivative_mat)
-        direction.vec <- neg.t.X.subtrain %*% pred.grad.vec
-        take.step <- function(s){
-          weight.vec+s*direction.vec
-        }
+      ptm <- proc.time() # timer
+      grid.result <- NULL
+      exact.result <- NULL
+      if (algo == "grid") {
+        step.grid <- 10^seq(-9, 0)
+        grid.dt <- data.table(step.size=step.grid)[, {
+          step.weight <- take.step(step.size)
+          grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
+          with(grid.aum, data.table(auc, aum))
+        }, by=step.size]
+        grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
+      } else if (algo == "exactL" || algo == "exactQ") {
+        LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
+        exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
+      } else if (algo == "hybridA") {
+        LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
+        exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
+        search.result <- data.table(LS$line_search_result)
+        search.result[, kink := .I/.N]
+        best.row <- search.result[which.min(aum)]
         
-        ptm <- proc.time() # timer
-        grid.result <- NULL
-        exact.result <- NULL
-        if (algo == "grid") {
-          step.grid <- 10^seq(-9, 0)
+        if (best.row$kink == 1) {
+          # if kink == 1, we have chosen the very last step size we looked at.
+          # run a grid search where we're at to find a larger step.size
+          step.grid <- best.row$step.size * 10^seq(1, 4)
           grid.dt <- data.table(step.size=step.grid)[, {
             step.weight <- take.step(step.size)
             grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
             with(grid.aum, data.table(auc, aum))
           }, by=step.size]
           grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
-        } else if (algo == "exact" || algo == "exactq") {
-          LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
-          exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
-        } else if (algo == "hybridA") {
-          LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
-          exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
-          search.result <- data.table(LS$line_search_result)
-          search.result[, kink := .I/.N]
-          best.row <- search.result[which.min(aum)]
-          
-          if (best.row$kink == 1) {
-            # if kink == 1, we have chosen the very last step size we looked at.
-            # run a grid search where we're at to find a larger step.size
-            step.grid <- best.row$step.size * 10^seq(1, 4)
-            grid.dt <- data.table(step.size=step.grid)[, {
-              step.weight <- take.step(step.size)
-              grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
-              with(grid.aum, data.table(auc, aum))
-            }, by=step.size]
-            grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
-            best.grid.row <- grid.result[which.min(aum)]
-            # if we got a better value using a grid search,
-            # adjust our max iterations to search for more values next time
-            if (best.grid.row$aum < best.row$aum) {
-              max.iterations <- max.iterations * 2
-            }
-          }
-        } else if (algo == "hybridB") {
-          LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
-          exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
-          search.result <- data.table(LS$line_search_result)
-          search.result[, kink := .I/.N]
-          best.row <- search.result[which.min(aum)]
-          
-          if (best.row$kink == 1) {
-            # if kink == 1, we have chosen the very last step size we looked at.
-            # run a grid search where we're at to find a larger step.size
-            step.grid <- best.row$step.size * 10^(2:7)
-            grid.dt <- data.table(step.size=step.grid)[, {
-              step.weight <- take.step(step.size)
-              grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
-              with(grid.aum, data.table(auc, aum))
-            }, by=step.size]
-            grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
-            best.grid.row <- grid.result[which.min(aum)]
-          }
-        } else if (algo == "hybridC") {
-          LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
-          exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
-          search.result <- data.table(LS$line_search_result)
-          search.result[, kink := .I/.N]
-          best.row <- search.result[which.min(aum)]
-          
-          if (best.row$kink == 1) {
-            # if kink == 1, we have chosen the very last step size we looked at.
-            # run a grid search where we're at to find a larger step.size
-            step.grid <- best.row$step.size * 10^(1:4)
-            grid.dt <- data.table(step.size=step.grid)[, {
-              step.weight <- take.step(step.size)
-              grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
-              with(grid.aum, data.table(auc, aum))
-            }, by=step.size]
-            grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
-            best.grid.row <- grid.result[which.min(aum)]
-          }
-        } else if (algo == "hybridD") {
-          LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
-          exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
-          search.result <- data.table(LS$line_search_result)
-          search.result[, kink := .I/.N]
-          best.row <- search.result[which.min(aum)]
-          
-          if (best.row$kink == 1) {
-            # if kink == 1, we have chosen the very last step size we looked at.
-            # run a grid search where we're at to find a larger step.size
-            steps.list <- list()
-            for (s in 10^seq(1,5)) {
-              step.size <- best.row$step.size * s
-              step.weight <- take.step(step.size)
-              step.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
-              if (step.aum$aum < best.row$aum) { # TODO AUC check
-                step.result <- data.table(search="grid", step.size, auc=step.aum$auc, aum=step.aum$aum)
-                steps.list[[paste(s)]] <- step.result
-              } else {
-                break
-              }
-            }
-            if (length(steps.list) > 0) {
-              grid.result <- rbindlist(steps.list)
-            }
+          best.grid.row <- grid.result[which.min(aum)]
+          # if we got a better value using a grid search,
+          # adjust our max iterations to search for more values next time
+          if (best.grid.row$aum < best.row$aum) {
+            max.iterations <- max.iterations * 2
           }
         }
-        elapsed.time <- (proc.time() - ptm)[["elapsed"]] # timer end
+      } else if (algo == "hybridB") {
+        LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
+        exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
+        search.result <- data.table(LS$line_search_result)
+        search.result[, kink := .I/.N]
+        best.row <- search.result[which.min(aum)]
         
-        steps.considered <- rbind(
-          exact.result,
-          grid.result
-        )[, step.prop := seq(1, .N)/.N, by=search][]
-        #considered.dt.list[[paste(
-        #  seed, init.name, algo, objective, step.number
-        #)]] <- data.table(
-        #  seed, init.name, algo, objective, step.number, steps.considered)
-        best.step <- steps.considered[which.min(obj.sign*get(objective))]
-        weight.vec <- take.step(best.step$step.size)
-        new.aum <- aum::aum(diffs.list$subtrain, X.subtrain %*% weight.vec)
-        err.thresh <- data.table(
-          new.aum$total_error,key="thresh"
-        )[, err_before := fp_before+fn_before][, .(
-          thresh=c(thresh[1]-1,thresh[-1]-diff(thresh)/2,thresh[.N]+1),
-          err=c(err_before,sum(diffs.list$subtrain$fp_diff))
-        )]
-        intercept <- err.thresh[which.min(err), thresh]
-        step.number <- step.number+1
-        prev.obj <- new.obj
-      }#step.number
-    }#algo/objective
-  }#seed/init.name
+        if (best.row$kink == 1) {
+          # if kink == 1, we have chosen the very last step size we looked at.
+          # run a grid search where we're at to find a larger step.size
+          step.grid <- best.row$step.size * 10^(2:7)
+          grid.dt <- data.table(step.size=step.grid)[, {
+            step.weight <- take.step(step.size)
+            grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
+            with(grid.aum, data.table(auc, aum))
+          }, by=step.size]
+          grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
+          best.grid.row <- grid.result[which.min(aum)]
+        }
+      } else if (algo == "hybridC") {
+        LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
+        exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
+        search.result <- data.table(LS$line_search_result)
+        search.result[, kink := .I/.N]
+        best.row <- search.result[which.min(aum)]
+        
+        if (best.row$kink == 1) {
+          # if kink == 1, we have chosen the very last step size we looked at.
+          # run a grid search where we're at to find a larger step.size
+          step.grid <- best.row$step.size * 10^(1:4)
+          grid.dt <- data.table(step.size=step.grid)[, {
+            step.weight <- take.step(step.size)
+            grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
+            with(grid.aum, data.table(auc, aum))
+          }, by=step.size]
+          grid.result <- grid.dt[, .(search="grid", step.size, auc, aum)]
+          best.grid.row <- grid.result[which.min(aum)]
+        }
+      } else if (algo == "hybrid") {
+        LS=aum::aum_line_search(diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=max.iterations)
+        exact.result <- LS$line_search_result[, .(search="exact", step.size, auc, aum)]
+        search.result <- data.table(LS$line_search_result)
+        search.result[, kink := .I/.N]
+        best.row <- search.result[which.min(aum)]
+        
+        if (best.row$kink == 1) {
+          # if kink == 1, we have chosen the very last step size we looked at.
+          # run a grid search where we're at to find a larger step.size
+          steps.list <- list()
+          for (s in 10^seq(1,5)) {
+            step.size <- best.row$step.size * s
+            step.weight <- take.step(step.size)
+            step.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
+            if (step.aum$aum < best.row$aum) { # TODO AUC check
+              step.result <- data.table(search="grid", step.size, auc=step.aum$auc, aum=step.aum$aum)
+              steps.list[[paste(s)]] <- step.result
+            } else {
+              break
+            }
+          }
+          if (length(steps.list) > 0) {
+            grid.result <- rbindlist(steps.list)
+          }
+        }
+      }
+      elapsed.time <- (proc.time() - ptm)[["elapsed"]] # timer end
+      
+      steps.considered <- rbind(
+        exact.result,
+        grid.result
+      )[, step.prop := seq(1, .N)/.N, by=search][]
+      #considered.dt.list[[paste(
+      #  seed, init.name, algo, objective, step.number
+      #)]] <- data.table(
+      #  seed, init.name, algo, objective, step.number, steps.considered)
+      best.step <- steps.considered[which.min(obj.sign*get(objective))]
+      weight.vec <- take.step(best.step$step.size)
+      new.aum <- aum::aum(diffs.list$subtrain, X.subtrain %*% weight.vec)
+      err.thresh <- data.table(
+        new.aum$total_error,key="thresh"
+      )[, err_before := fp_before+fn_before][, .(
+        thresh=c(thresh[1]-1,thresh[-1]-diff(thresh)/2,thresh[.N]+1),
+        err=c(err_before,sum(diffs.list$subtrain$fp_diff))
+      )]
+      intercept <- err.thresh[which.min(err), thresh]
+      step.number <- step.number+1
+      prev.obj <- new.obj
+    }#step.number
+  }#algo/objective
+  #}#seed/init.name
   list(
     sets=data.table(
       do.call(rbind, iteration.dt.list),
@@ -392,7 +404,8 @@ OneBatch <- function(testFold.path, aum.type, init.name){
 args.dt <- data.table::CJ(
   testFold.path=datasets.by.size$name[1:181],#testFold.vec,
   aum.type=c("rate"),#,"count")
-  init.name=c("zero")#, "IntervalRegressionCV")
+  init.name=c("zero"),#, "IntervalRegressionCV")
+  seed=c(1, 2, 3, 4)
 )
 
 ## Run on SLURM.
@@ -406,6 +419,8 @@ registry.dir <- "figure-line-grid-search-interactive-registry-11"#[1:181]
 registry.dir <- "figure-line-grid-search-interactive-registry-12"# new hybridC
 registry.dir <- "figure-line-grid-search-interactive-registry-13"# better params for hybridB (it's like hybridC now but searches more grid points)
 registry.dir <- "figure-line-grid-search-interactive-registry-15"# testing hybridD
+registry.dir <- "figure-line-grid-search-interactive-registry-16"# maybe final run?
+registry.dir <- "figure-line-grid-search-interactive-registry-17"# many-seeds
 
 if (FALSE) {
   reg=batchtools::loadRegistry(registry.dir, writeable = TRUE)
@@ -468,7 +483,7 @@ options(batchtools.verbose=TRUE, batchtools.progress=TRUE)
 runJobs <- function() {
   ptm <- proc.time()
   batchtools::submitJobs(chunks, resources=list(
-    #walltime = 50*5,#24 * 60 * 60,#seconds
+    walltime = 24 * 60 * 60,#seconds
     memory = 5000,#megabytes per cpu
     #max.concurrent.jobs = parallel.job.count,
     ncpus=1,  #>1 for multicore/parallel jobs.
@@ -623,7 +638,7 @@ results.with.dataset.size.and.init <- merge(algo.time.by.dataset.with.inits, dat
 
 
 # name for the folder for the images below to go in
-experiment.name <- "hybridD-testing"
+experiment.name <- "many-seeds"
 dir.create(file.path(experiment.name))
 
 
@@ -825,8 +840,8 @@ results.with.dataset.size %>%
   scale_colour_manual(values=cbPalette) +
   scale_fill_manual(values=cbPalette) +
   xlab("Size of Dataset (bytes)") +
-  ylab("Total time (seconds)") +
-  ggtitle("Dataset size vs. Algorithm time")
+  ylab("Total time (seconds)")
+ggtitle("Dataset size vs. Algorithm time")
 ggsave(paste(sep="/", experiment.name, "size.affects.time2.png"), width=1920*3, height=1080*3, units="px")
 
 results.with.dataset.size.and.init %>%
@@ -860,6 +875,29 @@ results.with.dataset.size %>%
   ggtitle("Dataset size vs. Algorithm time")
 ggsave(paste(sep="/", experiment.name, "size.affects.time4.png"), width=1920*2, height=1080*2, units="px")
 
+rfac <- 2
+results.with.dataset.size.and.init[, N := 10^(round(log10(size)*rfac)/rfac)]
+
+results.with.dataset.size.and.init[,data.table(min=min(total.time),max=max(total.time),mean=mean(total.time)), by=.(algo, N)] %>%
+  #group_by(algo, s=signif(size, 3)) %>%
+  #reframe(t=mean(total.time)) %>%
+  ggplot() +
+  geom_ribbon(aes(x=N, ymin=min, ymax=max, fill=algo), alpha=0.15) +
+  geom_line(aes(x=N, y=mean, color=algo), size=0.8) +
+  geom_point(aes(x=N, y=max, color=algo), size=0.7, alpha=0.15) +
+  geom_point(aes(x=N, y=min, color=algo), size=0.7, alpha=0.15) +
+  geom_point(aes(x=N, y=mean, color=algo), size=1.2) +
+  #geom_smooth(level=0.95)+#geom_smooth(level=0.70,span=0.6) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  #facet_grid(init.name ~ .) +
+  xlab("B = number of breakpoints in error functions") +
+  ylab("Total time (seconds)")
+#ggtitle("Dataset size vs. Algorithm time")
+ggsave(paste(sep="/", experiment.name, "size.affects.time5.png"), width=1920*1.25, height=1080*1.25, units="px")
+
 result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
   group_by(result.id, algo) %>%
   summarize(total.time = sum(elapsed.time)) %>%
@@ -890,3 +928,28 @@ result.sets[init.name=="zero"][objective=="aum"][set=="validation"] %>%
   ylab("Total time (seconds)") +
   ggtitle("Total time for every dataset fold")
 ggsave(paste(sep="/", experiment.name, "total.time2.png"), width=1920*1.5, height=1080*1.5, units="px")
+
+selected.datasets <- c("H3K9me3_TDH_BP", "ATAC_JV_adipose", "H3K27ac-H3K4me3_TDHAM_BP", "detailed")
+selected.datasets <- c("H3K9me3_TDH_BP", "detailed")
+
+(dataset.labels <- map(selected.datasets, function(x) {
+  size <- sum(datasets.by.size[data.name==x]$observations)
+  rounded.size <- round(10^(round(log10(size)*2)/2))
+  paste0(x, " (n≃",rounded.size,")")
+  paste0(x, " (n=",size,")")
+}))
+
+
+result.sets[data.name %in% selected.datasets] %>%
+  group_by(result.id, algo, data.name, seed) %>%
+  reframe(total.time = sum(elapsed.time)) %>%
+  ggplot() +
+  geom_boxplot(aes(x=total.time, y=factor(algo, levels=c("hybrid","exactL","exactQ","grid")), fill=algo), show.legend = FALSE) +
+  facet_wrap(.~factor(data.name, levels=selected.datasets, labels=dataset.labels), scales = "free") +
+  scale_x_log10() +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  ylab("Algorithm") +
+  xlab("Total time (seconds)")
+#ggtitle("Time for selected datasets")
+ggsave(paste(sep="/", experiment.name, "boxplot.datasets.png"), width=1920*1.2, height=1080*1.0, units="px")
