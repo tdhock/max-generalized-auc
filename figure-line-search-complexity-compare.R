@@ -582,6 +582,9 @@ for(data.csv in data.csv.vec){
   dt.list[[data.type]] <- data.table::fread(data.csv)
 }
 
+q25 <- function(x)quantile(x,0.25)
+q75 <- function(x)quantile(x,0.75)
+
 comp.dt <- data.table::fread("figure-line-search-complexity.csv")
 subtrain.sizes <- unique(comp.dt[, .(data.name, cv.type, test.fold, n.subtrain.diffs)])
 rfac <- 5
@@ -596,9 +599,9 @@ by=.(aum.type, data.name, cv.type, test.fold, seed, maxIterations.name)
 iterations.wide <- dcast(
   iterations.tall,
   B + maxIterations.name ~ .,
-  list(median, min, max),
+  list(median, min, max, q25, q75),
   value.var="iterations")
-L <- list(measurements=steps.wide[, data.table(
+L <- list(measurements=iterations.wide[, data.table(
   iterations=iterations_median,
   N=B,
   expr.name=maxIterations.name)])
@@ -612,7 +615,7 @@ ref.color <- "red"
 gg <- ggplot()+
   facet_grid(. ~ maxIterations.name, labeller=label_both)+
   geom_ribbon(aes(
-    B, ymin=iterations_min, ymax=iterations_max),
+    B, ymin=iterations_q25, ymax=iterations_q75),
     alpha=0.5,
     data=iterations.wide)+
   geom_line(aes(
@@ -630,8 +633,49 @@ gg <- ggplot()+
   scale_x_log10(
     "B = breakpoints in subtrain set error functions")+
   scale_y_log10(
-    "Total line search iterations\nuntil loss stops decreasing")
+    "Total line search iterations\nuntil loss stops decreasing\nmedian and quartiles")
 png("figure-line-search-complexity-compare-iterations-refs.png", width=9, height=3, units="in", res=200)
+print(gg)
+dev.off()
+
+steps.wide <- dcast(
+  iterations.tall,
+  B + maxIterations.name ~ .,
+  list(median, min, max, q25, q75),
+  value.var="steps")
+L <- list(measurements=steps.wide[, data.table(
+  steps=steps_median,
+  N=B,
+  expr.name=maxIterations.name)])
+my_funs <- list(
+  N=function(N)log10(N),
+  "\\log N"=function(N)log10(log(N)))
+best <- atime::references_best(L, unit.col.vec="steps", fun.list=my_funs)
+best$ref[, maxIterations.name := expr.name]
+ref.color <- "red"
+gg <- ggplot()+
+  facet_grid(. ~ maxIterations.name, labeller=label_both)+
+  geom_ribbon(aes(
+    B, ymin=steps_q25, ymax=steps_q75),
+    alpha=0.5,
+    data=steps.wide)+
+  geom_line(aes(
+    B, steps_median),
+    data=steps.wide)+
+  geom_line(aes(
+    N, reference, group=fun.name),
+    color=ref.color,
+    data=best$ref)+
+  directlabels::geom_dl(aes(
+    N, reference, group=fun.name, label=fun.name),
+    color=ref.color,
+    method="bottom.polygons",
+    data=best$ref)+
+  scale_x_log10(
+    "B = breakpoints in subtrain set error functions")+
+  scale_y_log10(
+    "Gradient descent steps\nuntil loss stops decreasing\nmedian and quartiles")
+png("figure-line-search-complexity-compare-steps-refs.png", width=9, height=3, units="in", res=200)
 print(gg)
 dev.off()
 
@@ -642,7 +686,7 @@ seconds.tall <- dt.list[["time"]][, seconds := elapsed.seconds][
 seconds.wide <- dcast(
   seconds.tall,
   B + maxIterations.name ~ .,
-  list(median, min, max),
+  list(median, min, max, q25, q75),
   value.var="seconds")
 L <- list(measurements=seconds.wide[, data.table(
   seconds=seconds_median,
@@ -658,7 +702,7 @@ ref.color <- "red"
 gg <- ggplot()+
   facet_grid(. ~ maxIterations.name, labeller=label_both)+
   geom_ribbon(aes(
-    B, ymin=seconds_min, ymax=seconds_max),
+    B, ymin=seconds_q25, ymax=seconds_q75),
     alpha=0.5,
     data=seconds.wide)+
   geom_line(aes(
@@ -676,7 +720,7 @@ gg <- ggplot()+
   scale_x_log10(
     "B = breakpoints in subtrain set error functions")+
   scale_y_log10(
-    "Total line search seconds\nuntil loss stops decreasing")
+    "Total line search seconds\nuntil loss stops decreasing\nmedian and quartiles")
 png("figure-line-search-complexity-compare-seconds-refs.png", width=9, height=3, units="in", res=200)
 print(gg)
 dev.off()
@@ -686,14 +730,14 @@ gg <- ggplot()+
     B, seconds_median, color=maxIterations.name),
     data=seconds.wide)+
   geom_ribbon(aes(
-    B, ymin=seconds_min, ymax=seconds_max, fill=maxIterations.name),
+    B, ymin=seconds_q25, ymax=seconds_q75, fill=maxIterations.name),
     alpha=0.5,
     data=seconds.wide)+
   scale_x_log10(
     "B = breakpoints in subtrain set error functions",
     limits=c(NA,8000))+
   scale_y_log10(
-    "Total line search seconds\nuntil loss stops decreasing")
+    "Total line search seconds\nuntil loss stops decreasing\nmedian and quartiles")
 dl <- directlabels::direct.label(gg, "right.polygons")
 png("figure-line-search-complexity-compare-seconds.png", width=4.5, height=3, units="in", res=200)
 print(dl)
