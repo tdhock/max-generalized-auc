@@ -42,6 +42,10 @@ Source:
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 4 May 2023
+
+[[file:figure-line-search-interactive.R]] make figure/demo for new
+paper/slides.
 
 ** 10 Apr 2023
 

@@ -25,7 +25,7 @@ if(FALSE){
 ## 13:      2902       H3K4me3_TDH_immune   3807
 ## 14:      5421 H3K27ac-H3K4me3_TDHAM_BP  15961
 (testFold.vec <- Sys.glob("../neuroblastoma-data/data/*/cv/*/testFolds/*"))
-testFold.path <- "../neuroblastoma-data/data/CTCF_TDH_ENCODE/cv/equal_labels/testFolds/1" 
+testFold.path <- "../neuroblastoma-data/data/detailed/cv/R-3.6.0-chrom/testFolds/1"               
 seed <- 1
 init.name="zero"
 aum.type="count"

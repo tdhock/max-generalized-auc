@@ -1,6 +1,5 @@
 library(animint2)
 library(data.table)
-
 data(neuroblastomaProcessed, package="penaltyLearning")
 data(neuroblastoma, package="neuroblastoma")
 ex <- function(label, profile.id, chromosome){
@@ -122,7 +121,7 @@ both.roc <- rbind(
 pred.list <- list(
   nine.cross=c(neg=3.05, pos=-2.95),
   flat=c(neg=2.75, pos=-3),
-  after.two=c(neg=2.5, pos=-2.75),
+  after.two=c(neg=2.8, pos=-2.75),
   increasing=c(neg=2.5, pos=-2.5))
 diff.grid.list <- list()
 ls.points.list <- list()
@@ -220,8 +219,6 @@ ggplot()+
   scale_fill_gradient(low="white", high="blue")+
   facet_grid(. ~ variable)+
   coord_equal()
-
-
 ggplot()+
   ggtitle("Overview, select step size")+
   geom_vline(aes(
