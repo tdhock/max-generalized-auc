@@ -415,3 +415,104 @@ best.algos <- selected.dt[
 best.algos[, .(count=.N), by=algo]
 best.algos[, .(count=.N), keyby=.(algo, objective)]
 best.algos[objective=="auc", .(count=.N), keyby=.(algo, gradient)]
+
+
+#analyze 3: how many steps?
+type.csv.vec <- Sys.glob(file.path(testFold.vec, "line_search","sets", "*.csv"))
+steps.dt.list <- list()
+for(type.csv.i in seq_along(type.csv.vec)){
+  type.csv <- type.csv.vec[[type.csv.i]]
+  type.dt <- fread(type.csv)
+  meta.dt <- type.dt[1, .(
+    data.name, cv.type, test.fold,
+    gradient=sub(".csv","",basename(type.csv)))]
+  ## does max auc get better auc than min aum?
+  valid.dt <- type.dt[
+    set=="validation",
+    .SD[, data.table(
+      max.auc=max(auc),
+      steps=.N)],
+    by=.(seed, init.name, algo, objective)]
+  steps.dt.list[[type.csv]] <- data.table(
+    meta.dt, valid.dt)
+}
+steps.dt <- rbindlist(steps.dt.list)
+fwrite(steps.dt, "figure-line-grid-search-interactive-steps.csv")
+
+steps.dt <- data.table::fread("figure-line-grid-search-interactive-steps.csv")
+comp.dt <- data.table::fread("figure-line-search-complexity.csv")
+
+subtrain.sizes <- unique(comp.dt[, .(data.name, cv.type, test.fold, n.subtrain.diffs)])
+Algo.map <- c(
+  grid="grid",
+  exact="exactL",
+  hybrid="both")
+rfac <- 5
+steps.ircv.aum <- steps.dt[
+  init.name=="IntervalRegressionCV" & objective=="aum"
+][,
+  Algo := Algo.map[algo]
+][
+  subtrain.sizes, on=.(data.name, cv.type, test.fold), nomatch=0L
+][, B:= as.integer(10^(round(log10(n.subtrain.diffs)*rfac)/rfac))]
+steps.ircv.aum[, hist(n.subtrain.diffs)]
+steps.wide <- dcast(
+  steps.ircv.aum,
+  B + Algo ~ .,
+  list(median, min, max),
+  value.var="steps")
+L <- list(measurements=steps.wide[, data.table(
+  steps=steps_median,
+  N=B,
+  expr.name=Algo)])
+my_funs <- list(
+  N=function(N)log10(N),
+  "\\log N"=function(N)log10(log(N)))
+best <- atime::references_best(L, unit.col.vec="steps", fun.list=my_funs)
+best$ref[, Algo := expr.name]
+library(ggplot2)
+ref.color <- "red"
+gg <- ggplot()+
+  facet_grid(. ~ Algo, labeller=label_both)+
+  geom_ribbon(aes(
+    B, ymin=steps_min, ymax=steps_max),
+    alpha=0.5,
+    data=steps.wide)+
+  geom_line(aes(
+    B, steps_median),
+    data=steps.wide)+
+  geom_line(aes(
+    N, reference, group=fun.name),
+    color=ref.color,
+    data=best$ref)+
+  directlabels::geom_dl(aes(
+    N, reference, group=fun.name, label=fun.name),
+    color=ref.color,
+    method="bottom.polygons",
+    data=best$ref)+
+  scale_x_log10(
+    "B = breakpoints in subtrain set error functions")+
+  scale_y_log10(
+    "Steps of gradient descent\nuntil loss stops decreasing")
+png("figure-line-grid-search-interactive-steps-refs.png", width=9, height=3, units="in", res=200)
+print(gg)
+dev.off()
+
+gg <- ggplot()+
+  geom_line(aes(
+    B, steps_median, color=Algo),
+    data=steps.wide)+
+  geom_ribbon(aes(
+    B, ymin=steps_min, ymax=steps_max, fill=Algo),
+    alpha=0.5,
+    data=steps.wide)+
+  scale_x_log10(
+    "B = breakpoints in subtrain set error functions",
+    limits=c(NA,8000))+
+  scale_y_log10(
+    "Steps of gradient descent\nuntil loss stops decreasing")
+dl <- directlabels::direct.label(gg, "right.polygons")
+png("figure-line-grid-search-interactive-steps.png", width=4.5, height=3, units="in", res=200)
+print(dl)
+dev.off()
+
