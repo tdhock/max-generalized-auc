@@ -47,6 +47,19 @@ Source:
 [[file:figure-line-search-interactive.R]] make figure/demo for new
 paper/slides.
 
+[[file:figure-line-search-complexity-compare.R]] studies asymptotic
+complexity of different versions of line search.
+
+[[file:figure-line-search-complexity-compare-steps-refs.png]]
+
+[[file:figure-line-search-complexity-compare-iterations-refs.png]]
+
+[[file:figure-line-search-complexity-compare-iterations.png]]
+
+[[file:figure-line-search-complexity-compare-seconds-refs.png]]
+
+[[file:figure-line-search-complexity-compare-seconds.png]]
+
 ** 10 Apr 2023
 
 [[file:figure-line-search-complexity.R]] is a more systematic version of
