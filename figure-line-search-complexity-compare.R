@@ -1,13 +1,6 @@
 library(ggplot2)
 library(data.table)
 setDTthreads(1)
-cache.name <- "figure-line-search-complexity-cache.rds"
-if(FALSE){
-  unlink(file.path(testFold.vec, cache.name), recursive=TRUE)
-}
-
-##TODO add for loop over line search set, subtrain or validation?
-
 ## > mb[per.set, on=list(set)][order(labels)]
 ##     megabytes                      set labels
 ##  1:       554       H3K36me3_TDH_other    200
@@ -109,10 +102,10 @@ OneBatch <- function(testFold.path, aum.type){
         X.train[keep, ],
         y.train[keep, ])
       some.param <- fit[["param.mat"]]
-      init.param[names(some.param)] <- some.param
+      init.param[rownames(some.param)] <- some.param
       init.param
     },
-    zero=function(){
+    near.zero=function(){
       init.param+rnorm(N.param)
     }
   )
@@ -121,10 +114,11 @@ OneBatch <- function(testFold.path, aum.type){
   iterations.dt.list <- list()
   Breaks <- nrow(diffs.list$subtrain)
   maxIterations.list <- list(
+    grid=NULL,
     min.aum="min.aum",
     exactL=Breaks,
     exactQ=Breaks*(Breaks-1)/2)
-  for(seed in 1:4)for(init.name in "IntervalRegressionCV"){
+  for(seed in 1:4)for(init.name in c("near.zero","IntervalRegressionCV")){
     init.fun <- init.fun.list[[init.name]]
     set.seed(seed)
     int.weights <- init.fun()
@@ -184,10 +178,6 @@ OneBatch <- function(testFold.path, aum.type){
           ##step.number < 2 &&
           1e-5 < improvement
         }){
-          LS=aum::aum_line_search(
-            diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=maxIterations)
-          iterations <- LS[["line_search_result"]][
-          , if(identical(maxIterations,"min.aum"))q.size else .N]
           pred.vec <- X.subtrain %*% weight.vec
           aum.list <- aum::aum(diffs.list$subtrain, pred.vec)
           pred.grad.vec <- rowMeans(aum.list$derivative_mat)
@@ -195,7 +185,23 @@ OneBatch <- function(testFold.path, aum.type){
           take.step <- function(s){
             weight.vec+s*direction.vec
           }
-          weight.vec <- take.step(LS$line_search_result[which.min(aum), step.size])
+          candidate.dt <- if(identical(maxIterations.name, "grid")){
+            step.grid <- 10^seq(-9, 0)
+            iterations <- NA_integer_
+            data.table(step.size=step.grid)[, {
+              step.weight <- take.step(step.size)
+              grid.aum <- aum_auc(diffs.list$subtrain, X.subtrain %*% step.weight)
+              with(grid.aum, data.table(auc, aum))
+            }, by=step.size]
+          }else{
+            LS=aum::aum_line_search(
+              diffs.list$subtrain, X.subtrain, weight.vec, maxIterations=maxIterations)
+            iterations <- LS[["line_search_result"]][
+            , if(identical(maxIterations,"min.aum"))q.size else .N]
+            LS$line_search_result
+          }
+          best.step.size <- candidate.dt[which.min(aum), step.size]
+          weight.vec <- take.step(best.step.size)
           new.aum <- aum::aum(diffs.list$subtrain, X.subtrain %*% weight.vec)
           err.thresh <- data.table(
             new.aum$total_error,key="thresh"
@@ -226,23 +232,19 @@ OneBatch <- function(testFold.path, aum.type){
     iterations=with_meta(iterations.dt.list),
     time=with_meta(time.dt.list))
 }
-
 args.dt <- data.table::CJ(
   testFold.path=testFold.vec,
   aum.type=c("rate","count")
 )
 
 ## Run on SLURM.
-registry.dir <- "figure-line-search-complexity-compare"
-reg=batchtools::loadRegistry(registry.dir)
-batchtools::getStatus(reg=reg)
-batchtools::findExpired(reg=reg)
-
+registry.dir <- "figure-line-search-complexity-compare-grid"
 if(FALSE){
   unlink(registry.dir, recursive=TRUE)
 }
 reg <- batchtools::makeRegistry(registry.dir)
 batchtools::batchMap(OneBatch, args=args.dt, reg=reg)
+batchtools::testJob(4, reg=reg)
 job.table <- batchtools::getJobTable(reg=reg)
 chunks <- data.frame(job.table, chunk=1)
 batchtools::submitJobs(chunks, resources=list(
@@ -257,7 +259,6 @@ status.dt <- batchtools::getJobStatus(reg=reg)
 status.dt[!is.na(error)]
 status.dt[!is.na(done)]
 
-batchtools::testJob(4, reg=reg)
 args.dt[21]
 
 ## Run locally.
@@ -553,7 +554,6 @@ dev.off()
 
 
 #analyze.
-registry.dir <- "figure-line-search-complexity-compare"
 reg=batchtools::loadRegistry(registry.dir)
 
 status.dt <- batchtools::getJobStatus(reg=reg)
@@ -597,7 +597,7 @@ by=.(aum.type, data.name, cv.type, test.fold, seed, maxIterations.name)
   subtrain.sizes, on=.(data.name, cv.type, test.fold), nomatch=0L
 ][, B := as.integer(10^(round(log10(n.subtrain.diffs)*rfac)/rfac))][]
 iterations.wide <- dcast(
-  iterations.tall,
+  iterations.tall[!is.na(iterations)],
   B + maxIterations.name ~ .,
   list(median, min, max, q25, q75),
   value.var="iterations")
@@ -742,3 +742,60 @@ dl <- directlabels::direct.label(gg, "right.polygons")
 png("figure-line-search-complexity-compare-seconds.png", width=4.5, height=3, units="in", res=200)
 print(dl)
 dev.off()
+
+max.valid.auc <- dt.list$sets[
+  set=="validation",
+  .SD[which.max(auc), .(auc)],
+  by=.(aum.type, data.name, cv.type, test.fold, seed, init.name, maxIterations.name)]
+max.valid.wide <- dcast(
+  max.valid.auc,
+  aum.type+data.name+cv.type+test.fold+seed+init.name ~ maxIterations.name,
+  value.var="auc")
+max.valid.wide[, hist(min.aum-exactL)]
+max.valid.wide[, table(min.aum>exactL)]
+max.valid.wide[, summary(min.aum-exactL)]
+max.valid.wide[, summary(min.aum-exactQ)]
+max.valid.wide[, summary(exactQ-exactL)]
+
+ggplot()+
+  geom_boxplot(aes(
+    auc, maxIterations.name),
+    data=max.valid.auc)
+
+max.valid.folds <- dcast(
+  max.valid.auc,
+  aum.type+data.name+cv.type+test.fold+init.name ~ maxIterations.name,
+  list(mean, length, min, max),
+  value.var="auc")
+max.valid.folds[auc_min_exactL < auc_max_exactL]
+max.valid.folds[auc_min_exactQ < auc_max_exactQ]
+max.valid.folds[auc_min_min.aum < auc_max_min.aum]
+pdt <- max.valid.folds[init.name=="IntervalRegressionCV", {
+  L <- t.test(auc_mean_grid, auc_mean_min.aum, alternative="two.sided", paired=TRUE)
+  with(L, data.table(p.value, estimate))
+}, by=.(aum.type, data.name, cv.type)][order(p.value)]
+pdt[order(estimate)]
+select.dt <- rbind(
+  data.table(aum.type="rate", data.name="CTCF_TDH_ENCODE", cv.type="equal_labels"),
+  data.table(aum.type="rate", data.name="systematic", cv.type="R-3.6.0-sequenceID"))
+select.auc <- max.valid.auc[select.dt, on=.(aum.type, data.name, cv.type)]
+
+ggplot()+
+  geom_point(aes(
+    auc, maxIterations.name),
+    data=select.auc)+
+  facet_grid(test.fold ~ aum.type+data.name+cv.type, labeller=label_both, scales="free")
+
+select.dt <- rbind(
+  ##data.table(aum.type="rate", data.name="CTCF_TDH_ENCODE", cv.type="equal_labels"),
+  data.table(aum.type="count", data.name="H3K27ac-H3K4me3_TDHAM_BP", cv.type="equal_labels"),
+  ##data.table(aum.type="rate", data.name="systematic", cv.type="chrom"),
+  ##data.table(aum.type="rate", data.name="systematic", cv.type="sequenceID"),
+  NULL)
+select.auc <- max.valid.auc[select.dt, on=.(aum.type, data.name, cv.type)]
+ggplot()+
+  geom_point(aes(
+    auc, maxIterations.name),
+    shape=1,
+    data=select.auc)+
+  facet_grid(init.name ~ test.fold, labeller=label_both, scales="free")
