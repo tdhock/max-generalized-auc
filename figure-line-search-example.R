@@ -272,6 +272,12 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
   current.points <- ls.points[step.size <= current.vline$step.size]
   seg.size <- 1
   after.linetype <- "solid"
+  diff.colors <- c(
+    "TRUE"="black",
+    "FALSE"="orange")
+  search.colors <- c(
+    exact="red",
+    grid="black")
   gg <- ggplot()+
     geom_vline(aes(
       xintercept=step.size),
@@ -296,12 +302,8 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
       this.next.step, this.next.thresh, color=search),
       data=current.intersections)+
     facet_grid(variable ~ ., scales="free_y")+
-    scale_fill_manual(values=c(
-      "TRUE"="black",
-      "FALSE"="orange"))+
-    scale_color_manual(values=c(
-      exact="red",
-      grid="black"))+
+    scale_fill_manual(values=diff.colors)+
+    scale_color_manual(values=search.colors)+
     geom_point(aes(
       step.size, value, fill=differentiable, color=search),
       size=3,
@@ -334,8 +336,87 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
     scale_y_continuous("")
   png(
     sprintf("figure-line-search-example-%d.png", step.i),
-    width=6, height=3, units="in", res=100)
-  print(gg)
+    width=6, height=5, units="in", res=300)
+  lwd <- 2
+  layout(rbind(1, 2, 3, 3, 3, 3))
+  left.lines <- 4.5
+  other.lines <- 1
+  ax.label.offset <- 1.5
+  par(
+    mar=c(0,left.lines,other.lines,other.lines),
+    cex=1.3)
+  draw.rect <- function(){
+    current.vline[, rect( 
+      0, -1000, step.size, 1000, 
+      col="grey90",
+      border=search.colors[["exact"]])]
+  }
+  diff.grid[variable=="AUC", plot(
+    step.size, value, type="n",
+    ylab="AUC",
+    xaxt="n",
+    las=1)]
+  draw.rect()
+  diff.grid[variable=="AUC", points(
+    step.size, value, pch=21,
+    bg=diff.colors[paste(differentiable)])]
+  current.segs[variable=="AUC", segments(
+    step.min, value.min,
+    step.max, value.max,
+    lwd=lwd,
+    col=search.colors[["exact"]])]
+  current.points[variable=="AUC", points(
+    step.size, value,
+    pch=20,
+    col=search.colors[["exact"]])]
+  current.vline[, segments(
+    step.size, auc.after,
+    step.after, auc.after,
+    lwd=lwd,
+    col=search.colors[["exact"]])]
+  par(mar=c(0,left.lines,other.lines,other.lines))
+  diff.grid[variable=="AUM", plot(
+    step.size, value, type="n",
+    ylab="AUM",
+    xaxt="n",
+    las=1)]
+  draw.rect()
+  diff.grid[variable=="AUM", points(
+    step.size, value, pch=21,
+    bg=diff.colors[paste(differentiable)])]
+  current.segs[variable=="AUM", segments(
+    step.min, value.min,
+    step.max, value.max,
+    lwd=lwd,
+    col=search.colors[["exact"]])]
+  current.points[variable=="AUM", points(
+    step.size, value,
+    pch=20,
+    col=search.colors[["exact"]])]
+  current.vline[, segments(
+      step.size, aum,
+      step.after, aum.after,
+      lwd=lwd,
+      col=search.colors[["exact"]])]
+  bottom.lines <- 4.5
+  par(mar=c(bottom.lines,left.lines,other.lines,other.lines))
+  plot(
+    range(diff.grid$step.size),
+    range(abline.dt$intercept),
+    type="n", las=1,
+    xlab="",
+    ylab="threshold")
+  mtext("Step size", side=1, line=2, cex=par("cex"))
+  draw.rect()
+  ##abline.dt[, points(rep(0, .N), intercept)]
+  abline.dt[, abline(
+    intercept, slope, col=search.colors[["exact"]],
+    lwd=lwd
+  ), by=intercept]
+  current.intersections[, points(
+    this.next.step, this.next.thresh,
+    col=search.colors[["exact"]])]
+  ##print(gg)
   dev.off()
   frame.list[[step.i]] <- sprintf("
 \\begin{frame}
