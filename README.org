@@ -42,6 +42,26 @@ Source:
 - [[http://ml.nau.edu/viz/2019-08-16-generalized-roc/][Some ROC curves with AUC>1.]]
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 4 May 2023
+
+[[file:figure-line-search-example.R]] make figure/demo for new
+paper/slides.
+
+[[file:figure-line-search-interactive.R]] makes new interactive figure
+showing line search.
+
+[[file:figure-line-search-complexity-compare.R]] studies asymptotic
+complexity of different versions of line search.
+
+[[file:figure-line-search-complexity-compare-steps-refs.png]]
+
+[[file:figure-line-search-complexity-compare-iterations-refs.png]]
+
+[[file:figure-line-search-complexity-compare-iterations.png]]
+
+[[file:figure-line-search-complexity-compare-seconds-refs.png]]
+
+[[file:figure-line-search-complexity-compare-seconds.png]]
 
 ** 10 Apr 2023
 

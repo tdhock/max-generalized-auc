@@ -1,4 +1,4 @@
-library(animint2)
+library(ggplot2)
 library(data.table)
 data(neuroblastomaProcessed, package="penaltyLearning")
 data(neuroblastoma, package="neuroblastoma")
@@ -33,7 +33,6 @@ nb.segs <- nb.some$profiles[, {
     end.pos=data.end.pos[end]
   )]
 }, by=label]
-
 some.err <- neuroblastomaProcessed$errors[select.dt, .(
   profile.id, chromosome,
   segments=n.segments,
@@ -59,9 +58,8 @@ some.err.tall <- melt(
   variable.name="var.lower")
 some.err.tall[, error.type := toupper(var.lower)]
 leg <- "Error type"
-
-dmin <- 2
-dmax <- 3.05
+dmin <- 2.3
+dmax <- 3
 some.err[, fp.diff := c(NA, diff(fp)), by=label]
 some.err[, fn.diff := c(NA, diff(fn)), by=label]
 some.diff <- some.err[fp.diff != 0 | fn.diff != 0, .(
@@ -83,7 +81,6 @@ grid.pred <- CJ(
   neg=neg.seq
 )[, diff := neg-pos]
 range(grid.pred[, neg-pos])
-
 grid.uniq.diff <- grid.pred[, .(
   pos=0,
   neg=unique(diff)
@@ -117,12 +114,8 @@ myjoin <- function(d.val, dt.pred){
 both.roc <- rbind(
   myjoin(TRUE, grid.pred),
   myjoin(FALSE, border.pred))
-
 pred.list <- list(
-  nine.cross=c(neg=3.05, pos=-2.95),
-  flat=c(neg=2.75, pos=-3),
-  after.two=c(neg=2.8, pos=-2.75),
-  increasing=c(neg=2.5, pos=-2.5))
+  after.two=c(neg=2.8, pos=-2.75))
 diff.grid.list <- list()
 ls.points.list <- list()
 ls.segs.list <- list()
@@ -135,7 +128,8 @@ for(pred.name in names(pred.list)){
   one.pred.diff <- one.pred[["neg"]]-one.pred[["pos"]]
   some.err[, example := label]
   diff.dt <- aum::aum_diffs_penalty(some.err, names(one.pred))
-  ls.list <- aum::aum_line_search(diff.dt, pred.vec=one.pred, maxIterations = 10)
+  ls.list <- aum::aum_line_search(
+    diff.dt, pred.vec=one.pred, maxIterations = 10)
   ##compute slope and intercept of each of the 6 T_b(s) functions, plot
   ##them using geom_abline, and geom_point to represent the 9
   ##intersection points.
@@ -199,42 +193,21 @@ ls.points <- rbindlist(ls.points.list)
 ls.segs <- rbindlist(ls.segs.list)
 abline.dt <- rbindlist(abline.dt.list)
 vline.dt <- rbindlist(vline.dt.list)
+
 ggplot()+
-  geom_tile(aes(
-    pos, neg, fill=norm),
-    data=metrics.tall[differentiable==TRUE])+
-  geom_point(aes(
-    pos, neg),
-    color="red",
-    data=heat.step[, .SD[-.N], by=pred.name])+
-  geom_line(aes(
-    pos, neg, group=pred.name),
-    color="red",
-    data=heat.step)+
-  geom_point(aes(
-    pos, neg),
-    shape=21,
-    fill="white",
-    data=pred.points)+
-  scale_fill_gradient(low="white", high="blue")+
-  facet_grid(. ~ variable)+
-  coord_equal()
-ggplot()+
-  ggtitle("Overview, select step size")+
   geom_vline(aes(
     xintercept=step.size),
     data=vline.dt,
     color="grey")+
   theme_bw()+
   theme(panel.margin=grid::unit(1, "lines"))+
-  theme_animint(width=300, height=300)+
   geom_abline(aes(
     slope=slope, intercept=intercept, color=search),
     data=abline.dt)+
   geom_point(aes(
     0, intercept, color=search),
     data=abline.dt)+
-  facet_grid(variable ~ pred.name, scales="free_y")+
+  facet_grid(variable ~ ., scales="free_y")+
   scale_fill_manual(values=c(
     "TRUE"="black",
     "FALSE"="orange"))+
@@ -261,7 +234,6 @@ ggplot()+
 ggplot()+
   theme_bw()+
   theme(panel.margin=grid::unit(1, "lines"))+
-  theme_animint(width=300, height=300)+
   facet_grid(variable ~ ., scales="free")+
   scale_fill_manual(values=c(
     "TRUE"="black",
@@ -276,79 +248,182 @@ ggplot()+
     data=data.table(search="grid", diff.grid))+
   scale_y_continuous("", breaks=seq(0, 3, by=1))
 
-min.max.step <- diff.grid[, seq(min(step.size), max(step.size), l=51)]
-slope.int.lines <- abline.dt[, data.table(
-  step.size=min.max.step,
-  threshold=intercept+slope*min.max.step
-), 
-by=.(pred.name, variable, search, intercept, slope)
-][min(abline.dt$intercept) < threshold & threshold < max(abline.dt$intercept)]
-animint(
-  out.dir="figure-line-search-interactive",
-  heat=ggplot()+
-    ggtitle("Loss function, select predictions")+
-    theme_bw()+
-    theme_animint(width=600, height=400)+
-    geom_tile(aes(
-      pos, neg, fill=norm),
-      data=metrics.tall[differentiable==TRUE])+
-    geom_point(aes(
-      pos, neg),
-      showSelected="pred.name",
-      color="red",
-      data=heat.step[, .SD[-.N], by=pred.name])+
-    geom_line(aes(
-      pos, neg, group=pred.name),
-      color="red",
-      showSelected="pred.name",
-      data=heat.step)+
-    geom_point(aes(
-      pos, neg),
-      shape=21,
-      fill="white",
-      size=4,
-      clickSelects="pred.name",
-      data=pred.points)+
-    scale_fill_gradient(low="white", high="blue")+
-    facet_grid(. ~ variable)+
-    coord_equal(),
-  step=ggplot()+
-    ggtitle("Line search for selected predictions")+
+frame.list <- list()
+for(step.i in 1:nrow(ls.list$line_search_result)){
+  ## TODO scales="free" increase AUM y axis max to 2, threshold
+  ## min-max to 4.
+  offset <- 0.015
+  current.vline <- ls.list$line_search_result[step.i][, `:=`(
+    step.after=step.size+offset,
+    aum.after=aum+offset*aum.slope.after
+  )]
+  current.intersections <- data.table(abline.dt[, `:=`(
+    this.intercept=intercept+slope*current.vline$step.size
+  )], key=c("this.intercept","slope"))[, `:=`(
+    next.slope=c(slope[-1],NA),
+    next.intercept=c(intercept[-1],NA)
+  )][, `:=`(
+    this.next.step=(intercept-next.intercept)/(next.slope-slope)
+  )][, `:=`(
+    this.next.thresh=this.next.step*slope+intercept
+  )][is.finite(this.next.step) & current.vline$step.size < this.next.step][]
+  current.segs <- ls.segs[
+  , search := "exact"][step.max <= current.vline$step.size]
+  current.points <- ls.points[step.size <= current.vline$step.size]
+  seg.size <- 1
+  after.linetype <- "solid"
+  diff.colors <- c(
+    "TRUE"="black",
+    "FALSE"="orange")
+  search.colors <- c(
+    exact="red",
+    grid="black")
+  gg <- ggplot()+
     geom_vline(aes(
       xintercept=step.size),
-      showSelected="pred.name",
       data=vline.dt,
       color="grey")+
+    geom_rect(aes(
+      ymin=-Inf, ymax=Inf,
+      xmin=0, 
+      xmax=step.size,
+      color=search),
+      alpha=0.3,
+      data=data.table(search="exact",current.vline))+
     theme_bw()+
-    theme(panel.margin=grid::unit(1, "lines"))+
-    theme_animint(width=400, height=400)+
-    geom_line(aes(
-      step.size, threshold, color=search, group=intercept),
-      showSelected="pred.name",
-      data=slope.int.lines)+
-    facet_grid(variable ~ ., scales="free")+
-    scale_fill_manual(values=c(
-      "TRUE"="black",
-      "FALSE"="orange"))+
-    scale_color_manual(values=c(
-      exact="red",
-      grid="black"))+
+    theme(panel.margin=grid::unit(0.5, "lines"))+
+    geom_abline(aes(
+      slope=slope, intercept=intercept, color=search),
+      data=abline.dt)+
+    geom_blank(aes(
+      0, intercept, color=search),
+      data=abline.dt)+
+    geom_point(aes(
+      this.next.step, this.next.thresh, color=search),
+      data=current.intersections)+
+    facet_grid(variable ~ ., scales="free_y")+
+    scale_fill_manual(values=diff.colors)+
+    scale_color_manual(values=search.colors)+
     geom_point(aes(
       step.size, value, fill=differentiable, color=search),
-      showSelected="pred.name",
       size=3,
       shape=21,
       data=data.table(search="grid", diff.grid))+
     geom_point(aes(
       step.size, value, color=search),
-      showSelected="pred.name",
-      data=data.table(search="exact", ls.points))+
+      data=data.table(search="exact", current.points))+
     geom_segment(aes(
       step.min, value.min,
       color=search,
       xend=step.max, yend=value.max),
-      showSelected="pred.name",
-      data=data.table(search="exact", ls.segs))+
+      size=seg.size,
+      data=current.segs)+
+    geom_segment(aes(
+      step.size, aum,
+      color=search,
+      xend=step.after, yend=aum.after),
+      linetype=after.linetype,
+      size=seg.size,
+      data=data.table(search="exact",variable="AUM",current.vline))+
+    geom_segment(aes(
+      step.size, auc.after,
+      color=search,
+      xend=step.after, yend=auc.after),
+      linetype=after.linetype,
+      size=seg.size,
+      data=data.table(search="exact",variable="AUC",current.vline))+
     xlab("Step size")+
     scale_y_continuous("")
-)
+  png(
+    sprintf("figure-line-search-example-%d.png", step.i),
+    width=6, height=5, units="in", res=300)
+  lwd <- 2
+  layout(rbind(1, 2, 3, 3, 3, 3))
+  left.lines <- 4.5
+  other.lines <- 1
+  ax.label.offset <- 1.5
+  par(
+    mar=c(0,left.lines,other.lines,other.lines),
+    cex=1.3)
+  draw.rect <- function(){
+    current.vline[, rect( 
+      0, -1000, step.size, 1000, 
+      col="grey90",
+      border=search.colors[["exact"]])]
+  }
+  diff.grid[variable=="AUC", plot(
+    step.size, value, type="n",
+    ylab="AUC",
+    xaxt="n",
+    las=1)]
+  draw.rect()
+  diff.grid[variable=="AUC", points(
+    step.size, value, pch=21,
+    bg=diff.colors[paste(differentiable)])]
+  current.segs[variable=="AUC", segments(
+    step.min, value.min,
+    step.max, value.max,
+    lwd=lwd,
+    col=search.colors[["exact"]])]
+  current.points[variable=="AUC", points(
+    step.size, value,
+    pch=20,
+    col=search.colors[["exact"]])]
+  current.vline[, segments(
+    step.size, auc.after,
+    step.after, auc.after,
+    lwd=lwd,
+    col=search.colors[["exact"]])]
+  par(mar=c(0,left.lines,other.lines,other.lines))
+  diff.grid[variable=="AUM", plot(
+    step.size, value, type="n",
+    ylab="AUM",
+    xaxt="n",
+    las=1)]
+  draw.rect()
+  diff.grid[variable=="AUM", points(
+    step.size, value, pch=21,
+    bg=diff.colors[paste(differentiable)])]
+  current.segs[variable=="AUM", segments(
+    step.min, value.min,
+    step.max, value.max,
+    lwd=lwd,
+    col=search.colors[["exact"]])]
+  current.points[variable=="AUM", points(
+    step.size, value,
+    pch=20,
+    col=search.colors[["exact"]])]
+  current.vline[, segments(
+      step.size, aum,
+      step.after, aum.after,
+      lwd=lwd,
+      col=search.colors[["exact"]])]
+  bottom.lines <- 4.5
+  par(mar=c(bottom.lines,left.lines,other.lines,other.lines))
+  plot(
+    range(diff.grid$step.size),
+    range(abline.dt$intercept),
+    type="n", las=1,
+    xlab="",
+    ylab="threshold")
+  mtext("Step size", side=1, line=2, cex=par("cex"))
+  draw.rect()
+  ##abline.dt[, points(rep(0, .N), intercept)]
+  abline.dt[, abline(
+    intercept, slope, col=search.colors[["exact"]],
+    lwd=lwd
+  ), by=intercept]
+  current.intersections[, points(
+    this.next.step, this.next.thresh,
+    col=search.colors[["exact"]])]
+  ##print(gg)
+  dev.off()
+  frame.list[[step.i]] <- sprintf("
+\\begin{frame}
+  \\frametitle{AUM/AUC line search, iteration %d}
+  \\includegraphics[width=\\textwidth]{figure-line-search-example-%d}
+\\end{frame}
+",step.i,step.i)
+}
+cat(paste(frame.list, collapse="\n"), file="figure-line-search-example.tex")
+system("pdflatex HOCKING-slides-toronto")
