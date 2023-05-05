@@ -248,8 +248,11 @@ ggplot()+
     data=data.table(search="grid", diff.grid))+
   scale_y_continuous("", breaks=seq(0, 3, by=1))
 
+frame.list <- list()
 for(step.i in 1:nrow(ls.list$line_search_result)){
-  offset <- 0.01
+  ## TODO scales="free" increase AUM y axis max to 2, threshold
+  ## min-max to 4.
+  offset <- 0.015
   current.vline <- ls.list$line_search_result[step.i][, `:=`(
     step.after=step.size+offset,
     aum.after=aum+offset*aum.slope.after
@@ -264,10 +267,12 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
   )][, `:=`(
     this.next.thresh=this.next.step*slope+intercept
   )][is.finite(this.next.step) & current.vline$step.size < this.next.step][]
-  current.segs <- ls.segs[step.max <= current.vline$step.size]
+  current.segs <- ls.segs[
+  , search := "exact"][step.max <= current.vline$step.size]
   current.points <- ls.points[step.size <= current.vline$step.size]
   seg.size <- 1
-  ggplot()+
+  after.linetype <- "solid"
+  gg <- ggplot()+
     geom_vline(aes(
       xintercept=step.size),
       data=vline.dt,
@@ -280,7 +285,7 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
       alpha=0.3,
       data=data.table(search="exact",current.vline))+
     theme_bw()+
-    theme(panel.margin=grid::unit(1, "lines"))+
+    theme(panel.margin=grid::unit(0.5, "lines"))+
     geom_abline(aes(
       slope=slope, intercept=intercept, color=search),
       data=abline.dt)+
@@ -310,19 +315,34 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
       color=search,
       xend=step.max, yend=value.max),
       size=seg.size,
-      data=data.table(search="exact", current.segs))+
+      data=current.segs)+
     geom_segment(aes(
       step.size, aum,
       color=search,
       xend=step.after, yend=aum.after),
+      linetype=after.linetype,
       size=seg.size,
       data=data.table(search="exact",variable="AUM",current.vline))+
     geom_segment(aes(
       step.size, auc.after,
       color=search,
       xend=step.after, yend=auc.after),
+      linetype=after.linetype,
       size=seg.size,
       data=data.table(search="exact",variable="AUC",current.vline))+
     xlab("Step size")+
     scale_y_continuous("")
+  png(
+    sprintf("figure-line-search-example-%d.png", step.i),
+    width=6, height=3, units="in", res=100)
+  print(gg)
+  dev.off()
+  frame.list[[step.i]] <- sprintf("
+\\begin{frame}
+  \\frametitle{AUM/AUC line search, iteration %d}
+  \\includegraphics[width=\\textwidth]{figure-line-search-example-%d}
+\\end{frame}
+",step.i,step.i)
 }
+cat(paste(frame.list, collapse="\n"), file="figure-line-search-example.tex")
+system("pdflatex HOCKING-slides-toronto")
