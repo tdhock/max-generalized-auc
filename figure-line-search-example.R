@@ -231,7 +231,9 @@ ggplot()+
   ##scale_y_continuous("", breaks=seq(0, 3, by=1))
   scale_y_continuous("")
 
-ggplot()+
+point.size <- 1
+gg <- ggplot()+
+  ggtitle("Many step sizes considered in grid search")+
   theme_bw()+
   theme(panel.margin=grid::unit(1, "lines"))+
   facet_grid(variable ~ ., scales="free")+
@@ -242,11 +244,52 @@ ggplot()+
     exact="red",
     grid="black"))+
   geom_point(aes(
-    pred.diff, value, fill=differentiable, color=search),
-    size=3,
+    step.size, value, fill=differentiable),
+    size=point.size,
     shape=21,
     data=data.table(search="grid", diff.grid))+
-  scale_y_continuous("", breaks=seq(0, 3, by=1))
+  scale_y_continuous("")+
+  scale_x_continuous("Step size", breaks=seq(-1, 1, by=0.1))
+png(
+  "figure-line-search-example-grid.png",
+  width=4.9, height=3, units="in", res=300)
+print(gg)
+dev.off()
+diff.grid.some <- diff.grid[
+  differentiable==TRUE
+][, .SD[seq(1,.N,by=3)], by=variable]
+ZERO <- 1e-3
+diff.grid.some <- diff.grid[
+  abs(round(step.size,digits=1)-step.size)<ZERO
+  & step.size>ZERO]
+gg <- ggplot()+
+  ggtitle("Four steps")+
+  theme_bw()+
+  theme(
+    legend.position="none",
+    panel.margin=grid::unit(1, "lines"))+
+  facet_grid(variable ~ ., scales="free")+
+  scale_fill_manual(values=c(
+    "TRUE"="black",
+    "FALSE"="orange"))+
+  scale_color_manual(values=c(
+    exact="red",
+    grid="black"))+
+  geom_blank(aes(
+    step.size, value),
+    data=diff.grid[, .(step.size=0.1, value=range(value)), by=variable])+
+  geom_point(aes(
+    step.size, value, fill=differentiable),
+    size=point.size,
+    shape=21,
+    data=data.table(search="grid", diff.grid.some))+
+  scale_y_continuous("")+
+  scale_x_continuous("Step size", breaks=seq(-1, 1, by=0.1))
+png(
+  "figure-line-search-example-some.png",
+  width=1.5, height=3, units="in", res=300)
+print(gg)
+dev.off()
 
 frame.list <- list()
 for(step.i in 1:nrow(ls.list$line_search_result)){
@@ -405,7 +448,7 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
     range(abline.dt$intercept),
     type="n", las=1,
     xlab="",
-    ylab="threshold")
+    ylab="threshold/constant")
   mtext("Step size", side=1, line=2, cex=par("cex"))
   draw.rect()
   ##abline.dt[, points(rep(0, .N), intercept)]

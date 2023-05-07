@@ -40,15 +40,16 @@
 
 \begin{document}
 
-\title{Optimizing ROC Curves with a Sort-Based Surrogate Loss for Binary Classification and Changepoint Detection}
+\title{Efficient line search optimization of penalty functions in
+  supervised changepoint detection}
 
 \author{
   Toby Dylan Hocking --- toby.hocking@nau.edu\\ 
-  joint work with my student Jonathan Hillman\\
+  joint work with my student Jadon Fowler\\
   Machine Learning Research Lab --- \url{http://ml.nau.edu}\\
   School of Informatics, Computing and Cyber Systems\\
   Northern Arizona University, USA\\
-  \includegraphics[height=3.5cm]{2021-03-lab-ski-lunch} \\
+  \includegraphics[height=4cm]{2023-02-02-group-meeting} \\
 }
 
 \date{}
@@ -150,14 +151,115 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 
 \begin{frame}
   \frametitle{Comparing changepoint algorithms using ROC curves}
-  {\scriptsize Hocking TD, Srivastava A. Labeled Optimal Partitioning. Accepted in Computational Statistics, arXiv:2006.13967.}
-  \includegraphics[width=0.9\textwidth]{figure-LOPART-roc}
+  Hocking TD, Srivastava A. Labeled Optimal
+  Partitioning. Computational Statistics (2022).
+  
+  \includegraphics[width=0.8\textwidth]{figure-LOPART-roc}
 
   LOPART algorithm (R package LOPART) has consistently larger
   test AUC than previous algorithms.
 \end{frame}
 
-\section{Proposed surrogate loss for ROC curve optimization: Area Under Min\{FP,FN\} (AUM)} 
+\section{Proposed line search algorithm for surrogate loss: Area Under Min\{FP,FN\} (AUM)}  
+
+\begin{frame}
+  \frametitle{Large AUC $\approx$ small Area Under Min(FP,FN) (AUM)} 
+  
+  \includegraphics[height=1.3in]{figure-more-than-one-binary-dots}
+
+  \includegraphics[height=1.3in]{figure-more-than-one-binary-aum}
+
+  Hocking, Hillman, \emph{Journal of Machine Learning Research} (2022).
+
+  Barr, Hocking, Morton, Thatcher, Shaw, \emph{TransAI} (2022).
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Proposed line search algorithm uses AUC/AUM structure}
+
+  When learning a linear model, 
+  \begin{itemize}
+  \item AUC is piecewise constant, and
+  \item AUM is piecewise linear,
+  \end{itemize}
+  as a function of predicted values (or difference in plot below),
+  
+\includegraphics[height=5cm]{figure-line-search-example-some}
+\includegraphics[height=5cm]{figure-line-search-example-grid}
+ 
+Proposed line search algorithm computes updates when there are
+possible changes in slope of AUM / values of AUC (orange dots).
+
+\end{frame}
+
+\input{figure-line-search-example}
+
+\section{Empirical results: increased speed and accuracy using proposed line search}
+
+\begin{frame}
+  \frametitle{AUM gradient descent results in increased train AUC for
+    a real changepoint problem}
+
+Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
+
+\includegraphics[height=3.7cm]{figure-aum-optimized-iterations.png}
+\includegraphics[height=3.7cm]{figure-aum-train-both.png}
+
+\begin{itemize}
+\item Left/middle: changepoint problem initialized to prediction vector with
+  min label errors, gradient descent on prediction vector.
+\item Right: linear model initialized by minimizing regularized convex
+  loss (surrogate for label error, Hocking \emph{et al.} ICML 2013),
+  gradient descent on weight vector.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Learning algorithm results in better TODO AUC/AUM for changepoint problems}
+    
+
+\end{frame}
+
+
+\section{Discussion and Conclusions}
+
+\begin{frame}
+  \frametitle{Discussion and Conclusions}
+  \begin{itemize}
+  \item ROC curves are used to evaluate binary classification and
+    changepoint detection algorithms.
+  % \item In changepoint detection there can be loops in ROC curves, so
+  %   maximizing AUC greater than 1 is not be desirable.
+  % \item In changepoint detection, maximizing Area Under ROC curve is
+  %   non-trivial even for the train set with unconstrained
+  %   predictions.
+  \item A new loss function, AUM=Area Under Min(FP,FN),
+    is a differentiable surrogate of the sum of Min(FP,FN) over
+    all points on the ROC curve.
+  \item We propose new gradient descent algorithm with efficient line
+    search, for optimizing AUM/AUC.
+  \item Implementations available in R/C++ and python:
+    {\scriptsize
+    \url{https://cloud.r-project.org/web/packages/aum/} (R/C++ line search)
+    \url{https://tdhock.github.io/blog/2022/aum-learning/} (pytorch AUM loss)
+    }
+  \item Empirical results provide evidence that line search is faster
+    and more accurate than grid search.
+  \item Future work: non-linear learning algorithms that use AUM
+    minimization as a surrogate for AUC maximization.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Thanks to co-author Jadon Fowler! (second from left)}
+
+  \includegraphics[height=3in]{2023-02-02-group-meeting}
+
+  Contact: toby.hocking@nau.edu
+
+\end{frame} 
 
 \begin{frame}
   \frametitle{Algorithm inputs: predictions and label error functions}
@@ -181,166 +283,5 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error-standAlone}}
 
 \end{frame}
-
-\begin{frame}
-  \frametitle{Proposed surrogate loss, Area Under Min (AUM)}
-  \begin{itemize}
-  \item Threshold
-    $t_b= v_b - \hat y_{\mathcal I_b}=\tau(\mathbf{\hat y})_q$ is largest constant you can add to predictions and still be on ROC point $q$.
-  \item Proposed surrogate loss, Area Under Min (AUM) of total FP/FN,
-    computed via sort and modified cumsum:
-  \end{itemize}
-\begin{eqnarray*}
-  \underline{\text{FP}}_b &=& \sum_{j: t_j < t_b} \Delta\text{FP}_j,\ 
-  \overline{\text{FP}}_b = \sum_{j: t_j \leq t_b} \Delta\text{FP}_j, \\
-  \underline{\text{FN}}_b &=& \sum_{j: t_j \geq t_b} - \Delta\text{FN}_j,\ 
-  \overline{\text{FN}}_b = \sum_{j: t_j > t_b} - \Delta\text{FN}_j.
-\end{eqnarray*}
-
-  \includegraphics[height=1.5in]{figure-more-than-one-more-aum}
-  \includegraphics[height=1.5in]{figure-more-than-one-more-auc}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Small AUM is correlated with large AUC} 
-  
-  \includegraphics[height=1.5in]{figure-more-than-one-binary-dots}
-
-  \includegraphics[height=1.5in]{figure-more-than-one-binary-aum}
-  
-\end{frame}
-
-\begin{frame}
-  \frametitle{Proposed algorithm computes two directional derivatives }
-
-  \begin{itemize}
-  \item Gradient only defined when function is differentiable, but AUM
-    is not differentiable everywhere (see below).
-  \item Directional derivatives always computable (R package aum),
-  \end{itemize}
-% \begin{theorem}
-% \label{thm:directional-derivs}
-% The AUM directional derivatives for a particular example
-% $i\in\{1,\dots,n\}$ can be computed using the following equations.
-% \end{theorem}
-\begin{eqnarray*}
-  &&\nabla_{\mathbf v(-1,i)} \text{AUM}(\mathbf{\hat y}) = \\
-  &&\sum_{b: \mathcal I_b = i}
-  \min\{
-  \overline{\text{FP}}_b , 
-  \overline{\text{FN}}_b 
-  \}
-  -
-  \min\{
-  \overline{\text{FP}}_b - \Delta\text{FP}_b, 
-  \overline{\text{FN}}_b - \Delta\text{FN}_b
-  \},\\
-  &&\nabla_{\mathbf v(1,i)} \text{AUM}(\mathbf{\hat y}) = \\
-  &&\sum_{b: \mathcal I_b = i}
-  \min\{
-  \underline{\text{FP}}_b + \Delta\text{FP}_b, 
-  \underline{\text{FN}}_b + \Delta\text{FN}_b
-  \}
-  -
-  \min\{
-  \underline{\text{FP}}_b , 
-  \underline{\text{FN}}_b 
-     \}.
-\end{eqnarray*}  
-
-\parbox{2in}{ \includegraphics[width=2in]{figure-aum-convexity} }
-\parbox{2in}{ Proposed learning algo uses mean of these two
-  directional derivatives as ``gradient.''  }
-
-\end{frame}
-
-\section{Empirical results: minimizing AUM results in optimized ROC curves}
-
-\begin{frame}
-  \frametitle{AUM gradient descent results in increased train AUC for
-    a real changepoint problem}
-
-\includegraphics[height=3.7cm]{figure-aum-optimized-iterations.png}
-\includegraphics[height=3.7cm]{figure-aum-train-both.png}
-
-\begin{itemize}
-\item Left/middle: changepoint problem initialized to prediction vector with
-  min label errors, gradient descent on prediction vector.
-\item Right: linear model initialized by minimizing regularized convex
-  loss (surrogate for label error, Hocking \emph{et al.} ICML 2013),
-  gradient descent on weight vector.
-\end{itemize}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Learning algorithm results in better test AUC/AUM for changepoint problems}
-    
-\includegraphics[width=\textwidth]{figure-test-aum-comparison.png}
-\includegraphics[width=\textwidth]{figure-test-auc-comparison.png}
-
-\begin{itemize}
-\item Five changepoint problems (panels from left to right).
-\item Two evaluation metrics (AUM=top, AUC=bottom).
-\item Three algorithms (Y axis), Initial=Min regularized convex loss
-  (surrogate for label error, Hocking \emph{et al.} ICML 2013), Min.Valid.AUM/Max.Valid.AUC=AUM
-  gradient descent with early stopping regularization.
-\item Four points = Four random initializations.
-\end{itemize}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Learning algorithm competitive for unbalanced binary classification}
-
- \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc.png}
-
- \begin{itemize}
- \item Squared hinge all pairs is a classic/popular surrogate loss function
-   for AUC optimization. (Yan \emph{et al.} ICML 2003)
- \item All linear models with early stopping regularization.
- \end{itemize}
-
-\end{frame}
-
-\section{Discussion and Conclusions}
-
-\begin{frame}
-  \frametitle{Discussion and Conclusions, Pre-print arXiv:2107.01285}
-  \begin{itemize}
-  \item ROC curves are used to evaluate binary classification and
-    changepoint detection algorithms.
-  % \item In changepoint detection there can be loops in ROC curves, so
-  %   maximizing AUC greater than 1 is not be desirable.
-  % \item In changepoint detection, maximizing Area Under ROC curve is
-  %   non-trivial even for the train set with unconstrained
-  %   predictions.
-  \item We propose a new loss function, AUM=Area Under Min(FP,FN),
-    which is a differentiable surrogate of the sum of Min(FP,FN) over
-    all points on the ROC curve.
-  \item We propose new algorithm for efficient AUM and directional
-    derivative computation.
-  \item Implementations available in R and python/torch:
-    \url{https://cloud.r-project.org/web/packages/aum/}
-    \url{https://tdhock.github.io/blog/2022/aum-learning/}
-  \item Empirical results provide evidence that learning using AUM
-    minimization results in ROC curve optimization (encourages
-    monotonic/regular curves with large AUC).
-  \item Future work: exploiting piecewise linear structure of the AUM
-    loss, other model classes, other problems/objectives.
-  \end{itemize}
-\end{frame}
-
-\input{figure-line-search-example} 
-
-\begin{frame}
-  \frametitle{Thanks to co-author Jonathan Hillman! (second from left)}
-
-  \includegraphics[height=3in]{2021-03-lab-ski-lunch} 
-
-  Contact: toby.hocking@nau.edu
-
-\end{frame} 
 
 \end{document}
