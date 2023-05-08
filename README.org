@@ -63,6 +63,14 @@ complexity of different versions of line search.
 
 [[file:figure-line-search-complexity-compare-seconds.png]]
 
+[[file:figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV.png]]
+
+
+[[file:figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV-initial.png]]
+
+
+[[file:figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV-seconds.png]]
+
 ** 10 Apr 2023
 
 [[file:figure-line-search-complexity.R]] is a more systematic version of

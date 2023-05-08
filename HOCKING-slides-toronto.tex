@@ -199,19 +199,19 @@ possible changes in slope of AUM / values of AUC (orange dots).
   \frametitle{Complexity analysis of proposed algorithm}
   For $N$ labeled observations, worst case $O(N)$ space, and
   \begin{description}
+  \item[min.aum: keep doing line search iterations until first AUM
+    increase.] Same as exactQ time.
   \item[grid: standard grid search.] Linear $O(N\log N)$ time, but
     potentially slow for a sub-optimal grid search.
+  \item[exactQ: all line search iterations.] Quadratic $O(N^2\log N)$
+    time, large step sizes, small number of steps.
   \item[exactL: only first $N$ line search iterations.] Linear $O(N\log N)$ time,
     relatively small step sizes chosen, relatively large number of
     steps overall in gradient descent.
-  \item[exactQ: all line search iterations.] Quadratic $O(N^2\log N)$
-    time, large step sizes, small number of steps.
-  \item[min.aum: keep doing line search iterations until first AUM
-    increase.] Same as exactQ time.
   \end{description}
 \end{frame}
 
-\section{Empirical results: increased speed and accuracy using proposed line search}
+\section{Empirical results: increased speed and accuracy using proposed exact line search}
 
 \begin{frame}
   \frametitle{AUM gradient descent results in increased train AUC for
@@ -233,9 +233,49 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 \end{frame}
 
 \begin{frame}
-  \frametitle{Learning algorithm results in better TODO AUC/AUM for changepoint problems}
-    
+  \frametitle{Proposed exact search consistently faster than grid search}
 
+  Downloaded supervised change-point detection data set
+  H3K4me3\_TDH\_immune from UCI Machine Learning Repository,
+  \url{https://archive.ics.uci.edu/ml/datasets/chipseq}
+  Train/test splits defined via 4-fold CV, linear model initialized by
+  minimizing regularized convex loss (surrogate for label error,
+  Hocking \emph{et al.} ICML 2013), keep doing AUM rate gradient
+  descent steps (with line search) until subtrain loss stops decreasing.
+
+  \includegraphics[width=\textwidth]{figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV-seconds}
+
+  \begin{description}
+  \item[min.aum:] proposed, keep iterating until first AUM
+    increase.
+  \item[grid:] search over step
+    size$\in\{10^{-9},10^{-8},\dots,10^1,1^0\}$.
+  \item[exactQ:] proposed, all line search iterations.
+  \item[exactL:] proposed, only first $N$ line search iterations.
+  \end{description}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Proposed exact search has similar accuracy as grid search}
+
+  Downloaded supervised change-point detection data set
+  H3K4me3\_TDH\_immune from UCI Machine Learning Repository,
+  \url{https://archive.ics.uci.edu/ml/datasets/chipseq}
+  Train/test splits defined via 4-fold CV, linear model initialized by
+  minimizing regularized convex loss (surrogate for label error,
+  Hocking \emph{et al.} ICML 2013), keep doing AUM rate gradient
+  descent steps (with line search) until subtrain loss stops decreasing.
+
+  \includegraphics[width=\textwidth]{figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV-initial}
+
+  \begin{description}
+  \item[min.aum:] proposed, keep iterating until first AUM
+    increase.
+  \item[grid:] search over step
+    size$\in\{10^{-9},10^{-8},\dots,10^1,1^0\}$.
+  \item[exactQ:] proposed, all line search iterations.
+  \item[exactL:] proposed, only first $N$ line search iterations.
+  \end{description}
 \end{frame}
 
 
@@ -261,8 +301,9 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
     \url{https://cloud.r-project.org/web/packages/aum/} (R/C++ line search)
     \url{https://tdhock.github.io/blog/2022/aum-learning/} (pytorch AUM loss)
     }
-  \item Empirical results provide evidence that line search is faster
-    and more accurate than grid search.
+  \item Empirical results provide evidence that proposed exact line
+    search is consistently faster than grid search, and can be more
+    accurate (in terms of max validation AUC).
   \item Future work: non-linear learning algorithms that use AUM
     minimization as a surrogate for AUC maximization.
   \end{itemize}
