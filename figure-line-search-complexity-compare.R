@@ -581,7 +581,6 @@ for(data.csv in data.csv.vec){
   data.type <- gsub(".csv|.*-", "", data.csv)
   dt.list[[data.type]] <- data.table::fread(data.csv)
 }
-
 q25 <- function(x)quantile(x,0.25)
 q75 <- function(x)quantile(x,0.75)
 
@@ -756,6 +755,17 @@ max.valid.wide[, table(min.aum>exactL)]
 max.valid.wide[, summary(min.aum-exactL)]
 max.valid.wide[, summary(min.aum-exactQ)]
 max.valid.wide[, summary(exactQ-exactL)]
+wide.p <- max.valid.wide[, {
+  tryCatch({
+    L <- t.test(min.aum, grid, alternative="two.sided", paired=TRUE)
+    with(L, data.table(p.value, estimate))
+  }, error=function(e){
+    NULL
+  })
+}, by=.(aum.type, data.name, cv.type, test.fold, init.name)][order(p.value)]
+wide.p[order(estimate)]
+wide.p[init.name=="IntervalRegressionCV"][order(estimate)]
+
 
 ggplot()+
   geom_boxplot(aes(
@@ -788,7 +798,11 @@ ggplot()+
 
 select.dt <- rbind(
   ##data.table(aum.type="rate", data.name="CTCF_TDH_ENCODE", cv.type="equal_labels"),
-  data.table(aum.type="count", data.name="H3K27ac-H3K4me3_TDHAM_BP", cv.type="equal_labels"),
+  ##data.table(aum.type="count", data.name="H3K27ac-H3K4me3_TDHAM_BP", cv.type="equal_labels"),
+  ##data.table(aum.type="count", data.name="systematic", cv.type="profileID"),
+  ##data.table(aum.type="count", data.name="systematic", cv.type="R-3.6.0-profileID"),
+  ##data.table(aum.type="rate", data.name="systematic", cv.type="R-3.6.0-chrom"),
+  ##data.table(aum.type="rate", data.name="H3K36me3_TDH_ENCODE", cv.type="equal_labels"),
   ##data.table(aum.type="rate", data.name="systematic", cv.type="chrom"),
   ##data.table(aum.type="rate", data.name="systematic", cv.type="sequenceID"),
   NULL)
@@ -799,3 +813,67 @@ ggplot()+
     shape=1,
     data=select.auc)+
   facet_grid(init.name ~ test.fold, labeller=label_both, scales="free")
+
+some.folds <- rbind(
+  data.table(data.name="detailed", cv.type="chrom", test.fold=1, aum.type="count", init.name="IntervalRegressionCV"),
+  data.table(data.name="H3K4me3_PGP_immune", cv.type="equal_labels", test.fold=4, aum.type="count", init.name="IntervalRegressionCV"),
+  data.table(data.name="H3K4me3_TDH_immune", cv.type="equal_labels", test.fold=4, aum.type="rate", init.name="IntervalRegressionCV"),
+  data.table(data.name="systematic", cv.type="profileSize", test.fold=4, aum.type="rate", init.name="IntervalRegressionCV"))
+##some.folds <- rbind(wide.p[init.name=="near.zero" & 0<estimate][order(p.value)][1:5])
+select.auc <- max.valid.auc[some.folds, on=.(aum.type, data.name, cv.type, test.fold, init.name)]
+select.wide <- dcast(
+  select.auc,
+  data.name +cv.type+test.fold+aum.type+init.name+maxIterations.name ~ .,
+  list(mean, sd),
+  value.var="auc")
+ggplot()+
+  geom_point(aes(
+    auc_mean, maxIterations.name),
+    shape=1,
+    data=select.wide)+
+  geom_segment(aes(
+    auc_mean-auc_sd, maxIterations.name,
+    xend=auc_mean+auc_sd, yend=maxIterations.name),
+    data=select.wide)+
+  facet_grid(
+    . ~ data.name + cv.type + test.fold + aum.type,
+    labeller=label_both, scales="free")+
+  scale_x_continuous(
+    "Max validation AUC")
+
+some.folds <- rbind(
+  ##data.table(data.name="detailed", cv.type="chrom", test.fold=1, aum.type="count", init.name="IntervalRegressionCV"),
+  data.table(data.name="H3K4me3_PGP_immune", cv.type="equal_labels", test.fold=4, aum.type="count", init.name="IntervalRegressionCV"),
+  ##data.table(data.name="H3K4me3_TDH_immune", cv.type="equal_labels", test.fold=4, aum.type="rate", init.name="IntervalRegressionCV"),
+  ##data.table(data.name="systematic", cv.type="profileSize", test.fold=4, aum.type="rate", init.name="IntervalRegressionCV"))
+  NULL)
+  max.valid.auc[some.folds, on=.(aum.type, data.name, cv.type, init.name)]
+select.auc <- max.valid.auc[data.name=="H3K4me3_PGP_immune" & cv.type=="equal_labels" & aum.type=="count" & init.name=="IntervalRegressionCV"]
+select.auc <- max.valid.auc[data.name=="systematic" & cv.type=="profileSize" & aum.type=="rate" & init.name=="IntervalRegressionCV"]
+select.auc <- max.valid.auc[data.name=="H3K4me3_TDH_immune" & cv.type=="equal_labels" & aum.type=="rate" & init.name=="IntervalRegressionCV"]#reasonable
+select.wide <- dcast(
+  select.auc,
+  data.name +cv.type+test.fold+aum.type+init.name+maxIterations.name ~ .,
+  list(mean, sd),
+  value.var="auc")
+gg <- ggplot()+
+  theme(
+    axis.text.x=element_text(angle=30, hjust=1))+
+  geom_point(aes(
+    auc_mean, maxIterations.name),
+    shape=1,
+    data=select.wide)+
+  geom_segment(aes(
+    auc_mean-auc_sd, maxIterations.name,
+    xend=auc_mean+auc_sd, yend=maxIterations.name),
+    data=select.wide)+
+  facet_grid(
+    . ~ test.fold,
+    labeller=label_both, scales="free")+
+  scale_x_continuous(
+    "Max validation AUC, mean +/- SD over 4 random initializations")+
+  scale_y_discrete(
+    "Line search type")
+png("figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV.png", width=8, height=2, units="in", res=200)
+print(gg)
+dev.off()
