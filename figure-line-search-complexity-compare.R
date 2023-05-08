@@ -742,9 +742,10 @@ png("figure-line-search-complexity-compare-seconds.png", width=4.5, height=3, un
 print(dl)
 dev.off()
 
-max.valid.auc <- dt.list$sets[
-  set=="validation",
-  .SD[which.max(auc), .(auc)],
+only.valid <- dt.list$sets[set=="validation"]
+step0.valid <- only.valid[step.number==0]
+max.valid.auc <- only.valid[
+  , .SD[which.max(auc), .(auc)],
   by=.(aum.type, data.name, cv.type, test.fold, seed, init.name, maxIterations.name)]
 max.valid.wide <- dcast(
   max.valid.auc,
@@ -850,30 +851,72 @@ some.folds <- rbind(
   max.valid.auc[some.folds, on=.(aum.type, data.name, cv.type, init.name)]
 select.auc <- max.valid.auc[data.name=="H3K4me3_PGP_immune" & cv.type=="equal_labels" & aum.type=="count" & init.name=="IntervalRegressionCV"]
 select.auc <- max.valid.auc[data.name=="systematic" & cv.type=="profileSize" & aum.type=="rate" & init.name=="IntervalRegressionCV"]
-select.auc <- max.valid.auc[data.name=="H3K4me3_TDH_immune" & cv.type=="equal_labels" & aum.type=="rate" & init.name=="IntervalRegressionCV"]#reasonable
+one_set <- function(DT){
+  DT[data.name=="H3K4me3_TDH_immune" & cv.type=="equal_labels" & aum.type=="rate" & init.name=="IntervalRegressionCV"]#reasonable
+}
+select.auc <- rbind(
+  one_set(max.valid.auc),
+  one_set(step0.valid)[maxIterations.name=="grid"][, maxIterations.name := "initial"][, .(
+    aum.type, data.name, cv.type, test.fold, seed, init.name, maxIterations.name, auc)])
 select.wide <- dcast(
   select.auc,
   data.name +cv.type+test.fold+aum.type+init.name+maxIterations.name ~ .,
   list(mean, sd),
   value.var="auc")
+only.initial <- select.wide[
+  maxIterations.name=="initial"
+][, .(test.fold, initial.validation.AUC=sprintf("%.4f", auc_mean))]
+not.initial <- select.wide[
+  maxIterations.name!="initial"
+][only.initial, on="test.fold"]
 gg <- ggplot()+
   theme(
     axis.text.x=element_text(angle=30, hjust=1))+
   geom_point(aes(
     auc_mean, maxIterations.name),
     shape=1,
-    data=select.wide)+
+    data=not.initial)+
   geom_segment(aes(
     auc_mean-auc_sd, maxIterations.name,
     xend=auc_mean+auc_sd, yend=maxIterations.name),
-    data=select.wide)+
+    data=not.initial)+
   facet_grid(
-    . ~ test.fold,
+    . ~ test.fold + initial.validation.AUC,
     labeller=label_both, scales="free")+
   scale_x_continuous(
-    "Max validation AUC, mean +/- SD over 4 random initializations")+
+    "Max validation AUC, mean +/- SD over 4 random initializations",
+    labels=function(x)sprintf("%.4f", x))+
   scale_y_discrete(
     "Line search type")
 png("figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV.png", width=8, height=2, units="in", res=200)
 print(gg)
 dev.off()
+
+set.times <- one_set(dt.list[["time"]])
+wide.times <- dcast(
+  set.times,
+  data.name +cv.type+test.fold+aum.type+init.name+maxIterations.name ~ .,
+  list(mean, sd),
+  value.var="elapsed.seconds")
+gg <- ggplot()+
+  theme(
+    axis.text.x=element_text(angle=30, hjust=1))+
+  geom_point(aes(
+    elapsed.seconds_mean, maxIterations.name),
+    shape=1,
+    data=wide.times)+
+  geom_segment(aes(
+    elapsed.seconds_mean-elapsed.seconds_sd, maxIterations.name,
+    xend=elapsed.seconds_mean+elapsed.seconds_sd, yend=maxIterations.name),
+    data=wide.times)+
+  facet_grid(
+    . ~ test.fold,
+    labeller=label_both, scales="free")+
+  scale_x_continuous(
+    "Computation time (seconds), mean +/- SD over 4 random initializations")+
+  scale_y_discrete(
+    "Line search type")
+png("figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV-seconds.png", width=8, height=1.5, units="in", res=200)
+print(gg)
+dev.off()
+
