@@ -183,7 +183,7 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   \item AUC is piecewise constant, and
   \item AUM is piecewise linear,
   \end{itemize}
-  as a function of predicted values (or difference in plot below),
+  as a function of step size in gradient descent.
   
 \includegraphics[height=5cm]{figure-line-search-example-some}
 \includegraphics[height=5cm]{figure-line-search-example-grid}
@@ -194,6 +194,22 @@ possible changes in slope of AUM / values of AUC (orange dots).
 \end{frame}
 
 \input{figure-line-search-example}
+
+\begin{frame}
+  \frametitle{Complexity analysis of proposed algorithm}
+  For $N$ labeled observations, worst case $O(N)$ space, and
+  \begin{description}
+  \item[grid: standard grid search.] Linear $O(N\log N)$ time, but
+    potentially slow for a sub-optimal grid search.
+  \item[exactL: only first $N$ line search iterations.] Linear $O(N\log N)$ time,
+    relatively small step sizes chosen, relatively large number of
+    steps overall in gradient descent.
+  \item[exactQ: all line search iterations.] Quadratic $O(N^2\log N)$
+    time, large step sizes, small number of steps.
+  \item[min.aum: keep doing line search iterations until first AUM
+    increase.] Same as exactQ time.
+  \end{description}
+\end{frame}
 
 \section{Empirical results: increased speed and accuracy using proposed line search}
 
