@@ -892,6 +892,29 @@ png("figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-
 print(gg)
 dev.off()
 
+gg <- ggplot()+
+  theme(
+    axis.text.x=element_text(angle=30, hjust=1))+
+  geom_point(aes(
+    auc_mean, maxIterations.name),
+    shape=1,
+    data=select.wide)+
+  geom_segment(aes(
+    auc_mean-auc_sd, maxIterations.name,
+    xend=auc_mean+auc_sd, yend=maxIterations.name),
+    data=select.wide)+
+  facet_grid(
+    . ~ test.fold,
+    labeller=label_both, scales="free")+
+  scale_x_continuous(
+    "Max validation AUC, mean +/- SD over 4 random initializations",
+    labels=function(x)sprintf("%.4f", x))+
+  scale_y_discrete(
+    "Line search type")
+png("figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV-initial.png", width=8, height=1.5, units="in", res=200)
+print(gg)
+dev.off()
+
 set.times <- one_set(dt.list[["time"]])
 wide.times <- dcast(
   set.times,
