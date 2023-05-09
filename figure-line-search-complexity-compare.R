@@ -851,34 +851,46 @@ some.folds <- rbind(
   max.valid.auc[some.folds, on=.(aum.type, data.name, cv.type, init.name)]
 select.auc <- max.valid.auc[data.name=="H3K4me3_PGP_immune" & cv.type=="equal_labels" & aum.type=="count" & init.name=="IntervalRegressionCV"]
 select.auc <- max.valid.auc[data.name=="systematic" & cv.type=="profileSize" & aum.type=="rate" & init.name=="IntervalRegressionCV"]
+disp.names <- c(
+  min.aum="first min(proposed)",
+  grid="grid",
+  exactQ="quadratic(proposed)",
+  exactL="linear(proposed)",
+  initial="initial")
 one_set <- function(DT){
-  DT[data.name=="H3K4me3_TDH_immune" & cv.type=="equal_labels" & aum.type=="rate" & init.name=="IntervalRegressionCV"]#reasonable
+  DT[
+    data.name=="H3K4me3_TDH_immune" & cv.type=="equal_labels" &
+      aum.type=="rate" & init.name=="IntervalRegressionCV"
+  ][, display.name := factor(disp.names[maxIterations.name], rev(disp.names))]
 }
 select.auc <- rbind(
   one_set(max.valid.auc),
-  one_set(step0.valid)[maxIterations.name=="grid"][, maxIterations.name := "initial"][, .(
-    aum.type, data.name, cv.type, test.fold, seed, init.name, maxIterations.name, auc)])
+  one_set(data.table(
+    step0.valid
+  )[maxIterations.name=="grid"][, maxIterations.name := "initial"])[, .(
+    aum.type, data.name, cv.type, test.fold, seed, init.name,
+    maxIterations.name, auc, display.name)])
 select.wide <- dcast(
   select.auc,
-  data.name +cv.type+test.fold+aum.type+init.name+maxIterations.name ~ .,
+  data.name +cv.type+test.fold+aum.type+init.name+display.name ~ .,
   list(mean, sd),
   value.var="auc")
 only.initial <- select.wide[
-  maxIterations.name=="initial"
+  display.name=="initial"
 ][, .(test.fold, initial.validation.AUC=sprintf("%.4f", auc_mean))]
 not.initial <- select.wide[
-  maxIterations.name!="initial"
+  display.name!="initial"
 ][only.initial, on="test.fold"]
 gg <- ggplot()+
   theme(
     axis.text.x=element_text(angle=30, hjust=1))+
   geom_point(aes(
-    auc_mean, maxIterations.name),
+    auc_mean, display.name),
     shape=1,
     data=not.initial)+
   geom_segment(aes(
-    auc_mean-auc_sd, maxIterations.name,
-    xend=auc_mean+auc_sd, yend=maxIterations.name),
+    auc_mean-auc_sd, display.name,
+    xend=auc_mean+auc_sd, yend=display.name),
     data=not.initial)+
   facet_grid(
     . ~ test.fold + initial.validation.AUC,
@@ -896,12 +908,12 @@ gg <- ggplot()+
   theme(
     axis.text.x=element_text(angle=30, hjust=1))+
   geom_point(aes(
-    auc_mean, maxIterations.name),
+    auc_mean, display.name),
     shape=1,
     data=select.wide)+
   geom_segment(aes(
-    auc_mean-auc_sd, maxIterations.name,
-    xend=auc_mean+auc_sd, yend=maxIterations.name),
+    auc_mean-auc_sd, display.name,
+    xend=auc_mean+auc_sd, yend=display.name),
     data=select.wide)+
   facet_grid(
     . ~ test.fold,
@@ -918,19 +930,19 @@ dev.off()
 set.times <- one_set(dt.list[["time"]])
 wide.times <- dcast(
   set.times,
-  data.name +cv.type+test.fold+aum.type+init.name+maxIterations.name ~ .,
+  data.name +cv.type+test.fold+aum.type+init.name+display.name ~ .,
   list(mean, sd),
   value.var="elapsed.seconds")
 gg <- ggplot()+
   theme(
     axis.text.x=element_text(angle=30, hjust=1))+
   geom_point(aes(
-    elapsed.seconds_mean, maxIterations.name),
+    elapsed.seconds_mean, display.name),
     shape=1,
     data=wide.times)+
   geom_segment(aes(
-    elapsed.seconds_mean-elapsed.seconds_sd, maxIterations.name,
-    xend=elapsed.seconds_mean+elapsed.seconds_sd, yend=maxIterations.name),
+    elapsed.seconds_mean-elapsed.seconds_sd, display.name,
+    xend=elapsed.seconds_mean+elapsed.seconds_sd, yend=display.name),
     data=wide.times)+
   facet_grid(
     . ~ test.fold,
