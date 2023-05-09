@@ -200,7 +200,7 @@ ggplot()+
     data=vline.dt,
     color="grey")+
   theme_bw()+
-  theme(panel.margin=grid::unit(1, "lines"))+
+  theme(panel.spacing=grid::unit(1, "lines"))+
   geom_abline(aes(
     slope=slope, intercept=intercept, color=search),
     data=abline.dt)+
@@ -235,7 +235,7 @@ point.size <- 1
 gg <- ggplot()+
   ggtitle("Many step sizes considered in grid search")+
   theme_bw()+
-  theme(panel.margin=grid::unit(1, "lines"))+
+  theme(panel.spacing=grid::unit(1, "lines"))+
   facet_grid(variable ~ ., scales="free")+
   scale_fill_manual(values=c(
     "TRUE"="black",
@@ -291,12 +291,19 @@ png(
 print(gg)
 dev.off()
 
+it.name.vec <- c(
+  "5"="first min",
+  "6"="linear",
+  "8"="quadratic")
+it.name.dt <- data.table(
+  iteration.i=as.integer(names(it.name.vec)),
+  maxIterations.name=it.name.vec)
 frame.list <- list()
-for(step.i in 1:nrow(ls.list$line_search_result)){
-  ## TODO scales="free" increase AUM y axis max to 2, threshold
-  ## min-max to 4.
+prev.intersection.list <- list(data.table(
+  iteration.i=1, this.next.step=0, this.next.thresh=1.1))
+for(iteration.i in 1:nrow(ls.list$line_search_result)){
   offset <- 0.015
-  current.vline <- ls.list$line_search_result[step.i][, `:=`(
+  current.vline <- ls.list$line_search_result[iteration.i][, `:=`(
     step.after=step.size+offset,
     aum.after=aum+offset*aum.slope.after
   )]
@@ -359,26 +366,26 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
       step.min, value.min,
       color=search,
       xend=step.max, yend=value.max),
-      size=seg.size,
+      linewidth=seg.size,
       data=current.segs)+
     geom_segment(aes(
       step.size, aum,
       color=search,
       xend=step.after, yend=aum.after),
       linetype=after.linetype,
-      size=seg.size,
+      linewidth=seg.size,
       data=data.table(search="exact",variable="AUM",current.vline))+
     geom_segment(aes(
       step.size, auc.after,
       color=search,
       xend=step.after, yend=auc.after),
       linetype=after.linetype,
-      size=seg.size,
+      linewidth=seg.size,
       data=data.table(search="exact",variable="AUC",current.vline))+
     xlab("Step size")+
     scale_y_continuous("")
   png(
-    sprintf("figure-line-search-example-%d.png", step.i),
+    sprintf("figure-line-search-example-%d.png", iteration.i),
     width=6, height=5, units="in", res=300)
   lwd <- 2
   layout(rbind(1, 2, 3, 3, 3, 3))
@@ -388,10 +395,17 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
   par(
     mar=c(0,left.lines,other.lines,other.lines),
     cex=1.3)
+  is.before <- it.name.dt$iteration.i <= iteration.i
+  it.name.some <- it.name.dt[is.before]
+  it.name.vlines <- ls.list$line_search_result[it.name.some$iteration.i]
   draw.rect <- function(){
+    abline(
+      v=it.name.vlines$step.size,
+      lwd=5,
+      col="#999999")
     current.vline[, rect( 
       0, -1000, step.size, 1000, 
-      col="grey90",
+      col="#00000033",
       border=search.colors[["exact"]])]
   }
   diff.grid[variable=="AUC", plot(
@@ -400,17 +414,19 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
     xaxt="n",
     las=1)]
   draw.rect()
+  grid.cex <- 0.5
   diff.grid[variable=="AUC", points(
-    step.size, value, pch=21,
+    step.size, value, pch=21, cex=grid.cex,
     bg=diff.colors[paste(differentiable)])]
   current.segs[variable=="AUC", segments(
     step.min, value.min,
     step.max, value.max,
     lwd=lwd,
     col=search.colors[["exact"]])]
+  current.pch <- 21
   current.points[variable=="AUC", points(
     step.size, value,
-    pch=20,
+    pch=current.pch,
     col=search.colors[["exact"]])]
   current.vline[, segments(
     step.size, auc.after,
@@ -425,7 +441,7 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
     las=1)]
   draw.rect()
   diff.grid[variable=="AUM", points(
-    step.size, value, pch=21,
+    step.size, value, pch=21, cex=grid.cex,
     bg=diff.colors[paste(differentiable)])]
   current.segs[variable=="AUM", segments(
     step.min, value.min,
@@ -434,7 +450,7 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
     col=search.colors[["exact"]])]
   current.points[variable=="AUM", points(
     step.size, value,
-    pch=20,
+    pch=current.pch,
     col=search.colors[["exact"]])]
   current.vline[, segments(
       step.size, aum,
@@ -448,7 +464,7 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
     range(abline.dt$intercept),
     type="n", las=1,
     xlab="",
-    ylab="threshold/constant")
+    ylab="Threshold")
   mtext("Step size", side=1, line=2, cex=par("cex"))
   draw.rect()
   ##abline.dt[, points(rep(0, .N), intercept)]
@@ -459,14 +475,29 @@ for(step.i in 1:nrow(ls.list$line_search_result)){
   current.intersections[, points(
     this.next.step, this.next.thresh,
     col=search.colors[["exact"]])]
+  rbindlist(prev.intersection.list)[, text(
+    this.next.step, this.next.thresh, iteration.i, adj=c(1,0.5))]
+  if(nrow(it.name.vlines))text(
+    it.name.vlines$step.size,
+    0.8,
+    it.name.some$maxIterations.name,
+    srt=90,
+    adj=c(0,1))
+  legend(
+    'topleft', c("grid", "proposed"),
+    col=c("black","red"), pch=1, lty=c(0,1), bg="white",
+    cex=0.75)
   ##print(gg)
   dev.off()
-  frame.list[[step.i]] <- sprintf("
+  frame.list[[iteration.i]] <- sprintf("
 \\begin{frame}
   \\frametitle{AUM/AUC line search, iteration %d}
   \\includegraphics[width=\\textwidth]{figure-line-search-example-%d}
 \\end{frame}
-",step.i,step.i)
+",iteration.i,iteration.i)
+  prev.intersection.list[[iteration.i+1]] <- current.intersections[
+    which.min(this.next.step),
+    .(iteration.i=iteration.i+1, this.next.step, this.next.thresh)]
 }
 cat(paste(frame.list, collapse="\n"), file="figure-line-search-example.tex")
 system("pdflatex HOCKING-slides-toronto")

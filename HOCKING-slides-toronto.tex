@@ -172,13 +172,15 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   Hocking, Hillman, \emph{Journal of Machine Learning Research} (2022).
 
   Barr, Hocking, Morton, Thatcher, Shaw, \emph{TransAI} (2022).
+
+  Proposal: track how thresholds in error plot change with step size.
   
 \end{frame}
 
 \begin{frame}
   \frametitle{Proposed line search algorithm uses AUC/AUM structure}
 
-  When learning a linear model, 
+  Theorem: when learning a linear model, 
   \begin{itemize}
   \item AUC is piecewise constant, and
   \item AUM is piecewise linear,
@@ -197,17 +199,23 @@ possible changes in slope of AUM / values of AUC (orange dots).
 
 \begin{frame}
   \frametitle{Complexity analysis of proposed algorithm}
-  For $N$ labeled observations, worst case $O(N)$ space, and
+
+  For $N$ labeled observations, input $N$ threshold line
+  slope/intercept values. Intersection points stored in a C++ STL map
+  (red-black tree, sorted by step size), $O(\log N)$ insertion, $O(1)$
+  lookup of next intersection. Overall, worst case $O(N)$ space,
   \begin{description}
-  \item[min.aum: keep doing line search iterations until first AUM
-    increase.] Same as exactQ time.
-  \item[grid: standard grid search.] Linear $O(N\log N)$ time, but
+  \item[grid: standard grid search.] Linear $O(N\log N)$ time per step, but
     potentially slow for a sub-optimal grid search.
-  \item[exactQ: all line search iterations.] Quadratic $O(N^2\log N)$
-    time, large step sizes, small number of steps.
-  \item[exactL: only first $N$ line search iterations.] Linear $O(N\log N)$ time,
-    relatively small step sizes chosen, relatively large number of
-    steps overall in gradient descent.
+  \item[exact.linear: only first $N$ line search iterations.] Linear
+    $O(N\log N)$ time per step, relatively small step sizes chosen,
+    relatively large number of steps overall in gradient descent.
+  \item[exact.quadratic: all line search iterations.] Quadratic
+    $O(N^2)$ intersections, $O(N^2\log N)$ time per step, large step
+    sizes, small number of steps.
+  \item[exact.first.min: keep doing line search iterations until first AUM
+    increase.] Same as exactQ time in worst case, but may be faster on
+    average.
   \end{description}
 \end{frame}
 
@@ -216,7 +224,7 @@ possible changes in slope of AUM / values of AUC (orange dots).
 \begin{frame}
   \frametitle{AUM gradient descent results in increased train AUC for
     a real changepoint problem}
-
+ 
 Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 
 \includegraphics[height=3.7cm]{figure-aum-optimized-iterations.png}
