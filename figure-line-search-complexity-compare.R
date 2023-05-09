@@ -852,11 +852,11 @@ some.folds <- rbind(
 select.auc <- max.valid.auc[data.name=="H3K4me3_PGP_immune" & cv.type=="equal_labels" & aum.type=="count" & init.name=="IntervalRegressionCV"]
 select.auc <- max.valid.auc[data.name=="systematic" & cv.type=="profileSize" & aum.type=="rate" & init.name=="IntervalRegressionCV"]
 disp.names <- c(
+  initial="initial",
   min.aum="first min(proposed)",
   grid="grid",
   exactQ="quadratic(proposed)",
-  exactL="linear(proposed)",
-  initial="initial")
+  exactL="linear(proposed)")
 one_set <- function(DT){
   DT[
     data.name=="H3K4me3_TDH_immune" & cv.type=="equal_labels" &
