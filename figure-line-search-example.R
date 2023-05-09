@@ -302,7 +302,7 @@ frame.list <- list()
 prev.intersection.list <- list(data.table(
   iteration.i=1, this.next.step=0, this.next.thresh=1.1))
 for(iteration.i in 1:nrow(ls.list$line_search_result)){
-  offset <- 0.015
+  offset <- if(iteration.i==8)1000 else 0.015
   current.vline <- ls.list$line_search_result[iteration.i][, `:=`(
     step.after=step.size+offset,
     aum.after=aum+offset*aum.slope.after
@@ -404,7 +404,7 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
       lwd=5,
       col="#999999")
     current.vline[, rect( 
-      0, -1000, step.size, 1000, 
+      0, -1000, if(iteration.i==8)1000 else step.size, 1000, 
       col="#00000033",
       border=search.colors[["exact"]])]
   }
