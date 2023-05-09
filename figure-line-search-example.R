@@ -386,7 +386,7 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
     scale_y_continuous("")
   png(
     sprintf("figure-line-search-example-%d.png", iteration.i),
-    width=6, height=5, units="in", res=300)
+    width=6, height=4.7, units="in", res=300)
   lwd <- 2
   layout(rbind(1, 2, 3, 3, 3, 3))
   left.lines <- 4.5
@@ -394,7 +394,7 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
   ax.label.offset <- 1.5
   par(
     mar=c(0,left.lines,other.lines,other.lines),
-    cex=1.3)
+    cex=1.2)
   is.before <- it.name.dt$iteration.i <= iteration.i
   it.name.some <- it.name.dt[is.before]
   it.name.vlines <- ls.list$line_search_result[it.name.some$iteration.i]
@@ -491,13 +491,16 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
   dev.off()
   frame.list[[iteration.i]] <- sprintf("
 \\begin{frame}
-  \\frametitle{AUM/AUC line search, iteration %d}
-  \\includegraphics[width=\\textwidth]{figure-line-search-example-%d}
+  \\frametitle{Proposed complete AUC/AUM line search, iteration %d}
+%s\n\n
+  \\includegraphics[width=\\textwidth]{figure-line-search-example-%d}\n\n
 \\end{frame}
-",iteration.i,iteration.i)
+",iteration.i,if(iteration.i>1)"AUC/AUM values completely known within shaded grey region." else "AUC/AUM values known only at red vertical line.",iteration.i)
   prev.intersection.list[[iteration.i+1]] <- current.intersections[
     which.min(this.next.step),
     .(iteration.i=iteration.i+1, this.next.step, this.next.thresh)]
 }
 cat(paste(frame.list, collapse="\n"), file="figure-line-search-example.tex")
 system("pdflatex HOCKING-slides-toronto")
+
+

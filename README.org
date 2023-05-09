@@ -44,6 +44,9 @@ Source:
 
 ** 4 May 2023
 
+JSM Slides "Efficient line search optimization of penalty functions in
+  supervised changepoint detection," [[file:HOCKING-slides-toronto.pdf][PDF]], [[file:HOCKING-slides-toronto.tex][LaTeX source]].
+
 [[file:figure-line-search-example.R]] make figure/demo for new
 paper/slides.
 

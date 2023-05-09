@@ -160,7 +160,7 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   test AUC than previous algorithms.
 \end{frame}
 
-\section{Proposed line search algorithm for surrogate loss: Area Under Min\{FP,FN\} (AUM)}  
+\section{Proposed complete line search algorithm for surrogate loss: Area Under Min\{FP,FN\} (AUM)} 
 
 \begin{frame}
   \frametitle{Large AUC $\approx$ small Area Under Min(FP,FN) (AUM)} 
@@ -169,9 +169,9 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 
   \includegraphics[height=1.3in]{figure-more-than-one-binary-aum}
 
-  Hocking, Hillman, \emph{Journal of Machine Learning Research} (2022).
-
   Barr, Hocking, Morton, Thatcher, Shaw, \emph{TransAI} (2022).
+
+  Hocking, Hillman, \emph{Journal of Machine Learning Research} (2023).
 
   Proposal: track how thresholds in error plot change with step size.
   
@@ -201,25 +201,28 @@ possible changes in slope of AUM / values of AUC (orange dots).
   \frametitle{Complexity analysis of proposed algorithm}
 
   For $N$ labeled observations, input $N$ threshold line
-  slope/intercept values. Intersection points stored in a C++ STL map
-  (red-black tree, sorted by step size), $O(\log N)$ insertion, $O(1)$
-  lookup of next intersection. Overall, worst case $O(N)$ space,
+  slope/intercept values. Possible next intersection points stored in
+  a C++ STL map (red-black tree, sorted by step size), $O(\log N)$
+  time insertion, $O(1)$ lookup of next intersection. Worst case $O(N)$
+  space.
+  %$O([N+I]\log N)$ time for $I$ iterations.
   \begin{description}
-  \item[grid: standard grid search.] Linear $O(N\log N)$ time per step, but
-    potentially slow for a sub-optimal grid search.
-  \item[exact.linear: only first $N$ line search iterations.] Linear
+  \item[grid: standard grid search.] $O(G N\log N)$ time per step, 
+    for $G$ grid points.
+  \item[linear(proposed): only first $N$ intersections.]
     $O(N\log N)$ time per step, relatively small step sizes chosen,
     relatively large number of steps overall in gradient descent.
-  \item[exact.quadratic: all line search iterations.] Quadratic
-    $O(N^2)$ intersections, $O(N^2\log N)$ time per step, large step
-    sizes, small number of steps.
-  \item[exact.first.min: keep doing line search iterations until first AUM
-    increase.] Same as exactQ time in worst case, but may be faster on
-    average.
+  \item[quadratic(proposed): all $O(N^2)$ intersections.]
+    $O(N^2\log N)$ time per step, large step sizes, small number of
+    steps.
+  \item[first min(proposed): keep iterating until first AUM increase.]
+    Same as quadratic in worst case, but may be faster on average (it
+    was faster than both quadratic and linear for the example on the
+    previous slide).
   \end{description}
 \end{frame}
 
-\section{Empirical results: increased speed and accuracy using proposed exact line search}
+\section{Empirical results: increased speed and comparable accuracy using proposed complete line search} 
 
 \begin{frame}
   \frametitle{AUM gradient descent results in increased train AUC for
@@ -241,11 +244,18 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 \end{frame}
 
 \begin{frame}
-  \frametitle{Proposed exact search consistently faster than grid search}
+  \frametitle{Proposed search consistently faster than grid search}
 
-  Downloaded supervised change-point detection data set
-  H3K4me3\_TDH\_immune from UCI Machine Learning Repository,
-  \url{https://archive.ics.uci.edu/ml/datasets/chipseq}
+  Analyzed supervised genomic change-point detection data set
+  H3K4me3\_TDH\_immune ($N=1073$ to 1248)
+%     > subtrain.sizes[data.name=="H3K4me3_TDH_immune"]
+%             data.name      cv.type test.fold n.subtrain.diffs
+% 1: H3K4me3_TDH_immune equal_labels         1             1248
+% 2: H3K4me3_TDH_immune equal_labels         2             1200
+% 3: H3K4me3_TDH_immune equal_labels         3             1197
+% 4: H3K4me3_TDH_immune equal_labels         4             1073
+  from UCI Machine Learning Repository,
+  {\scriptsize \url{https://archive.ics.uci.edu/ml/datasets/chipseq},}
   Train/test splits defined via 4-fold CV, linear model initialized by
   minimizing regularized convex loss (surrogate for label error,
   Hocking \emph{et al.} ICML 2013), keep doing AUM rate gradient
@@ -254,21 +264,28 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
   \includegraphics[width=\textwidth]{figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV-seconds}
 
   \begin{description}
-  \item[min.aum:] proposed, keep iterating until first AUM
+  \item[first min(proposed):] keep iterating until first AUM
     increase.
   \item[grid:] search over step
     size$\in\{10^{-9},10^{-8},\dots,10^1,1^0\}$.
-  \item[exactQ:] proposed, all line search iterations.
-  \item[exactL:] proposed, only first $N$ line search iterations.
+  \item[quadratic(proposed):] all line search iterations.
+  \item[linear(proposed):] only first $N$ line search iterations.
   \end{description}
 \end{frame}
 
 \begin{frame}
-  \frametitle{Proposed exact search has similar accuracy as grid search}
+  \frametitle{Proposed search has similar accuracy as grid search}
 
-  Downloaded supervised change-point detection data set
-  H3K4me3\_TDH\_immune from UCI Machine Learning Repository,
-  \url{https://archive.ics.uci.edu/ml/datasets/chipseq}
+  Analyzed supervised genomic change-point detection data set
+  H3K4me3\_TDH\_immune ($N=1073$ to 1248)
+%     > subtrain.sizes[data.name=="H3K4me3_TDH_immune"]
+%             data.name      cv.type test.fold n.subtrain.diffs
+% 1: H3K4me3_TDH_immune equal_labels         1             1248
+% 2: H3K4me3_TDH_immune equal_labels         2             1200
+% 3: H3K4me3_TDH_immune equal_labels         3             1197
+% 4: H3K4me3_TDH_immune equal_labels         4             1073
+  from UCI Machine Learning Repository,
+  {\scriptsize \url{https://archive.ics.uci.edu/ml/datasets/chipseq},}
   Train/test splits defined via 4-fold CV, linear model initialized by
   minimizing regularized convex loss (surrogate for label error,
   Hocking \emph{et al.} ICML 2013), keep doing AUM rate gradient
@@ -277,12 +294,12 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
   \includegraphics[width=\textwidth]{figure-line-search-complexity-compare-H3K4me3_TDH_immune-equal_labels-rate-IntervalRegressionCV-initial}
 
   \begin{description}
-  \item[min.aum:] proposed, keep iterating until first AUM
+  \item[first min(proposed):] keep iterating until first AUM
     increase.
   \item[grid:] search over step
     size$\in\{10^{-9},10^{-8},\dots,10^1,1^0\}$.
-  \item[exactQ:] proposed, all line search iterations.
-  \item[exactL:] proposed, only first $N$ line search iterations.
+  \item[quadratic(proposed):] all line search iterations.
+  \item[linear(proposed):] only first $N$ line search iterations.
   \end{description}
 \end{frame}
 
@@ -292,26 +309,26 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 \begin{frame}
   \frametitle{Discussion and Conclusions}
   \begin{itemize}
-  \item ROC curves are used to evaluate binary classification and
-    changepoint detection algorithms.
+  \item Area Under the ROC Curve (AUC) is used to evaluate binary
+    classification and changepoint detection algorithms.
   % \item In changepoint detection there can be loops in ROC curves, so
   %   maximizing AUC greater than 1 is not be desirable.
   % \item In changepoint detection, maximizing Area Under ROC curve is
   %   non-trivial even for the train set with unconstrained
   %   predictions.
-  \item A new loss function, AUM=Area Under Min(FP,FN),
-    is a differentiable surrogate of the sum of Min(FP,FN) over
-    all points on the ROC curve.
-  \item We propose new gradient descent algorithm with efficient line
-    search, for optimizing AUM/AUC.
+  \item Hocking, Hillman, \emph{Journal of Machine Learning Research}
+    (2023), proposed AUM=Area Under Min(FP,FN), a new
+    differentiable surrogate loss for AUC optimization.
+  \item In this talk we proposed new gradient descent algorithms with
+    efficient complete line search, for optimizing AUM/AUC.
+  \item Empirical results provide evidence that proposed complete line
+    search is consistently faster than grid search, and has 
+    comparable accuracy (in terms of max validation AUC).
   \item Implementations available in R/C++ and python:
     {\scriptsize
     \url{https://cloud.r-project.org/web/packages/aum/} (R/C++ line search)
     \url{https://tdhock.github.io/blog/2022/aum-learning/} (pytorch AUM loss)
     }
-  \item Empirical results provide evidence that proposed exact line
-    search is consistently faster than grid search, and can be more
-    accurate (in terms of max validation AUC).
   \item Future work: non-linear learning algorithms that use AUM
     minimization as a surrogate for AUC maximization.
   \end{itemize}
@@ -325,28 +342,5 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
   Contact: toby.hocking@nau.edu
 
 \end{frame} 
-
-\begin{frame}
-  \frametitle{Algorithm inputs: predictions and label error functions}
-
-  \begin{itemize}
-  \item Each observation $i\in\{1,\dots,n\}$ has a predicted value
-    $\hat y_i\in\mathbb R$.
-  \item Breakpoints
-  $b\in\{1,\dots, B\}$ used to represent label error via tuple
-  $(v_b, \Delta\text{FP}_b, \Delta\text{FN}_b, \mathcal I_b)$.
-\item There are changes $\Delta\text{FP}_b, \Delta\text{FN}_b$ at
-  predicted value $v_b\in\mathbb R$ in error function
-  $\mathcal I_b\in\{1,\dots,n\}$.
-  \end{itemize}
-
-  \parbox{0.49\textwidth}{
-    Binary classification\\
-  \includegraphics[width=0.49\textwidth]{figure-more-than-one-binary-errors}
-}\parbox{0.49\textwidth}{
-  Changepoint detection\\
-  \includegraphics[width=0.49\textwidth]{figure-fn-not-monotonic-error-standAlone}}
-
-\end{frame}
 
 \end{document}
