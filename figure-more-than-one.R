@@ -69,11 +69,19 @@ for(profile.i in seq_along(profile.list)){
   roc.dt.list[[profile.i]] <- data.table(model, roc.list$roc)
   auc.dt.list[[profile.i]] <- with(roc.list, data.table(model, auc, aum))
 }
-roc.dt <- do.call(rbind, roc.dt.list)
+roc.dt <- do.call(rbind, roc.dt.list)[
+, aum := min.fp.fn*(max.thresh-min.thresh)
+][
+, AUM := sum(ifelse(is.finite(aum), aum, 0)), by=model
+][
+, `:=`(FP=fp, FN=fn, `min(FP,FN)`=min.fp.fn, Model = factor(model, model.ord))
+][
+, FNR := 1-TPR
+][
+, `min(FPR,FNR)` := pmin(FPR,FNR)
+]
+
 auc.dt <- do.call(rbind, auc.dt.list)
-roc.dt[, aum := min.fp.fn*(max.thresh-min.thresh)]
-roc.dt[, AUM := sum(ifelse(is.finite(aum), aum, 0)), by=model]
-roc.dt[, `:=`(FP=fp, FN=fn, `min(FP,FN)`=min.fp.fn)]
 fp.fn.dt <- data.table::melt(roc.dt, measure.vars=c("FP", "FN", "min(FP,FN)"))
 err.sizes <- c(
   FP=3,
@@ -83,6 +91,10 @@ err.colors <- c(
   FP="red",
   FN="deepskyblue",
   "min(FP,FN)"="black")
+rate.names <- function(x)structure(x, names=gsub(
+  "(?<=[PN])", "R", names(x), perl=TRUE))
+rate.sizes <- rate.names(err.sizes)
+rate.colors <- rate.names(err.colors)
 ggplot()+
   facet_grid(model ~ ., labeller=label_both)+
   theme_bw()+
@@ -188,12 +200,10 @@ png("figure-more-than-one-binary.png", width=5, height=2, units="in", res=200)
 print(gg)
 dev.off()
 
-fp.fn.dt[, Model := factor(model, model.ord)]
 leg <- "Error type"
 gg <- ggplot()+
   facet_grid(. ~ Model + AUM, labeller=label_both)+
   theme_bw()+
-  theme(panel.spacing=grid::unit(0, "lines"))+
   geom_rect(aes(
     xmin=min.thresh, xmax=max.thresh,
     ymin=0, ymax=value),
@@ -207,10 +217,46 @@ gg <- ggplot()+
     data=some(fp.fn.dt))+
   scale_color_manual(leg, values=err.colors)+
   scale_size_manual(leg, values=err.sizes)+
-  scale_x_continuous("Constant added to predictions")+
-  scale_y_continuous("Label errors")
+  scale_x_continuous(
+    "Constant added to predictions",
+    breaks=seq(0, 10, by=2))+
+  scale_y_continuous("Label errors", breaks=seq(0, 10, by=2))
 png(
   "figure-more-than-one-binary-aum.png", 
+  width=6, height=2, units="in", res=200)
+print(gg)
+dev.off()
+
+roc.rate <- data.table(roc.dt)[
+, aum := `min(FPR,FNR)`*(max.thresh-min.thresh)
+][
+, AUM := sum(ifelse(is.finite(aum), aum, 0)), by=model
+]
+fpr.fnr.dt <- data.table::melt(
+  roc.rate,
+  measure.vars=c("FPR", "FNR", "min(FPR,FNR)"))
+gg <- ggplot()+
+  facet_grid(. ~ Model + AUM, labeller=label_both)+
+  theme_bw()+
+  geom_rect(aes(
+    xmin=min.thresh, xmax=max.thresh,
+    ymin=0, ymax=value),
+    color="grey",
+    fill="grey",
+    data=some(fpr.fnr.dt[variable=="min(FPR,FNR)"]))+
+  geom_segment(aes(
+    min.thresh, value,
+    color=variable, size=variable,
+    xend=max.thresh, yend=value),
+    data=some(fpr.fnr.dt))+
+  scale_color_manual(leg, values=rate.colors)+
+  scale_size_manual(leg, values=rate.sizes)+
+  scale_x_continuous(
+    "Constant added to predictions",
+    breaks=seq(0, 10, by=2))+
+  scale_y_continuous("Label errors", breaks=seq(0, 1, by=0.5))
+png(
+  "figure-more-than-one-binary-aum-rate.png", 
   width=6, height=2, units="in", res=200)
 print(gg)
 dev.off()
@@ -245,6 +291,56 @@ gg <- ggplot()+
 print(gg)
 png(
   "figure-more-than-one-binary-dots.png", 
+  width=6, height=2, units="in", res=200)
+print(gg)
+dev.off()
+
+rate.grid <- seq(0, 1, by=0.1)
+grid.dt <- data.table(expand.grid(
+  FPR=rate.grid, TPR=rate.grid
+))[
+, FNR := 1-TPR
+][
+, `min(FPR,FNR)` := pmin(FPR,FNR)
+][]
+text.off <- 0.02
+gg <- ggplot()+
+  theme_bw()+
+  scale_fill_gradient(
+    "min(FPR,FNR)",
+    low="white",
+    high="purple")+
+  geom_tile(aes(
+    FPR, TPR, fill=`min(FPR,FNR)`),
+    data=grid.dt)+
+  geom_path(aes(
+    FPR, TPR),
+    data=some(roc.join))+
+  ## ggrepel::geom_text_repel(aes(
+  ##   FPR, TPR, label=min.FPR.FNR),
+  ##   size=3,
+  ##   data=some(roc.join))+
+  geom_text(aes(
+    FPR+text.off, TPR-text.off, label=min.FPR.FNR),
+    hjust=0, vjust=1,
+    size=2.5,
+    data=some(roc.join))+
+  geom_point(aes(
+    FPR, TPR),
+    data=some(roc.join))+
+  facet_grid(.~Model+`sum(min)`, labeller=label_both)+
+  coord_equal()+
+  scale_x_continuous(
+    "False Positive Rate (FPR)",
+    labels=c("0","0.5","1"),
+    breaks = seq(0, 1, by=0.5))+
+  scale_y_continuous(
+    "True Positive Rate\n(TPR = 1-FNR)",
+    breaks = seq(0, 1, by=0.5),
+    labels=c("0","0.5","1"))
+print(gg)
+png(
+  "figure-more-than-one-binary-heat.png", 
   width=6, height=2, units="in", res=200)
 print(gg)
 dev.off()

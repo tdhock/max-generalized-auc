@@ -1,61 +1,75 @@
 library(data.table)
 library(animint2)
-auc.improved <- readRDS("auc.improved.rds")
-
-auc.improved[, set.fold := paste0(set.name, "/", fold)]
+auc.optimized <- readRDS("auc.improved.rds")[
+  initialization=="min.error"
+][
+, predictions := sub("improved", "optimized", pred.name)
+]
+auc.optimized[, set.fold := paste0(set.name, "/", fold)]
 roc.dt.list <- list()
-for(test.fold.i in 1:nrow(auc.improved)){
-  one.fold <- auc.improved[test.fold.i]
+for(test.fold.i in 1:nrow(auc.optimized)){
+  one.fold <- auc.optimized[test.fold.i]
   roc.dt.list[[test.fold.i]] <- one.fold[, data.table(
-    set.fold, pred.name, roc[[1]])]
+    set.fold, predictions, roc[[1]])]
 }
 (roc.dt <- do.call(rbind, roc.dt.list))
 roc.dt[, fn0 := fn-min(fn), by=.(set.fold)]
 roc.dt[, min.fp.fn := ifelse(fp<fn0, fp, fn0)]
+roc.dt[, min.diff := c(0,diff(min.fp.fn)), by=.(set.fold,predictions)]
+roc.dt[, cum.abs.diff := cumsum(abs(min.diff)), by=.(set.fold,predictions)]
+text.info <- roc.dt[
+  cum.abs.diff==0
+][
+, data.table(text.thresh=max.thresh)[which.max(max.thresh)]
+, by=.(set.fold,predictions)
+]
 roc.dt[, width := max.thresh-min.thresh]
 roc.dt[, area := ifelse(min.fp.fn==0, 0, min.fp.fn*width)]
 (aum.dt <- roc.dt[, .(
   aum=sum(area)
-), by=.(set.fold, pred.name)][order(aum)])
+), by=.(set.fold, predictions)
+][
+  text.info, on=.(set.fold,predictions)
+][order(aum)])
 aum.dt[, log.aum := log10(aum+1)]
-aum.wide <- dcast(aum.dt, set.fold ~ pred.name, value.var="log.aum")
+aum.wide <- dcast(aum.dt, set.fold ~ predictions, value.var="log.aum")
 aum.wide[, status := ifelse(
-  initial==improved, "same", ifelse(
-    initial>improved, "better", "worse"))]
+  initial==optimized, "same", ifelse(
+    initial>optimized, "better", "worse"))]
 
 ggplot()+
   theme_bw()+
   theme(panel.margin=grid::unit(0, "lines"))+
   geom_point(aes(
-    auc, set.name, color=pred.name),
-    data=auc.improved)
+    auc, set.name, color=predictions),
+    data=auc.optimized)
 
-auc.improved[, accuracy.percent := 100-error.percent]
-auc.tall <- melt(auc.improved, measure.vars=c("accuracy.percent", "auc"))
+auc.optimized[, accuracy.percent := 100-error.percent]
+auc.tall <- melt(auc.optimized, measure.vars=c("accuracy.percent", "auc"))
 auc.stats <- auc.tall[, .(
   mean=mean(value),
   sd=sd(value)
-), by=.(set.name, variable, pred.name)]
-auc.only <- auc.stats[variable=="auc" & pred.name=="improved"][order(mean)]
+), by=.(set.name, variable, predictions)]
+auc.only <- auc.stats[variable=="auc" & predictions=="optimized"][order(mean)]
 set.levs <- auc.only$set.name
 auc.stats[, set.fac := factor(set.name, set.levs)]
 auc.tall[, set.fac := factor(set.name, set.levs)]
 auc.only.wide <- dcast(
-  auc.stats[variable=="auc"], set.name ~ pred.name, value.var="mean")
-auc.only.wide[, diff := improved - initial]
+  auc.stats[variable=="auc"], set.name ~ predictions, value.var="mean")
+auc.only.wide[, diff := optimized - initial]
 auc.only.wide[order(diff)]
 
 roc.wide <- dcast(
-  auc.improved,
-  set.name + fold + set.fold ~ pred.name,
+  auc.optimized,
+  set.name + fold + set.fold ~ predictions,
   value.var=c("auc", "accuracy.percent"))
 roc.wide[, auc_status := ifelse(
-  auc_initial==auc_improved, "same", ifelse(
-    auc_initial<auc_improved, "better", "worse"))]
-roc.wide[auc_initial>auc_improved]
+  auc_initial==auc_optimized, "same", ifelse(
+    auc_initial<auc_optimized, "better", "worse"))]
+roc.wide[auc_initial>auc_optimized]
 roc.wide[, accuracy.percent_status := ifelse(
-  accuracy.percent_initial==accuracy.percent_improved, "same", ifelse(
-    accuracy.percent_initial<accuracy.percent_improved, "better", "worse"))]
+  accuracy.percent_initial==accuracy.percent_optimized, "same", ifelse(
+    accuracy.percent_initial<accuracy.percent_optimized, "better", "worse"))]
 
 err.sizes <- c(
   fp=3,
@@ -65,7 +79,7 @@ err.colors <- c(
   fp="red",
   fn="deepskyblue",
   errors="black")
-roc.dt[, seg.i := 1:.N, by=.(set.fold, pred.name)]
+roc.dt[, seg.i := 1:.N, by=.(set.fold, predictions)]
 roc.dt[, mid.thresh := (min.thresh+max.thresh)/2]
 roc.tall <- melt(
   roc.dt,
@@ -77,14 +91,14 @@ status.colors <- c(
 tallrect.dt <- data.table(
   mid.thresh=seq(-10, 5, by=0.2))
 roc.dots <- roc.dt[tallrect.dt, .(
-  set.fold, pred.name, mid.thresh=i.mid.thresh, FPR, TPR
+  set.fold, predictions, mid.thresh=i.mid.thresh, FPR, TPR
 ), on=.(
   min.thresh<mid.thresh, max.thresh>mid.thresh)]
-animint(
-  title="Minimizing area under min(FP,FN)",
+viz <- animint(
+  title="Initial/optimized AUM/AUC for change-point problems",
   out.dir="figure-auc-improved-interactive",
   ## ggplot()+
-  ##   ggtitle("Data sets ordered by mean improved AUC")+
+  ##   ggtitle("Data sets ordered by mean optimized AUC")+
   ##   guides(size="none", color="none")+
   ##   theme_bw()+
   ##   theme(panel.margin=grid::unit(0, "lines"))+
@@ -92,38 +106,38 @@ animint(
   ##   facet_grid(. ~ variable, scales="free")+
   ##   geom_segment(aes(
   ##     mean+sd, set.fac,
-  ##     color=pred.name, size=pred.name,
+  ##     color=predictions, size=predictions,
   ##     xend=mean-sd, yend=set.fac),
   ##     data=auc.stats)+
-  ##   scale_size_manual(values=c(improved=2, initial=3))+
+  ##   scale_size_manual(values=c(optimized=2, initial=3))+
   ##   geom_point(aes(
   ##     mean, set.fac,
-  ##     color=pred.name),
+  ##     color=predictions),
   ##     shape=21,
   ##     size=3,
   ##     fill="white",
   ##     data=auc.stats)+
   ##   geom_point(aes(
   ##     value, set.fac,
-  ##     color=pred.name),
+  ##     color=predictions),
   ##     clickSelects="set.fold",
   ##     alpha=0.6,
   ##     size=4,
   ##     data=auc.tall)+
   ##   xlab("")+
   ##   ylab("Data set"),
-  ggplot()+
+  labelErr=ggplot()+
     ggtitle("FP/FN curves")+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "lines"))+
     theme_animint(update_axes="y")+
-    facet_grid(pred.name ~ .)+
+    facet_grid(predictions ~ .)+
     xlab("Prediction threshold")+
     ylab("Incorrectly predicted labels")+
     geom_vline(aes(
       xintercept=(min.thresh+max.thresh)/2,
       key=1),
-      data=auc.improved,
+      data=auc.optimized,
       color="grey",
       showSelected="set.fold")+
     geom_line(aes(
@@ -132,9 +146,17 @@ animint(
       color=variable, size=variable),
       data=roc.tall,
       showSelected="set.fold")+
+    geom_text(aes(
+      text.thresh-1, text.err,
+      key=1,
+      label=sprintf("AUM=%.1f", aum)),
+      hjust=1,
+      showSelected="set.fold",
+      data=aum.dt[, text.err := 0],
+      color="grey50")+
     geom_polygon(aes(
       mid.thresh, min.fp.fn, key=1),
-      color="grey",
+      fill="grey",
       data=roc.dt,
       size=0,
       showSelected="set.fold")+
@@ -149,35 +171,35 @@ animint(
     scale_color_manual(values=err.colors),
   selector.types=list(
     variable="multiple"),
-  ggplot()+
+  roc=ggplot()+
     ggtitle("ROC curves")+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "lines"))+
     geom_path(aes(
       FPR, TPR,
-      key=pred.name,
-      color=pred.name, group=pred.name),
+      key=predictions,
+      color=predictions, group=predictions),
       data=roc.dt,
       showSelected="set.fold")+
     geom_point(aes(
-      FPR, TPR, color=pred.name, key=pred.name),
+      FPR, TPR, color=predictions, key=predictions),
       fill="white",
-      data=auc.improved,
+      data=auc.optimized,
       showSelected="set.fold")+
     geom_point(aes(
-      FPR, TPR, color=pred.name, key=pred.name),
+      FPR, TPR, color=predictions, key=predictions),
       data=roc.dots,
       showSelected=c("set.fold", "mid.thresh"),
       size=4,
       alpha=0.5)+
     geom_point(aes(
-      FPR, TPR, color=pred.name, key=paste(pred.name, mid.thresh)),
+      FPR, TPR, color=predictions, key=paste(predictions, mid.thresh)),
       data=roc.dots,
       showSelected="set.fold",
       clickSelects="mid.thresh",
       size=4,
       alpha=0.5),
-  ggplot()+
+  labelAcc=ggplot()+
     ggtitle("Percent correctly predicted labels")+
     theme_bw()+
     theme_animint(width=300)+
@@ -187,14 +209,16 @@ animint(
     guides(color="none")+
     coord_equal()+
     geom_point(aes(
-      accuracy.percent_initial, accuracy.percent_improved,
-      key=set.fold,
-      color=accuracy.percent_status),
+      accuracy.percent_initial, accuracy.percent_optimized,
+      key=set.fold),
       clickSelects="set.fold",
-      alpha=0.6,
+      alpha_off=1,
+      fill_off="transparent",
+      fill="black",
+      color="black",
       size=4,
       data=roc.wide),
-  ggplot()+
+  logAUM=ggplot()+
     ggtitle("Log[Area under Min(FP,FN) + 1]")+
     theme_bw()+
     theme_animint(width=300)+
@@ -203,28 +227,31 @@ animint(
     guides(color="none")+
     scale_color_manual("Status",values=status.colors)+
     geom_point(aes(
-      initial, improved,
-      key=set.fold,
-      color=status),
+      initial, optimized,
+      key=set.fold),
       clickSelects="set.fold",
       size=4,
-      alpha=0.6,
+      alpha_off=1,
+      fill_off="transparent",
+      fill="black",
+      color="black",
       data=aum.wide)+
     coord_equal(),
-  ggplot()+
+  auc=ggplot()+
     ggtitle("Area under the ROC curve")+
     theme_bw()+
     theme_animint(width=300)+
     theme(panel.margin=grid::unit(0, "lines"))+
     geom_abline(slope=1, intercept=0, color="grey")+
-    scale_color_manual("Status",values=status.colors)+
     geom_point(aes(
-      auc_initial, auc_improved,
-      key=set.fold,
-      color=auc_status),
+      auc_initial, auc_optimized,
+      key=set.fold),
       clickSelects="set.fold",
       size=4,
-      alpha=0.6,
+      alpha_off=1,
+      fill_off="transparent",
+      fill="black",
+      color="black",
       data=roc.wide)+
     coord_equal(),
   duration=list(
@@ -234,7 +261,12 @@ animint(
     ms=500,
     variable="mid.thresh"),
   first=list(
-    set.fold="H3K27me3_RL_cancer/2",
+    set.fold="H3K4me3_XJ_immune/4",
     mid.thresh=-5
-    )
+  ),
+  source="https://github.com/tdhock/max-generalized-auc/blob/master/figure-auc-improved-interactive.R"
 )
+animint2dir(viz, viz$out.dir, open.browser=FALSE)
+if(FALSE){
+  animint2pages(viz, "2023-11-21-auc-improved")
+}

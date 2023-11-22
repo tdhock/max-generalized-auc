@@ -81,9 +81,12 @@
   \begin{itemize}
   \item Classic evaluation method from the signal processing
     literature (Egan and Egan, 1975).
-  \item For a given set of predicted scores, plot True Positive Rate
-    vs False Positive Rate, each point on the ROC curve is a different
-    threshold of the predicted scores.
+  \item ROC curve of learned $f$ is plot of True
+    Positive Rate vs False Positive Rate: each point on the ROC curve
+    is a different constant $c\in\mathbb R$ added to the predicted
+    values: $f(\mathbf x)+c$.
+  \item $c=\infty$ means always predict positive label (FPR=TPR=1).
+  \item $c=-\infty$ means always predict negative label (FPR=TPR=0).
   \item Best classifier has a point near upper left (TPR=1, FPR=0), with large
     Area Under the Curve (AUC).
   % \item Proposed idea: a new surrogate for AUC that is differentiable,
@@ -106,7 +109,7 @@
     space, using a loss function which is a differentiable surrogate
     of the sum of min(FP,FN).
   \end{itemize}
-  \includegraphics[width=\textwidth]{figure-more-than-one-binary-dots}
+  \includegraphics[width=\textwidth]{figure-more-than-one-binary-heat}
 \end{frame}
  
 \section{Problem setting 2: ROC curves for evaluating supervised changepoint algorithms}
@@ -166,9 +169,9 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \begin{frame}
   \frametitle{Large AUC $\approx$ small Area Under Min(FP,FN) (AUM)} 
   
-  \includegraphics[height=1.3in]{figure-more-than-one-binary-dots}
+  \includegraphics[height=1.3in]{figure-more-than-one-binary-heat}
 
-  \includegraphics[height=1.3in]{figure-more-than-one-binary-aum}
+  \includegraphics[height=1.3in]{figure-more-than-one-binary-aum-rate}
 
   Barr, Hocking, Morton, Thatcher, Shaw, \emph{TransAI} (2022).
 
@@ -181,7 +184,7 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 \begin{frame}
   \frametitle{Proposed line search algorithm uses AUC/AUM structure}
 
-  Theorem: when learning a linear model, 
+  Theorem: when learning a linear model, $f(\mathbf x)= \mathbf w^T \mathbf x$,
   \begin{itemize}
   \item AUC is piecewise constant, and
   \item AUM is piecewise linear,
@@ -342,6 +345,13 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 
   Contact: toby.hocking@nau.edu
 
-\end{frame} 
+\end{frame}
+
+\begin{frame}
+  \frametitle{Initial/optimized AUC/AUM for change-point problems}
+  \centering
+  \includegraphics[height=0.7\textheight]{figure-auc-improved-interactive-screenshot}
+  \url{https://tdhock.github.io/2023-11-21-auc-improved}
+\end{frame}
 
 \end{document}
