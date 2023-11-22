@@ -140,7 +140,11 @@ ggplot()+
     xmax=max.thresh),
     data=grid.roc[, ymin := ifelse(predictions=="initial", 0, 0.5)])+
   facet_wrap("set.fold")
-
+ggplot()+
+  geom_line(aes(
+    mid.thresh, percent.curve, color=predictions),
+    data=grid.roc)+
+  facet_wrap("set.fold")
 viz <- animint(
   title="Initial/optimized AUM/AUC for change-point problems",
   out.dir="figure-auc-improved-interactive",
