@@ -88,12 +88,59 @@ status.colors <- c(
   same="black",
   better="blue",
   worse="red")
-tallrect.dt <- data.table(
-  mid.thresh=seq(-10, 5, by=0.2))
-roc.dots <- roc.dt[tallrect.dt, .(
-  set.fold, predictions, mid.thresh=i.mid.thresh, FPR, TPR
-), on=.(
-  min.thresh<mid.thresh, max.thresh>mid.thresh)]
+if(FALSE){
+  tallrect.dt <- data.table(
+    mid.thresh=seq(-10, 5, by=0.2))
+  roc.dots <- roc.dt[tallrect.dt, .(
+    set.fold, predictions, mid.thresh=i.mid.thresh, FPR, TPR
+  ), on=.(
+    min.thresh<mid.thresh, max.thresh>mid.thresh)]
+}
+cum.dt <- melt(
+  roc.dt,
+  measure.vars=c("FPR","TPR"),
+  id.vars=c("mid.thresh","set.fold","predictions")
+)[
+, diff := c(0, diff(value)), by=.(set.fold,variable,predictions)
+][
+, .(L2=sqrt(sum(diff^2))), keyby=.(set.fold,predictions,mid.thresh)
+][
+, cum.L2 := cumsum(L2), by=.(set.fold,predictions)
+][]
+n.grid <- 101
+grid.dt <- cum.dt[, .(
+  cum.grid=seq(0, max(cum.L2), l=n.grid),
+  percent.curve=seq(0, 100, l=n.grid)
+), by=.(set.fold,predictions)]
+grid.thresh <- cum.dt[
+  grid.dt,
+  data.table(
+    set.fold, predictions, mid.thresh, percent.curve
+  )
+, on=.(set.fold, predictions, cum.L2=cum.grid), roll="nearest"]
+grid.roc <- roc.dt[
+  grid.thresh,
+  .(set.fold, predictions, percent.curve, 
+    min.thresh, mid.thresh, max.thresh, FPR, TPR),
+  on=.(set.fold, predictions, mid.thresh)
+]
+grid.thresh[, .(n.thresh=.N), by=.(set.fold, predictions)]
+ggplot()+
+  coord_equal()+
+  geom_point(aes(
+    FPR, TPR, color=predictions),
+    data=grid.roc)+
+  facet_wrap("set.fold")
+ggplot()+
+  geom_rect(aes(
+    ymin=ymin,
+    ymax=ymin+0.5,
+    fill=predictions,
+    xmin=min.thresh,
+    xmax=max.thresh),
+    data=grid.roc[, ymin := ifelse(predictions=="initial", 0, 0.5)])+
+  facet_wrap("set.fold")
+
 viz <- animint(
   title="Initial/optimized AUM/AUC for change-point problems",
   out.dir="figure-auc-improved-interactive",
@@ -160,13 +207,15 @@ viz <- animint(
       data=roc.dt,
       size=0,
       showSelected="set.fold")+
-    make_tallrect(tallrect.dt, "mid.thresh")+
-    ## geom_tallrect(aes(
-    ##   xmin=min.thresh, xmax=max.thresh),
-    ##   data=roc.dt,
-    ##   showSelected="set.fold",
-    ##   clickSelects="mid.thresh",
-    ##   alpha=0.5)+
+    ## make_tallrect(tallrect.dt, "mid.thresh")+
+    geom_tallrect(aes(
+      xmin=min.thresh,
+      xmax=max.thresh,
+      key=percent.curve),
+      data=grid.roc,
+      showSelected="set.fold",
+      clickSelects="percent.curve",
+      alpha=0.5)+
     scale_size_manual(values=err.sizes)+
     scale_color_manual(values=err.colors),
   selector.types=list(
@@ -186,19 +235,32 @@ viz <- animint(
       fill="white",
       data=auc.optimized,
       showSelected="set.fold")+
-    geom_point(aes(
+    geom_point(aes(#for smooth transitions.
       FPR, TPR, color=predictions, key=predictions),
-      data=roc.dots,
-      showSelected=c("set.fold", "mid.thresh"),
+      data=grid.roc,
+      showSelected=c("set.fold", "percent.curve"),
       size=4,
       alpha=0.5)+
     geom_point(aes(
-      FPR, TPR, color=predictions, key=paste(predictions, mid.thresh)),
-      data=roc.dots,
+      FPR, TPR, color=predictions, key=paste(predictions, percent.curve)),
+      data=grid.roc,
       showSelected="set.fold",
-      clickSelects="mid.thresh",
+      clickSelects="percent.curve",
       size=4,
       alpha=0.5),
+    ## geom_point(aes(#for smooth transitions.
+    ##   FPR, TPR, color=predictions, key=predictions),
+    ##   data=roc.dots,
+    ##   showSelected=c("set.fold", "mid.thresh"),
+    ##   size=4,
+    ##   alpha=0.5)+
+    ## geom_point(aes(
+    ##   FPR, TPR, color=predictions, key=paste(predictions, mid.thresh)),
+    ##   data=roc.dots,
+    ##   showSelected="set.fold",
+    ##   clickSelects="mid.thresh",
+    ##   size=4,
+    ##   alpha=0.5),
   labelAcc=ggplot()+
     ggtitle("Percent correctly predicted labels")+
     theme_bw()+
@@ -256,13 +318,12 @@ viz <- animint(
     coord_equal(),
   duration=list(
     set.fold=500,
-    mid.thresh=500),
+    percent.curve=500),
   time=list(
     ms=500,
-    variable="mid.thresh"),
+    variable="percent.curve"),
   first=list(
-    set.fold="H3K4me3_XJ_immune/4",
-    mid.thresh=-5
+    set.fold="H3K4me3_XJ_immune/4"
   ),
   source="https://github.com/tdhock/max-generalized-auc/blob/master/figure-auc-improved-interactive.R"
 )
