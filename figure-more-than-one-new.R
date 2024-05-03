@@ -24,14 +24,6 @@ profile.list <- list(
     d(5,3,0),
     d(7, 7, 0),
     d(8, 10, 0)),
-  bad=profile(
-    d(-Inf, 0, 10),
-    d(1,1,9),
-    d(2,2,8),
-    d(3,3,7),
-    d(4,4,6),
-    d(5,5,5),
-    d(8, 10, 0)),
   good=profile(
     d(-Inf, 0, 10),
     d(1,1,8),
@@ -47,7 +39,13 @@ profile.list <- list(
     d(3, 4, 3),
     d(5, 7, 3),
     d(7, 7, 0),
-    d(8, 10, 0)))
+    d(8, 10, 0)),
+  bad=profile(
+    d(-Inf, 0, 10),
+    d(3,3,7),
+    d(4,4,6),
+    d(5,5,5),
+    d(8, 10, 0)))  
 pred.dt <- data.table(problem=1, pred.log.lambda=0)
 roc.dt.list <- list()
 auc.dt.list <- list()
@@ -69,8 +67,8 @@ roc.dt <- do.call(rbind, roc.dt.list)[
 ][
 , `min(FPR,FNR)` := pmin(FPR,FNR)
 ][
-, letter := LETTERS[1:.N]
-, by=model
+, letter := c(LETTERS,letters)[1:.N]
+##, by=model
 ][]
 
 auc.dt <- do.call(rbind, auc.dt.list)
