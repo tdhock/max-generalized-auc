@@ -304,6 +304,7 @@ frame.list <- list()
 prev.intersection.list <- list(data.table(
   iteration.i=1, this.next.step=0, this.next.thresh=1.1, letters=""))
 int.tab.list <- list()
+leg.cex <- 0.7
 for(iteration.i in 1:nrow(ls.list$line_search_result)){
   plist <- rbindlist(prev.intersection.list)
   offset <- if(iteration.i==8)1000 else 0.015
@@ -454,6 +455,12 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
       ylab="AUM",
       xaxt="n",
       las=1)]
+    legend(
+      'bottomleft', "non-differentiable",
+      pt.bg=diff.colors[["FALSE"]],
+      pch=21,
+      col="black",
+      cex=leg.cex)
     draw.rect()
     diff.grid[variable=="AUM", points(
       step.size, value, pch=21,
@@ -503,8 +510,12 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
       adj=c(0,1))
     legend(
       'topleft', c("grid", "proposed"),
-      col=c("black","red"), pch=1, lty=c(0,1), bg="white",
-      cex=1)
+      pt.bg=c("black","white"),
+      col=c("black","red"),
+      pch=21,
+      lty=c(0,1),
+      bg="white",
+      cex=leg.cex)
     ##print(gg)
   }
   png(
