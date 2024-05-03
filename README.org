@@ -49,7 +49,7 @@ Source:
 
 [[file:figure-more-than-one-new.R]] makes new figures for AUM line search paper:
 
-[[file:figure-more-than-one-binary-heat.png]]
+[[file:figure-more-than-one-new-binary-heat.png]]
 
 [[file:figure-more-than-one-new-binary-aum-rate.png]]
 
