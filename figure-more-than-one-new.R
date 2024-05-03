@@ -235,7 +235,7 @@ gg <- ggplot()+
     "Constant added to predictions",
     limits=c(0,9),
     breaks=seq(0, 10, by=2))+
-  scale_y_continuous("Label errors", breaks=seq(0, 1, by=0.5))
+  scale_y_continuous("Label error rate", breaks=seq(0, 1, by=0.5))
 print(gg)
 png(
   "figure-more-than-one-new-binary-aum-rate.png", 
