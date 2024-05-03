@@ -191,7 +191,9 @@ pred.points <- rbindlist(pred.points.list)
 diff.grid <- rbindlist(diff.grid.list)
 ls.points <- rbindlist(ls.points.list)
 ls.segs <- rbindlist(ls.segs.list)
-abline.dt <- rbindlist(abline.dt.list)
+abline.dt <- rbindlist(abline.dt.list)[
+, letter := letters[1:.N]
+][]
 vline.dt <- rbindlist(vline.dt.list)
 
 ggplot()+
@@ -300,7 +302,8 @@ it.name.dt <- data.table(
   maxIterations.name=it.name.vec)
 frame.list <- list()
 prev.intersection.list <- list(data.table(
-  iteration.i=1, this.next.step=0, this.next.thresh=1.1))
+  iteration.i=1, this.next.step=0, this.next.thresh=1.1, letters=""))
+int.tab.list <- list()
 for(iteration.i in 1:nrow(ls.list$line_search_result)){
   offset <- if(iteration.i==8)1000 else 0.015
   current.vline <- ls.list$line_search_result[iteration.i][, `:=`(
@@ -311,12 +314,19 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
     this.intercept=intercept+slope*current.vline$step.size
   )], key=c("this.intercept","slope"))[, `:=`(
     next.slope=c(slope[-1],NA),
-    next.intercept=c(intercept[-1],NA)
+    next.intercept=c(intercept[-1],NA),
+    next.letter=c(letter[-1],NA)
   )][, `:=`(
-    this.next.step=(intercept-next.intercept)/(next.slope-slope)
+    this.next.step=(intercept-next.intercept)/(next.slope-slope),
+    letters=paste0(letter,next.letter)
   )][, `:=`(
     this.next.thresh=this.next.step*slope+intercept
   )][is.finite(this.next.step) & current.vline$step.size < this.next.step][]
+  print(current.intersections)
+  int.tab.list[[iteration.i]] <- data.table(
+    it=iteration.i,
+    ##step=current.vline$step.size,
+    "next"=paste(current.intersections$letters,collapse=","))
   current.segs <- ls.segs[
   , search := "exact"][step.max <= current.vline$step.size]
   current.points <- ls.points[step.size <= current.vline$step.size]
@@ -506,12 +516,20 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
 ",iteration.i,if(iteration.i>1)"AUC/AUM values completely known within shaded grey region." else "AUC/AUM values known only at red vertical line.",iteration.i)
   prev.intersection.list[[iteration.i+1]] <- current.intersections[
     which.min(this.next.step),
-    .(iteration.i=iteration.i+1, this.next.step, this.next.thresh)]
+    .(iteration.i=iteration.i+1, this.next.step, this.next.thresh, letters)]
 }
 cat(paste(frame.list, collapse="\n"), file="figure-line-search-example.tex")
 system("pdflatex HOCKING-slides-toronto")
+
 png(
-  sprintf("figure-line-search-example.png", iteration.i),
+  "figure-line-search-example.png",
   width=8, height=4.7, units="in", res=300)
 plot_iteration(1.5)
+abline.dt[, text(0, intercept, letter, adj=c(1,0.5), cex=0.9)]
+rbindlist(prev.intersection.list)[, text(
+  this.next.step, this.next.thresh, paste0(letters,"  "), adj=c(1,0.5))]
 dev.off()
+
+library(xtable)
+xt <- xtable(rbindlist(int.tab.list))
+print(xt,type="latex",include.rownames=FALSE)
