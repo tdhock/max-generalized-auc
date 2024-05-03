@@ -45,6 +45,14 @@ Source:
   
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
+** 3 May 2023
+
+[[file:figure-more-than-one-new.R]] makes new figures for AUM line search paper:
+
+[[file:figure-more-than-one-binary-heat.png]]
+
+[[file:figure-more-than-one-new-binary-aum-rate.png]]
+
 ** 21 Nov 2023
 
 [[file:figure-more-than-one.R]] modified to make heat map version of SM
