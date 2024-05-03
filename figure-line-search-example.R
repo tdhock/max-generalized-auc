@@ -384,110 +384,118 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
       data=data.table(search="exact",variable="AUC",current.vline))+
     xlab("Step size")+
     scale_y_continuous("")
-  png(
-    sprintf("figure-line-search-example-%d.png", iteration.i),
-    width=6, height=4.7, units="in", res=300)
-  lwd <- 2
-  layout(rbind(1, 2, 3, 3, 3, 3))
-  left.lines <- 4.5
-  other.lines <- 1
-  ax.label.offset <- 1.5
-  par(
-    mar=c(0,left.lines,other.lines,other.lines),
-    cex=1.2)
-  is.before <- it.name.dt$iteration.i <= iteration.i
-  it.name.some <- it.name.dt[is.before]
-  it.name.vlines <- ls.list$line_search_result[it.name.some$iteration.i]
-  draw.rect <- function(){
-    abline(
-      v=it.name.vlines$step.size,
-      lwd=5,
-      col="#999999")
-    current.vline[, rect( 
-      0, -1000, if(iteration.i==8)1000 else step.size, 1000, 
-      col="#00000033",
-      border=search.colors[["exact"]])]
-  }
-  diff.grid[variable=="AUC", plot(
-    step.size, value, type="n",
-    ylab="AUC",
-    xaxt="n",
-    las=1)]
-  draw.rect()
-  grid.cex <- 0.5
-  diff.grid[variable=="AUC", points(
-    step.size, value, pch=21, cex=grid.cex,
-    bg=diff.colors[paste(differentiable)])]
-  current.segs[variable=="AUC", segments(
-    step.min, value.min,
-    step.max, value.max,
-    lwd=lwd,
-    col=search.colors[["exact"]])]
-  current.pch <- 21
-  current.points[variable=="AUC", points(
-    step.size, value,
-    pch=current.pch,
-    col=search.colors[["exact"]])]
-  current.vline[, segments(
-    step.size, auc.after,
-    step.after, auc.after,
-    lwd=lwd,
-    col=search.colors[["exact"]])]
-  par(mar=c(0,left.lines,other.lines,other.lines))
-  diff.grid[variable=="AUM", plot(
-    step.size, value, type="n",
-    ylab="AUM",
-    xaxt="n",
-    las=1)]
-  draw.rect()
-  diff.grid[variable=="AUM", points(
-    step.size, value, pch=21, cex=grid.cex,
-    bg=diff.colors[paste(differentiable)])]
-  current.segs[variable=="AUM", segments(
-    step.min, value.min,
-    step.max, value.max,
-    lwd=lwd,
-    col=search.colors[["exact"]])]
-  current.points[variable=="AUM", points(
-    step.size, value,
-    pch=current.pch,
-    col=search.colors[["exact"]])]
-  current.vline[, segments(
+  plot_iteration <- function(point.cex=1){
+    lwd <- 2
+    layout(rbind(1, 2, 3, 3, 3, 3))
+    left.lines <- 4.5
+    other.lines <- 1
+    ax.label.offset <- 1.5
+    par(
+      mar=c(0,left.lines,other.lines,other.lines),
+      cex=1.2)
+    is.before <- it.name.dt$iteration.i <= iteration.i
+    it.name.some <- it.name.dt[is.before]
+    it.name.vlines <- ls.list$line_search_result[it.name.some$iteration.i]
+    draw.rect <- function(){
+      abline(
+        v=it.name.vlines$step.size,
+        lwd=5,
+        col="#999999")
+      current.vline[, rect( 
+        0, -1000, if(iteration.i==8)1000 else step.size, 1000, 
+        col="#00000033",
+        border=search.colors[["exact"]])]
+    }
+    diff.grid[variable=="AUC", plot(
+      step.size, value, type="n",
+      ylab="AUC",
+      xaxt="n",
+      las=1)]
+    draw.rect()
+    grid.cex <- 0.5
+    diff.grid[variable=="AUC", points(
+      step.size, value, pch=21,
+      cex=point.cex*grid.cex,
+      bg=diff.colors[paste(differentiable)])]
+    current.segs[variable=="AUC", segments(
+      step.min, value.min,
+      step.max, value.max,
+      lwd=lwd,
+      col=search.colors[["exact"]])]
+    current.pch <- 21
+    current.points[variable=="AUC", points(
+      step.size, value,
+      pch=current.pch,
+      cex=point.cex,
+      col=search.colors[["exact"]])]
+    current.vline[, segments(
+      step.size, auc.after,
+      step.after, auc.after,
+      lwd=lwd,
+      col=search.colors[["exact"]])]
+    par(mar=c(0,left.lines,other.lines,other.lines))
+    diff.grid[variable=="AUM", plot(
+      step.size, value, type="n",
+      ylab="AUM",
+      xaxt="n",
+      las=1)]
+    draw.rect()
+    diff.grid[variable=="AUM", points(
+      step.size, value, pch=21,
+      cex=point.cex*grid.cex,
+      bg=diff.colors[paste(differentiable)])]
+    current.segs[variable=="AUM", segments(
+      step.min, value.min,
+      step.max, value.max,
+      lwd=lwd,
+      col=search.colors[["exact"]])]
+    current.points[variable=="AUM", points(
+      step.size, value,
+      pch=current.pch,
+      cex=point.cex,
+      col=search.colors[["exact"]])]
+    current.vline[, segments(
       step.size, aum,
       step.after, aum.after,
       lwd=lwd,
       col=search.colors[["exact"]])]
-  bottom.lines <- 4.5
-  par(mar=c(bottom.lines,left.lines,other.lines,other.lines))
-  plot(
-    range(diff.grid$step.size),
-    range(abline.dt$intercept),
-    type="n", las=1,
-    xlab="",
-    ylab="Threshold")
-  mtext("Step size", side=1, line=2, cex=par("cex"))
-  draw.rect()
-  ##abline.dt[, points(rep(0, .N), intercept)]
-  abline.dt[, abline(
-    intercept, slope, col=search.colors[["exact"]],
-    lwd=lwd
-  ), by=intercept]
-  current.intersections[, points(
-    this.next.step, this.next.thresh,
-    col=search.colors[["exact"]])]
-  rbindlist(prev.intersection.list)[, text(
-    this.next.step, this.next.thresh, iteration.i, adj=c(1,0.5))]
-  if(nrow(it.name.vlines))text(
-    it.name.vlines$step.size,
-    0.8,
-    it.name.some$maxIterations.name,
-    srt=90,
-    adj=c(0,1))
-  legend(
-    'topleft', c("grid", "proposed"),
-    col=c("black","red"), pch=1, lty=c(0,1), bg="white",
-    cex=0.75)
-  ##print(gg)
+    bottom.lines <- 4.5
+    par(mar=c(bottom.lines,left.lines,other.lines,other.lines))
+    plot(
+      range(diff.grid$step.size),
+      range(abline.dt$intercept),
+      type="n", las=1,
+      xlab="",
+      ylab="Threshold")
+    mtext("Step size", side=1, line=2, cex=par("cex"))
+    draw.rect()
+    ##abline.dt[, points(rep(0, .N), intercept)]
+    abline.dt[, abline(
+      intercept, slope, col=search.colors[["exact"]],
+      lwd=lwd
+    ), by=intercept]
+    current.intersections[, points(
+      this.next.step, this.next.thresh,
+      cex=point.cex,
+      col=search.colors[["exact"]])]
+    rbindlist(prev.intersection.list)[, text(
+      this.next.step, this.next.thresh, iteration.i, adj=c(1,0.5))]
+    if(nrow(it.name.vlines))text(
+      it.name.vlines$step.size,
+      0.8,
+      it.name.some$maxIterations.name,
+      srt=90,
+      adj=c(0,1))
+    legend(
+      'topleft', c("grid", "proposed"),
+      col=c("black","red"), pch=1, lty=c(0,1), bg="white",
+      cex=1)
+    ##print(gg)
+  }
+  png(
+    sprintf("figure-line-search-example-%d.png", iteration.i),
+    width=6, height=4.7, units="in", res=300)
+  plot_iteration()
   dev.off()
   frame.list[[iteration.i]] <- sprintf("
 \\begin{frame}
@@ -502,5 +510,8 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
 }
 cat(paste(frame.list, collapse="\n"), file="figure-line-search-example.tex")
 system("pdflatex HOCKING-slides-toronto")
-
-
+png(
+  sprintf("figure-line-search-example.png", iteration.i),
+  width=8, height=4.7, units="in", res=300)
+plot_iteration(1.5)
+dev.off()
