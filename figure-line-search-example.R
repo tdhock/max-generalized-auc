@@ -305,6 +305,7 @@ prev.intersection.list <- list(data.table(
   iteration.i=1, this.next.step=0, this.next.thresh=1.1, letters=""))
 int.tab.list <- list()
 for(iteration.i in 1:nrow(ls.list$line_search_result)){
+  plist <- rbindlist(prev.intersection.list)
   offset <- if(iteration.i==8)1000 else 0.015
   current.vline <- ls.list$line_search_result[iteration.i][, `:=`(
     step.after=step.size+offset,
@@ -407,13 +408,17 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
     it.name.some <- it.name.dt[is.before]
     it.name.vlines <- ls.list$line_search_result[it.name.some$iteration.i]
     draw.rect <- function(){
+      plist[c(2,3,4,7), abline(
+        v=this.next.step,
+        lwd=1,
+        col="#999999")]
       abline(
         v=it.name.vlines$step.size,
         lwd=5,
         col="#999999")
       current.vline[, rect( 
         0, -1000, if(iteration.i==8)1000 else step.size, 1000, 
-        col="#00000033",
+        col="#00000022",
         border=search.colors[["exact"]])]
     }
     diff.grid[variable=="AUC", plot(
@@ -488,7 +493,7 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
       this.next.step, this.next.thresh,
       cex=point.cex,
       col=search.colors[["exact"]])]
-    rbindlist(prev.intersection.list)[, text(
+    plist[, text(
       this.next.step, this.next.thresh, iteration.i, adj=c(1,0.5))]
     if(nrow(it.name.vlines))text(
       it.name.vlines$step.size,
@@ -526,7 +531,7 @@ png(
   width=8, height=4.7, units="in", res=300)
 plot_iteration(1.5)
 abline.dt[, text(0, intercept, letter, adj=c(1,0.5), cex=0.9)]
-rbindlist(prev.intersection.list)[, text(
+plist[, text(
   this.next.step, this.next.thresh, paste0(letters,"  "), adj=c(1,0.5))]
 dev.off()
 
