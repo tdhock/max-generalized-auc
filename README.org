@@ -53,6 +53,11 @@ Source:
 
 [[file:figure-more-than-one-new-binary-aum-rate.png]]
 
+[[file:figure-line-search-example.R]] make figure/demo for new
+paper/slides.
+
+[[file:figure-line-search-example.png]]
+
 ** 21 Nov 2023
 
 [[file:figure-more-than-one.R]] modified to make heat map version of SM
