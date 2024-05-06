@@ -149,7 +149,8 @@ all.points <- suppressWarnings(melt(
   bin.line.search$line_search_result[, AUC := auc],
   measure.vars=c("AUC"),
   variable.name="panel"))
-abline.df <- data.frame(panel="constant", bin.line.search$line_search_input)
+Constant <- "Constant added\nto pred. values"
+abline.df <- data.frame(panel=Constant, bin.line.search$line_search_input)
 gg <- ggplot2::ggplot()+
   ggplot2::theme_bw()+
   ggplot2::geom_vline(ggplot2::aes(
@@ -184,10 +185,10 @@ gg <- ggplot2::ggplot()+
   geom_text(aes(
     step.size, letter.const, label=letter),
     size=3,
-    data=data.table(panel="constant",roc.dt))+
+    data=data.table(panel=Constant,roc.dt))+
   geom_blank(aes(
     0, y),
-    data=data.table(y=c(-1.5,11),panel="constant"))+
+    data=data.table(y=c(-1.5,11),panel=Constant))+
   ggplot2::scale_y_continuous("")+
   ggplot2::scale_x_continuous(
     "Step size",

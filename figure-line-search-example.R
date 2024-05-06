@@ -489,7 +489,8 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
       range(abline.dt$intercept),
       type="n", las=1,
       xlab="",
-      ylab="Threshold")
+      ylab="")
+    mtext("Constant added\nto predicted values",side=2,line=2.2)
     mtext("Step size", side=1, line=2, cex=par("cex"))
     draw.rect()
     ##abline.dt[, points(rep(0, .N), intercept)]
