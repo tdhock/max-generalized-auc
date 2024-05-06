@@ -11,6 +11,7 @@ ex <- function(label, profile.id, chromosome){
 select.dt <- rbind(
   ex("pos", 4, 2),
   ex("neg", 513, 3))
+  ##ex("neg", 490, 2))
 nb.list <- lapply(neuroblastoma, data.table)
 nb.some <- lapply(nb.list, "[", select.dt, on=.NATURAL)
 max.segments <- max(neuroblastomaProcessed$errors$n.segments)

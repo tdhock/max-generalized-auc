@@ -45,7 +45,15 @@ Source:
   
 - [[http://ml.nau.edu/viz/2019-08-20-min-area-under-min-fp-fn/][Minimizing area under min(FP,FN) usually maximizes AUC]].
 
-** 3 May 2023
+** 6 May 2024
+
+[[file:figure-aum-convexity-new.R]] makes
+
+[[file:figure-aum-convexity-new-profiles.png]]
+
+[[file:figure-aum-convexity-new.png]]
+
+** 3 May 2024
 
 [[file:figure-more-than-one-new.R]] makes new figures for AUM line search paper:
 
