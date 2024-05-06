@@ -53,6 +53,14 @@ Source:
 
 [[file:figure-aum-convexity-new.png]]
 
+[[file:figure-line-search-example-binary.R]] makes
+
+[[file:figure-line-search-example-binary-roc.png]]
+
+[[file:figure-line-search-example-binary-error.png]]
+
+[[file:figure-line-search-example-binary.png]]
+
 ** 3 May 2024
 
 [[file:figure-more-than-one-new.R]] makes new figures for AUM line search paper:
