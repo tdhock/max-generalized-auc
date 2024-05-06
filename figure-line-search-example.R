@@ -115,8 +115,9 @@ myjoin <- function(d.val, dt.pred){
 both.roc <- rbind(
   myjoin(TRUE, grid.pred),
   myjoin(FALSE, border.pred))
+
 pred.list <- list(
-  after.two=c(neg=2.8, pos=-2.75))
+  after.two=c(neg=2.55, pos=-3))
 diff.grid.list <- list()
 ls.points.list <- list()
 ls.segs.list <- list()
@@ -135,8 +136,8 @@ for(pred.name in names(pred.list)){
   ##them using geom_abline, and geom_point to represent the 9
   ##intersection points.
   some.diff[, `:=`(
-    slope=ifelse(label=="pos", 0, -1),
-    intercept=pred.log.lambda-ifelse(label=="pos", 0, 6.5))]
+    slope=ls.list$gradient_pred[paste(label)],
+    intercept=pred.log.lambda-one.pred[paste(label)])]
   denom <- sum(ls.list$gradient_pred*c(1,-1))
   ToStep <- function(d){
     ifelse(d==0, 0, if(denom==0)NA else d/denom)
@@ -196,7 +197,6 @@ abline.dt <- rbindlist(abline.dt.list)[
 , letter := letters[1:.N]
 ][]
 vline.dt <- rbindlist(vline.dt.list)
-
 ggplot()+
   geom_vline(aes(
     xintercept=step.size),
@@ -303,7 +303,7 @@ it.name.dt <- data.table(
   maxIterations.name=it.name.vec)
 frame.list <- list()
 prev.intersection.list <- list(data.table(
-  iteration.i=1, this.next.step=0, this.next.thresh=1.1, letters=""))
+  iteration.i=1, this.next.step=0, this.next.thresh=1.3, letters=""))
 int.tab.list <- list()
 leg.cex <- 0.7
 for(iteration.i in 1:nrow(ls.list$line_search_result)){
@@ -505,7 +505,7 @@ for(iteration.i in 1:nrow(ls.list$line_search_result)){
       this.next.step, this.next.thresh, iteration.i, adj=c(1,0.5))]
     if(nrow(it.name.vlines))text(
       it.name.vlines$step.size,
-      0.8,
+      1,
       it.name.some$maxIterations.name,
       srt=90,
       adj=c(0,1))

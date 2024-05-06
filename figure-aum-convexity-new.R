@@ -65,6 +65,9 @@ some.err.tall <- melt(
 , variable := toupper(var.lower)
 ][]
 leg <- "Error type"
+pred.dt <- rbind(
+  data.table(SeqID="513.3", pred=2.55),
+  data.table(SeqID="4.2", pred=-3))
 gg.err <- ggplot()+
   theme_bw()+
   theme(
@@ -77,6 +80,11 @@ gg.err <- ggplot()+
     data=some.pred,
     size=1,
     color="grey")+
+  geom_vline(aes(
+    xintercept=pred),
+    data=pred.dt,
+    size=1,
+    color="violet")+
   geom_text(aes(
     pred.log.lambda, 0.5,
     label=n.segments-1),
@@ -99,7 +107,7 @@ gg.err <- ggplot()+
   scale_size_manual(leg,values=err.sizes)+
   scale_x_continuous(
     "Predicted value f(x)",
-    breaks=seq(-2, 6, by=2))+
+    breaks=seq(-10, 10, by=1))+
   coord_cartesian(xlim=c(-3, 5))
 png("figure-aum-convexity-new-profiles.png", 3.5, 2.5, units="in", res=200)
 print(gg.err)
