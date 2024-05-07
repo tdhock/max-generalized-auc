@@ -35,11 +35,35 @@ roc.dt <- pred.dt[
 , letter.const := ifelse(const== -Inf, max.const-1, ifelse(
   max.const==Inf, const+1, (const+max.const)/2))
 ][]
+roc.segs <- roc.dt[, .(
+  next.FPR=FPR[-1], FPR=FPR[-.N],
+  next.TPR=TPR[-1], TPR=TPR[-.N],
+  seg.i=seq(1,.N-1)
+), by=step.size
+][
+, updated := ifelse(seg.i %in% c(1,.N), "no","yes")
+, by=step.size][]
+poly.dt <- roc.segs[updated=="yes", .(
+  FPR=c(FPR,FPR,next.FPR,next.FPR),
+  TPR=c(0,TPR,next.TPR,0)
+), by=.(step.size,seg.i)]
 gg <- ggplot()+
   theme_bw()+
-  geom_path(aes(
-    FPR, TPR),
-    data=roc.dt)+
+  geom_polygon(aes(
+    FPR, TPR, group=seg.i),
+    fill="grey",
+    data=poly.dt)+
+  ## geom_path(aes(
+  ##   FPR, TPR),
+  ##   data=roc.dt)+
+  geom_segment(aes(
+    FPR, TPR,
+    xend=next.FPR, yend=next.TPR,
+    color=updated),
+    size=1,
+    data=roc.segs)+
+  scale_color_manual(
+    values=c(no="black",yes="orange"))+
   geom_point(aes(
     FPR, TPR),
     data=roc.dt)+
@@ -52,13 +76,13 @@ gg <- ggplot()+
   facet_grid(. ~ step.size, labeller=label_both)+
   scale_x_continuous(
     "False Positive Rate",
-    limits=c(-0.1,1.1),
+    limits=c(-0.2,1.2),
     breaks=seq(0,1,by=0.5))+
   scale_y_continuous(
     "True Positive Rate",
-    limits=c(-0.1,1.1),
+    limits=c(-0.2,1.2),
     breaks=seq(0,1,by=0.5))
-png("figure-line-search-example-binary-roc.png", 4.5, 2, units="in", res=400)
+png("figure-line-search-example-binary-roc.png", 4.5, 1.8, units="in", res=400)
 print(gg)
 dev.off()
 
