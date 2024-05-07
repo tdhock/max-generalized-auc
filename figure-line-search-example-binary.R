@@ -1,6 +1,6 @@
 source("packages.R")
 label.vec <- c(0,0,1,1)
-pred.vec <- c(-8,-2,0,-4)
+pred.vec <- c(-7,-2,0,-4)
 (bin.diffs <- aum::aum_diffs_binary(label.vec, denominator = "rate"))
 bin.line.search <- aum::aum_line_search(bin.diffs, pred.vec=pred.vec)
 if(requireNamespace("ggplot2"))plot(bin.line.search)
@@ -14,7 +14,7 @@ ggplot()+
     FPR, TPR),
     data=roc.df)
 
-step.dt <- data.table(step.size=seq(0,2))
+step.dt <- data.table(step.size=c(0,2,4))
 pred.dt <- step.dt[, .(
   pred=pred.vec-step.size*bin.line.search$gradient
 ), by=step.size]
@@ -75,14 +75,14 @@ gg <- ggplot()+
   coord_equal()+
   facet_grid(. ~ step.size, labeller=label_both)+
   scale_x_continuous(
-    "False Positive Rate",
+    "False Positive Rate (FPR)",
     limits=c(-0.2,1.2),
     breaks=seq(0,1,by=0.5))+
   scale_y_continuous(
-    "True Positive Rate",
+    "True Positive Rate\n(TPR = 1-FNR)",
     limits=c(-0.2,1.2),
     breaks=seq(0,1,by=0.5))
-png("figure-line-search-example-binary-roc.png", 4.5, 1.8, units="in", res=400)
+png("figure-line-search-example-binary-roc.png", 4.5, 1.7, units="in", res=400)
 print(gg)
 dev.off()
 
@@ -103,11 +103,11 @@ seg <- function(x,xend,y,step.size){
 }
 seg.dt <- rbind(
   seg(2,3,0.9,0),
-  seg(3,4,0.9,1),
-  seg(4,5,0.9,2),
+  seg(3,4,0.9,2),
+  seg(4,5,0.9,4),
   seg(4,3,0.8,0),
-  seg(3,2,0.8,1),
-  seg(2,1,0.8,2))
+  seg(3,2,0.8,2),
+  seg(2,1,0.8,4))
 gg <- ggplot()+
   theme_bw()+
   scale_size_manual(
@@ -212,7 +212,7 @@ gg <- ggplot2::ggplot()+
     data=data.table(panel=Constant,roc.dt))+
   geom_blank(aes(
     0, y),
-    data=data.table(y=c(-1.5,11),panel=Constant))+
+    data=data.table(y=c(-1.5,8.2),panel=Constant))+
   ggplot2::scale_y_continuous("")+
   ggplot2::scale_x_continuous(
     "Step size",
