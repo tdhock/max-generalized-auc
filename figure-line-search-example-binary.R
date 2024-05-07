@@ -1,7 +1,7 @@
 source("packages.R")
 label.vec <- c(0,0,1,1)
 pred.vec <- c(-8,-2,0,-4)
-(bin.diffs <- aum::aum_diffs_binary(label.vec))
+(bin.diffs <- aum::aum_diffs_binary(label.vec, denominator = "rate"))
 bin.line.search <- aum::aum_line_search(bin.diffs, pred.vec=pred.vec)
 if(requireNamespace("ggplot2"))plot(bin.line.search)
 
