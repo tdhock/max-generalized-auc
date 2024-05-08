@@ -192,8 +192,8 @@ gg <- ggplot()+
     N, empirical_mean, color=maxIt.fac),
     size=1,
     data=some(it.step.stats))+
-  scale_color_manual(leg,values=maxIt.colors)+
-  scale_fill_manual(leg,values=maxIt.colors,guide="none")+
+  scale_color_manual(leg,values=maxIt.colors,drop=FALSE)+
+  scale_fill_manual(leg,values=maxIt.colors,guide="none",drop=FALSE)+
   geom_ribbon(aes(
     N,
     ymin=empirical_mean-empirical_sd,
