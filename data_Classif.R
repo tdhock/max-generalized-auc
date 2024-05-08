@@ -1,8 +1,7 @@
 library(ggplot2)
 library(data.table)
-(csv.vec <- Sys.glob(file.path("data_Classif","*.csv")))[2]
+(csv.vec <- Sys.glob(file.path("data_Classif","*.csv")))
 result.list <- list()
-ref.list <- list()
 for(csv.i in seq_along(csv.vec)){
   classif.csv <- csv.vec[[csv.i]]
   data.name <- sub(".csv","",basename(classif.csv))
@@ -56,10 +55,12 @@ for(csv.i in seq_along(csv.vec)){
         diff.list[[set.name]] <- aum::aum_diffs_binary(
           y.vec[is.set], denominator="rate")
       }
-      imp.thr <- diff.list[[1]][, .(
-        diff=c(fp_diff,fn_diff)
-      )][diff!=0, min(abs(diff))/100]
-      print(imp.thr)
+      imp.thr <- if(FALSE){
+        diff.list[[1]][, .(
+          diff=c(fp_diff,fn_diff)
+        )][diff!=0, min(abs(diff))/100]
+        print(imp.thr)
+      }else 1e-3
       N.subtrain <- nrow(feature.list$subtrain)
       maxit.list <- list(
         min.aum="min.aum",
@@ -72,10 +73,10 @@ for(csv.i in seq_along(csv.vec)){
     times=1,
     seconds.limit=10,
     expr.list=expr.list)
-  ref.list[[data.name]] <- atime::references_best(result.list[[data.name]])
 }
-names(ref.list)
-plot(ref.list$FishSonar)
-plot(ref.list$N)
-save(result.list, ref.list, file="data_Classif.RData")
+if(FALSE){
+  plot(result.list$FishSonar)
+  plot(ref.list$N)
+}
+save(result.list, file="data_Classif.RData")
 

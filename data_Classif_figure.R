@@ -2,26 +2,27 @@ library(ggplot2)
 library(data.table)
 library(atime)
 load("data_Classif.RData")
-
-plot(ref.list$FishSonar)
-plot(ref.list$N)
-
 loss.dt.list <- list()
 it.step.list <- list()
+parse_expr.name <- function(df)nc::capture_first_df(
+  df, 
+  expr.name=list(
+    "lm ",
+    nc::field("maxIt","=",".*?"),
+    ",",
+    nc::field("seed","=",".*")))
 for(data.name in names(result.list)){
   atime.result <- result.list[[data.name]]
-  atime.ref <- ref.list[[data.name]]
+  atime.ref <- atime::references_best(atime.result)
   it.step.list[[data.name]] <- data.table(
     data.name,
     atime.ref$measurements[unit %in% c("mean.it.per.step","steps")]
   )
-  loss.dt <- atime.result$measurements[
+  loss.dt <- parse_expr.name(atime.result$measurements[
   , fit[[1]]$loss, by=.(N,expr.name)
   ][
-  , maxIt := sub(".*=", "", expr.name)
-  ][
-   , N.i := .GRP, by=N
-  ][]
+  , N.i := .GRP, by=N
+  ])
   loss.dt[step.number==0]#verify initialization same.
   min.dt <- loss.dt[, .SD[which.min(aum)], by=.(set,N)]
   loss.dt.list[[data.name]] <- data.table(data.name, loss.dt)
@@ -59,7 +60,11 @@ for(data.name in names(result.list)){
       min.aum=2,
       quadratic=1))
 }
-ldt <- rbindlist(loss.dt.list)
+(ldt <- rbindlist(loss.dt.list))
+it.step <- parse_expr.name(rbindlist(it.step.list)[
+, Data := data.name
+])
+
 ggplot()+
   scale_y_log10()+
   geom_line(aes(
@@ -75,7 +80,12 @@ ggplot()+
     min.aum=2,
     quadratic=1))
 
-select.dt <- ldt[, .(
+select.dt <- ldt[
+, seeds := .N
+, by=.(data.name,N,set,step.number,maxIt)
+][
+  seeds==max(seeds)
+][, .(
   algos=length(unique(maxIt))
 ), by=.(data.name,N)
 ][
@@ -87,11 +97,12 @@ linetype.scale <- scale_linetype_manual(values=c(
   quadratic=2,
   linear=1,
   min.aum=3))
-it.step <- rbindlist(it.step.list)[
-, maxIt := sub(".*=", "", expr.name)
-][
-, Data := data.name
-][]
+(it.step.stats <- dcast(
+  it.step,
+  Data + N + maxIt + unit ~ .,
+  list(mean,sd,length),
+  value.var="empirical"
+)[empirical_length==max(empirical_length)])
 gg <- ggplot()+
   geom_vline(aes(
     xintercept=N),
@@ -105,16 +116,27 @@ gg <- ggplot()+
   theme_bw()+
   linetype.scale+
   geom_line(aes(
-    N, empirical, linetype=maxIt),
+    N, empirical_mean, linetype=maxIt),
     size=1,
-    data=it.step)+
+    data=it.step.stats)+
+  geom_ribbon(aes(
+    N,
+    ymin=empirical_mean-empirical_sd,
+    group=maxIt,
+    ymax=empirical_mean+empirical_sd),
+    alpha=0.4,
+    fill="black",
+    color=NA,
+    data=it.step.stats)+
   facet_grid(unit~Data,scales="free")
-png("data_Classif_figure_units.png", width=6, height=3, units="in", res=300)
+png("data_Classif_figure_units.png", width=8, height=3, units="in", res=300)
 print(gg)
 dev.off()
 
 select.loss <- ldt[
   select.dt, on=.(data.name,N)
+][
+  seed==1
 ][
 , Data := sprintf(
   "Data: %s, N=%d",
@@ -151,6 +173,6 @@ gg <- ggplot()+
   scale_size_manual(values=c(
     subtrain=2,
     validation=1))
-png("data_Classif_figure_subtrain_validation.png", width=6, height=3, units="in", res=300)
+png("data_Classif_figure_subtrain_validation.png", width=8, height=3, units="in", res=300)
 print(gg)
 dev.off()
