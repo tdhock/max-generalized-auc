@@ -4,13 +4,16 @@ library(data.table)
 result.list <- list()
 for(csv.i in seq_along(csv.vec)){
   classif.csv <- csv.vec[[csv.i]]
+  cat(sprintf("%d / %d %s\n", csv.i, length(csv.vec), classif.csv))
   data.name <- sub(".csv","",basename(classif.csv))
   raw.dt <- fread(classif.csv)
   set.seed(1)
+  raw.y.tab <- table(raw.dt$y)
+  neg.y <- if("0" %in% names(raw.y.tab)) 0 else raw.dt$y[1]
   classif.dt <- raw.dt[
     sample(.N)
   ][
-  , y := ifelse(y==y[1], 0, 1)
+  , y := ifelse(y==neg.y, 0, 1)
   ][]
   group.name <- names(classif.dt)[1]
   feature.names <- setdiff(names(classif.dt),c(group.name,"y"))
@@ -32,6 +35,7 @@ for(csv.i in seq_along(csv.vec)){
       sum.iterations=sum(fit$search$iterations),
       steps=nrow(fit$search),
       mean.it.per.step=mean(fit$search$iterations),
+      max.intersections,
       min.valid.AUM=fit$loss[set=="validation", min(aum)])
   })
   result.list[[data.name]] <- atime::atime(
@@ -62,11 +66,12 @@ for(csv.i in seq_along(csv.vec)){
         print(imp.thr)
       }else 1e-3
       N.subtrain <- nrow(feature.list$subtrain)
+      max.intersections <- N.subtrain*(N.subtrain-1)/2
       maxit.list <- list(
         min.aum="min.aum",
         ##max.auc="max.auc",#??
         linear=N.subtrain,
-        quadratic=N.subtrain*(N.subtrain-1)/2)
+        quadratic=max.intersections)
     },
     verbose=TRUE,
     result=TRUE,
