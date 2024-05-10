@@ -53,6 +53,11 @@ for(csv.i in seq_along(csv.vec)){
       X.keep <- X.sc[,keep]
       feature.list <- list()
       diff.list <- list()
+      out.dt <- data.table(set=set.vec, y=y.vec, X.keep)
+      out.csv <- sprintf("data_Classif_scaled/%s_N=%d.csv", data.name, N)
+      out.dir <- dirname(out.csv)
+      dir.create(out.dir)
+      fwrite(out.dt, out.csv)
       for(set.name in set.names){
         is.set <- set.vec==set.name
         feature.list[[set.name]] <- X.keep[is.set,]
