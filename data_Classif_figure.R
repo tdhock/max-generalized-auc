@@ -64,7 +64,9 @@ for(data.name in names(result.list)){
       min.aum=2,
       quadratic=1))
 }
-(ldt <- rbindlist(loss.dt.list))
+(ldt <- rbindlist(loss.dt.list))[
+, maxIt.fac := factor(maxIt,names(maxIt.colors))
+][]
 maxIt.colors <- c(
   max="black",
   quadratic="#1B9E77",
