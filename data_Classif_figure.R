@@ -64,14 +64,14 @@ for(data.name in names(result.list)){
       min.aum=2,
       quadratic=1))
 }
-(ldt <- rbindlist(loss.dt.list))[
-, maxIt.fac := factor(maxIt,names(maxIt.colors))
-][]
 maxIt.colors <- c(
   max="black",
   quadratic="#1B9E77",
   min.aum="#D95F02",
   linear="#7570B3")
+(ldt <- rbindlist(loss.dt.list))[
+, maxIt.fac := factor(maxIt,names(maxIt.colors))
+][]
 (it.step <- parse_expr.name(rbindlist(it.step.list))[
 , Data := data.name
 ][
@@ -210,7 +210,6 @@ png("data_Classif_figure_units.png", width=8, height=1.5*length(show.units), uni
 print(gg)
 dev.off()
 
-
 select.loss <- ldt[
   select.dt, on=.(data.name,N)
 ][
@@ -317,4 +316,41 @@ png("data_Classif_figure_subtrain_validation.png", width=8, height=2, units="in"
 print(gg)
 dev.off()
 
-system("cd /projects/genomic-ml/ && publish_data projects/max-generalized-auc")
+select.max <- select.loss[
+  set=="validation",
+  .SD[which.max(auc)],
+  by=.(Data,maxIt)]
+gg <- ggplot()+
+  theme_bw()+
+  theme(panel.spacing=grid::unit(1,"lines"))+
+  scale_y_log10(
+    "Area Under ROC Curve (AUC)")+
+  scale_x_log10(
+    "Number of gradient descent steps with line search")+
+  geom_line(aes(
+    step.number, auc,
+    size=Set,
+    color=maxIt,
+    linetype=Set),
+    data=show(select.loss))+
+  geom_point(aes(
+    step.number, auc,
+    color=maxIt),
+    fill="white",
+    shape=21,
+    data=data.table(show(select.max),step="max"))+
+  facet_wrap(.~Data,scales="free",nrow=1)+
+  scale_fill_manual(values=c(min="white"))+
+  scale_linetype_manual(
+    values=set.linetype.vec)+
+  scale_color_manual(
+    leg,
+    values=maxIt.colors)+
+  scale_size_manual(values=c(
+    subtrain=1,
+    validation=0.7))
+png("data_Classif_figure_subtrain_validation_AUC.png", width=8, height=2, units="in", res=300)
+print(gg)
+dev.off()
+
+system("cd /projects/genomic-ml/ && unpublish_data max-generalized-auc && publish_data projects/max-generalized-auc")
