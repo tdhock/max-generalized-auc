@@ -32,6 +32,11 @@ run_one <- function(seed_csv, objective, set.obj, ...){
     feature.list[[set.name]] <- as.matrix(set.data[,-(1:2)])
     diffs.list[[set.name]] <- aum::aum_diffs_binary(set.data$y)
   }
+  fit_ls <- aum:::aum_linear_model_ls(
+    feature.list,
+    diffs.list,
+    improvement.thresh=1e-2,
+    initial.weight.fun=function(...)seed.dt$weight)
   fit <- aum:::aum_linear_model(
     feature.list,
     diffs.list,

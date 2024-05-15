@@ -67,15 +67,16 @@ for(data.name in names(result.list)){
 maxIt.colors <- c(
   max="black",
   quadratic="#1B9E77",
-  min.aum="#D95F02",
+  "first min"="#D95F02",
   linear="#7570B3")
+mfac <- function(x)factor(ifelse(x=="min.aum", "first min", x), names(maxIt.colors))
 (ldt <- rbindlist(loss.dt.list))[
-, maxIt.fac := factor(maxIt,names(maxIt.colors))
+, maxIt.fac := mfac(maxIt)
 ][]
 (it.step <- parse_expr.name(rbindlist(it.step.list))[
 , Data := data.name
 ][
-, maxIt.fac := factor(maxIt,names(maxIt.colors))
+, maxIt.fac := mfac(maxIt)
 ][])
 if(FALSE){
   ggplot()+
@@ -178,18 +179,18 @@ some <- function(DT)DT[Data %in% show.data]
 gg <- ggplot()+
   theme_bw()+
   theme(panel.spacing=grid::unit(1,"lines"))+
+  ## geom_vline(aes(
+  ##   xintercept=N),
+  ##   color="grey",
+  ##   size=1,
+  ##   data=some(data.table(select.dt)[, Data := data.name]))+
   geom_line(aes(
     N, iterations, color=maxIt.fac),
     data=some(it.max))+
-  geom_vline(aes(
-    xintercept=N),
-    color="grey",
-    size=1,
-    data=some(data.table(select.dt)[, Data := data.name]))+
   scale_y_log10(
     "")+
   scale_x_log10(
-    "Number of rows of training data")+
+    "N = Number of rows of training data")+
   geom_line(aes(
     N, empirical_mean, color=maxIt.fac),
     size=1,
