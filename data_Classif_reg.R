@@ -94,7 +94,7 @@ if(FALSE){
 chunks <- data.frame(job.table, chunk=1)
 batchtools::submitJobs(chunks, resources=list(
   walltime = 4*60*60,#seconds
-  memory = 8000,#megabytes per cpu
+  memory = 32000,#megabytes per cpu
   ncpus=1,  #>1 for multicore/parallel jobs.
   ntasks=1, #>1 for MPI jobs.
   chunks.as.arrayjobs=TRUE), reg=reg)
@@ -102,5 +102,6 @@ reg <- batchtools::loadRegistry(reg.dir)
 batchtools::getStatus(reg=reg)
 
 result.list <- batchtools::reduceResultsList(reg=reg)
+names(result.list) <- sub(".csv","",basename(csv.vec))
 save(result.list, file="data_Classif.RData")
 

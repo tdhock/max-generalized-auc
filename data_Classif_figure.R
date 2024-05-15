@@ -1,7 +1,7 @@
 library(ggplot2)
 library(data.table)
 library(atime)
-load("data_Classif.RData")
+(objs <- load("data_Classif.RData"))
 loss.dt.list <- list()
 it.step.list <- list()
 parse_expr.name <- function(df)nc::capture_first_df(

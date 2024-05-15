@@ -35,7 +35,7 @@ run_one <- function(seed_csv, objective, set.obj, ...){
   fit <- aum:::aum_linear_model(
     feature.list,
     diffs.list,
-    improvement.thresh=1e-3,
+    improvement.thresh=1e-6,
     maxIterations=objective,
     initial.weight.fun=function(...)seed.dt$weight,
     line.search.set=set.obj)
@@ -67,32 +67,24 @@ batchtools::submitJobs(chunks, resources=list(
 reg <- batchtools::loadRegistry(reg.dir)
 batchtools::getStatus(reg=reg)
 
-result.old <- if(file.exists("data_Classif_batchtools.csv")){
-  fread("data_Classif_batchtools.csv")
-}else{
-  data.table()
-}
-
 f <- function(vname,...)list("_",nc::field(vname,"=",".*?",...))
-result.new <- nc::capture_first_glob(
-  "data_Classif_constant/*.csv",
-  #"data_Classif_constant/STL10_N=1778_seed=4_lr=1.0_loss=SquaredHinge.csv"
+result.dt <- nc::capture_first_glob(
+  "data_Classif_line_search/*.csv",
+  ##CIFAR10_N=5623_seed=1_objective=min.aum_set=validation.csv
   "/",
   data.name=".*?",
   f("N",as.integer),
   f("seed",as.integer),
-  f("lr",as.numeric),
-  f("loss"),
+  f("objective"),
+  "_set=",set.obj=".*?",
   "[.]csv")
 
-result.dt <- rbind(result.old, result.new)
-fwrite(result.dt, "data_Classif_batchtools.csv")
-unlink("data_Classif_constant/*.csv")
+fwrite(result.dt, "data_Classif_line_search.csv")
 
 best.valid <- result.dt[
-  set_name=="validation",
+  set=="validation",
   .SD[which.max(auc)],
-  keyby=.(data.name,N,loss,seed)]
+  keyby=.(data.name,N,seed)]
 result.dt[step_number==0 & lr==1 & set_name=="subtrain"][order(data.name,loss,seed), .(data.name,loss,seed,auc)]##these should be different.
 select.dt <- best.valid[, .(data.name, N, seed, loss, lr)]
 select.result <- result.dt[select.dt, on=names(select.dt)]

@@ -35,7 +35,7 @@ if(FALSE){
 chunks <- data.frame(job.table, chunk=1)
 batchtools::submitJobs(chunks, resources=list(
   walltime = 4*60*60,#seconds
-  memory = 4000,#megabytes per cpu
+  memory = 8000,#megabytes per cpu
   ncpus=1,  #>1 for multicore/parallel jobs.
   ntasks=1, #>1 for MPI jobs.
   chunks.as.arrayjobs=TRUE), reg=reg)
@@ -89,10 +89,7 @@ gg <- ggplot()+
     shape=21,
     data=best.valid)+
   scale_x_log10()+
-  coord_cartesian(
-    ##xlim=c(0,1000),
-    ylim=c(0.5,1))+
-  facet_grid(data.name+N~seed, labeller=label_both)
+  facet_grid(data.name+N~seed, labeller=label_both, scales="free")
 png("data_Classif_batchtools.png", width=14, height=8, units="in", res=200)
 print(gg)
 dev.off()
