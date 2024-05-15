@@ -35,8 +35,11 @@ run_one <- function(seed_csv, objective, set.obj, ...){
   fit_ls <- aum:::aum_linear_model_ls(
     feature.list,
     diffs.list,
-    improvement.thresh=1e-2,
+    improvement.thresh=1e1,
     initial.weight.fun=function(...)seed.dt$weight)
+  fit_ls$search[best.valid.it<iterations]
+  auc.wide <- data.table(fit_ls$search[, .(max.valid.auc)], fit_ls$loss[set=="validation" & step.number>0])
+  auc.tall <- melt(auc.wide, measure.vars=c("max.valid.auc","auc"))
   fit <- aum:::aum_linear_model(
     feature.list,
     diffs.list,
