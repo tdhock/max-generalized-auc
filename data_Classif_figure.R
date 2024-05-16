@@ -188,9 +188,9 @@ gg <- ggplot()+
     N, iterations, color=maxIt.fac),
     data=some(it.max))+
   scale_y_log10(
-    "")+
+    "Mean line and SD band\nover 4 random initializations")+
   scale_x_log10(
-    "N = Number of rows of training data")+
+    "n = Number of rows of training data")+
   geom_line(aes(
     N, empirical_mean, color=maxIt.fac),
     size=1,
