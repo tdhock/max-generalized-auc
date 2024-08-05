@@ -68,6 +68,12 @@ proposed algorithm is fast and exact; in changepoint detection
 problems we show that the proposed algorithm is just as accurate as
 grid search, but faster.
 
+** 5 Aug 2024
+
+[[file:data_Classif_batchtools_best_valid.R]] makes
+
+[[file:data_Classif_batchtools_best_valid.png]]
+
 ** 7 May 2024
 
 [[file:data_Classif.R]] makes [[file:data_Classif.RData]]
