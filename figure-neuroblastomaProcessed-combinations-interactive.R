@@ -1,9 +1,8 @@
-source("packages.R")
-
+library(data.table)
+library(animint2)
 nb.comb <- readRDS("neuroblastomaProcessed.combinations.rds")
-
 roc.dt <- nb.comb$auc[, data.table(
-  roc[[1]][[1]]
+  roc[[1]]
 ), by=.(size, combo.i)]
 perfect <- roc.dt[FPR==0 & TPR==1]
 nb.comb$auc[!perfect, on=.(size, combo.i)]
@@ -27,7 +26,7 @@ u.roc <- roc.dt[, {
   list(n.uniq=nrow(unique(data.table(FPR, TPR))))
 }, by=.(size, combo.i)]
 auc.stats <- nb.comb$auc[u.roc, .(
-  size, combo.i, auc, aub, n.finite, n.uniq,
+  size, combo.i, auc, aum=aub, n.finite, n.uniq,
   panel.key=paste("uniq", n.uniq, auc)
 ), on=.(size, combo.i)]
 
@@ -59,13 +58,13 @@ rect.dt <- data.table(
 ##link two plots, show details.
 auc.stats[, round.auc := round(auc, 4)]
 rfac <- 5
-auc.stats[, round.aub := round(aub*rfac)/rfac]
+auc.stats[, round.aum := round(aum*rfac)/rfac]
 auc.stats[, prop.finite := n.finite/max.finite]
 panel.titles <- c(
-  round.aub="Area under both",
-  prop.finite="Proportion predictions in finite interval",
+  round.aum="Area under both",
+  prop.finite="Prop. predictions in finite interval",
   round.auc="Area under ROC curve")
-xlevs <- c("prop.finite", "round.aub")
+xlevs <- c("prop.finite", "round.aum")
 ylevs <- c("prop.finite", "round.auc")
 panel.dt <- data.table(
   expand.grid(
@@ -101,7 +100,9 @@ count.dt <- auc.panels[, .(
   combos=.N
 ), by=.(size, xfac, yfac, xval, yval, key, panel.key)]
 ggplot()+facet_wrap("size")+geom_bar(aes(combos), data=count.dt)
+
 ggplot()+facet_wrap("size")+geom_bar(aes(log10(combos)), data=count.dt)
+
 combos.for.panel.key <- count.dt[auc.panels, .(
   size, panel.key, combo.i
 ), on=.(
@@ -155,38 +156,39 @@ roc.dt[, min.new := c(0, max.new[-.N]), by=.(size, combo.i)]
 roc.dt.tall <- melt(
   roc.dt,
   measure.vars=names(err.colors))
-aub0 <- auc.stats[, .(
-  aub0=sum(aub==0),
+aum0 <- auc.stats[, .(
+  aum0=sum(aum==0),
   auc1=sum(auc==1),
   auc.over1=sum(auc>1)
 ), by=.(size)]
-aub0.tall <- melt(aub0, id.vars="size")
-animint(
+aum0.tall <- melt(aum0, id.vars="size")
+viz <- animint(
   title="Generalized ROC curve metrics",
+  source="https://github.com/tdhock/max-generalized-auc/blob/master/figure-neuroblastomaProcessed-combinations-interactive.R",
   out.dir="figure-neuroblastomaProcessed-combinations-interactive",
   sizes=ggplot()+
     ggtitle("Select margin size")+
     theme_bw()+
-    theme_animint(width=250, height=250)+
+    theme_animint(width=300, height=300)+
     theme(panel.margin=grid::unit(0, "lines"))+
     facet_grid(variable ~ ., scales="free")+
     scale_x_continuous(
-      "Margin size of prediction wrt infinite interval")+
+      "Margin size of prediction wrt inf. interval")+
     scale_y_continuous("Number of prediction combinations")+
     geom_point(aes(
       log10(size), value),
-      data=aub0.tall)+
+      data=aum0.tall)+
     geom_tallrect(aes(
       xmin=log10(size)-0.5,
       xmax=log10(size)+0.5),
-      data=aub0,
+      data=aum0,
       alpha=0.5,
       clickSelects="size"),
   scatter=ggplot()+
-    ggtitle("ROC curve, AUC/AUB distribution, select prediction")+
+    ggtitle("ROC curve, AUC/AUM distribution, select prediction")+
     theme_bw()+
     theme_animint(width=500, height=500)+
-    theme(panel.margin=grid::unit(0, "lines"))+
+    theme(panel.margin=grid::unit(0.5, "lines"))+
     guides(color="none")+
     facet_grid(yfac ~ xfac, scales="free")+
     scale_x_continuous("", breaks=break.vec)+
@@ -207,8 +209,8 @@ animint(
       data=YPANEL("round.auc", auc=1),
       color="grey50")+
     geom_vline(aes(
-      xintercept=aub),
-      data=XPANEL("round.aub", aub=0),
+      xintercept=aum),
+      data=XPANEL("round.aum", aum=0),
       color="grey50")+
     geom_point(aes(
       xval, yval,
@@ -329,3 +331,6 @@ animint(
     panel.key="prop.finite round.auc 0.625 1.1667"),
   time=list(variable="thresh.i", ms=500)
 )
+if(FALSE){
+  animint2pages(viz, "2024-06-26-neuroblastomaProcessed-combinations")
+}
