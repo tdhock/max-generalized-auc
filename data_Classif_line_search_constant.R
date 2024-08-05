@@ -6,7 +6,12 @@ best.constant <- constant.dt[
   set_name=="validation",
   .SD[which.max(auc)],
   keyby=.(data.name,N,loss,seed)
-][
+]
+select.dt <- best.constant[, .(data.name,N,loss,seed,lr,step_number)]
+select.best <- constant.dt[select.dt, on=.NATURAL]
+fwrite(best.constant, "data_Classif_batchtools_best_valid.csv")
+
+best.constant[
 , algorithm := paste0(loss,", constant")
 ][]
 ls.dt <- fread("data_Classif_line_search.csv")
