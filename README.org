@@ -106,6 +106,8 @@ grid search, but faster.
 
 [[file:figure-more-than-one-new-binary-heat.png]]
 
+[[file:figure-more-than-one-new-binary-heat-segs.png]]
+
 [[file:figure-more-than-one-new-binary-aum-rate.png]]
 
 [[file:figure-line-search-example.R]] make figure/demo for new

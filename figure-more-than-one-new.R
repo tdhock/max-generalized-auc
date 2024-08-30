@@ -288,10 +288,6 @@ gg <- ggplot()+
   geom_path(aes(
     FPR, TPR),
     data=some(roc.join))+
-  ## ggrepel::geom_text_repel(aes(
-  ##   FPR, TPR, label=min.FPR.FNR),
-  ##   size=3,
-  ##   data=some(roc.join))+
   geom_text(aes(
     FPR-text.off,
     TPR+text.off,
@@ -306,16 +302,6 @@ gg <- ggplot()+
     hjust=0, vjust=1,
     size=2.5,
     data=some(roc.join))+
-  ## geom_text(aes(
-  ##   FPR+text.off,
-  ##   TPR-text.off,
-  ##   label=ifelse(
-  ##     FPR==1,
-  ##     paste0(min.FPR.FNR, "\n", letter),
-  ##     paste(min.FPR.FNR, letter))),
-  ##   hjust=0, vjust=1,
-  ##   size=2.5,
-  ##   data=some(roc.join))+
   geom_point(aes(
     FPR, TPR),
     data=some(roc.join))+
@@ -335,6 +321,76 @@ print(gg)
 png(
   "figure-more-than-one-new-binary-heat.png", 
   width=6.6, height=2.2, units="in", res=200)
+print(gg)
+dev.off()
+
+seg.dt <- some(roc.join)[min.FPR.FNR>0]
+SM.x <- 0.65
+SM.y <- 0.1
+SM.dt <- some(roc.join)[max.thresh==Inf]
+gg <- ggplot()+
+  theme_bw()+
+  scale_fill_gradient(
+    "Min(FPR,FNR)",
+    low="white",
+    high="purple")+
+  geom_tile(aes(
+    FPR, TPR, fill=`Min(FPR,FNR)`),
+    data=grid.dt)+
+  geom_path(aes(
+    FPR, TPR),
+    data=some(roc.join))+
+  geom_text(aes(
+    FPR-text.off,
+    TPR+text.off,
+    label=letter),
+    hjust=1, vjust=0,
+    size=2.5,
+    data=some(roc.join))+
+  geom_text(aes(
+    FPR+text.off,
+    TPR-text.off,
+    label=min.FPR.FNR),
+    hjust=0, vjust=1,
+    size=2.5,
+    data=some(roc.join))+
+  geom_point(aes(
+    FPR, TPR),
+    data=some(roc.join))+
+  facet_grid(.~Model, labeller=label_both)+
+  coord_equal()+
+  scale_x_continuous(
+    "False Positive Rate (FPR)",
+    labels=c("0","0.5","1"),
+    limits=roc.lim,
+    breaks = seq(0, 1, by=0.5))+
+  scale_y_continuous(
+    "True Positive Rate\n(TPR = 1-FNR)",
+    breaks = seq(0, 1, by=0.5),
+    limits=roc.lim,
+    labels=c("0","0.5","1"))+
+  geom_segment(aes(
+    FPR+0.2, TPR-0.12,
+    xend=SM.x, yend=SM.y),
+    color="grey30",
+    data=seg.dt)+
+  geom_text(aes(
+    SM.x, SM.y,
+    label=sprintf("sum(Min)=%.1f", `sum(min)`)),
+    size=2.5,
+    vjust=1.3,
+    data=SM.dt)+
+  geom_text(aes(
+    Inf, -Inf,
+    label=sprintf("AUC=%.2f", AUC)),
+    size=2.5,
+    vjust=-0.2,
+    hjust=1.135,
+    data=SM.dt)
+print(gg)
+png(
+  "figure-more-than-one-new-binary-heat-segs.png", 
+  width=6.6, height=1.9, units="in", res=200)
 print(gg)
 dev.off()
 
