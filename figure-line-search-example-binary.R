@@ -27,7 +27,7 @@ roc.dt <- pred.dt[
   const = -threshold,
   letter = LETTERS[1:.N]
 )][
-, `min(FPR,FNR)` := pmin(FPR,FNR)
+, `Min(FPR,FNR)` := pmin(FPR,FNR)
 ][
 , max.const := c(const[-1],Inf)
 , by=step.size
@@ -87,16 +87,16 @@ print(gg)
 dev.off()
 
 err.sizes <- c(
-  "min(FPR,FNR)"=1,
+  "Min(FPR,FNR)"=1,
   FPR=3,
   FNR=2)
 err.colors <- c(
-  "min(FPR,FNR)"="black",
+  "Min(FPR,FNR)"="black",
   FPR="red",
   FNR="deepskyblue")
 roc.long <- melt(
   roc.dt,
-  measure=c("FNR","FPR","min(FPR,FNR)")
+  measure=c("FNR","FPR","Min(FPR,FNR)")
 )
 seg <- function(x,xend,y,step.size){
   data.table(x,xend,y,step.size)
@@ -118,7 +118,7 @@ gg <- ggplot()+
     values=err.colors)+
   geom_rect(aes(
     xmin=const, xmax=max.const,
-    ymin=0, ymax=`min(FPR,FNR)`),
+    ymin=0, ymax=`Min(FPR,FNR)`),
     fill="grey80",
     data=roc.dt)+
   geom_vline(aes(

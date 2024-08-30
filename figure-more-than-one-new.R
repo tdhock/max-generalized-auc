@@ -61,26 +61,26 @@ roc.dt <- do.call(rbind, roc.dt.list)[
 ][
 , AUM := sum(ifelse(is.finite(aum), aum, 0)), by=model
 ][
-, `:=`(FP=fp, FN=fn, `min(FP,FN)`=min.fp.fn, Model = factor(model, model.ord))
+, `:=`(FP=fp, FN=fn, `Min(FP,FN)`=min.fp.fn, Model = factor(model, model.ord))
 ][
 , FNR := 1-TPR
 ][
-, `min(FPR,FNR)` := pmin(FPR,FNR)
+, `Min(FPR,FNR)` := pmin(FPR,FNR)
 ][
 , letter := c(LETTERS,letters)[1:.N]
 ##, by=model
 ][]
 
 auc.dt <- do.call(rbind, auc.dt.list)
-fp.fn.dt <- data.table::melt(roc.dt, measure.vars=c("FP", "FN", "min(FP,FN)"))
+fp.fn.dt <- data.table::melt(roc.dt, measure.vars=c("FP", "FN", "Min(FP,FN)"))
 err.sizes <- c(
   FP=3,
   FN=2,
-  "min(FP,FN)"=1)
+  "Min(FP,FN)"=1)
 err.colors <- c(
   FP="red",
   FN="deepskyblue",
-  "min(FP,FN)"="black")
+  "Min(FP,FN)"="black")
 rate.names <- function(x)structure(x, names=gsub(
   "(?<=[PN])", "R", names(x), perl=TRUE))
 rate.sizes <- rate.names(err.sizes)
@@ -174,7 +174,7 @@ gg <- ggplot()+
     ymin=0, ymax=value),
     color="grey",
     fill="grey",
-    data=some(fp.fn.dt[variable=="min(FP,FN)"]))+
+    data=some(fp.fn.dt[variable=="Min(FP,FN)"]))+
   geom_segment(aes(
     min.thresh, value,
     color=variable, size=variable,
@@ -193,13 +193,13 @@ print(gg)
 dev.off()
 
 roc.rate <- data.table(roc.dt)[
-, aum := `min(FPR,FNR)`*(max.thresh-min.thresh)
+, aum := `Min(FPR,FNR)`*(max.thresh-min.thresh)
 ][
 , AUM := sum(ifelse(is.finite(aum), aum, 0)), by=model
 ]
 fpr.fnr.dt <- data.table::melt(
   roc.rate,
-  measure.vars=c("FPR", "FNR", "min(FPR,FNR)"))
+  measure.vars=c("FPR", "FNR", "Min(FPR,FNR)"))
 gg <- ggplot()+
   facet_grid(. ~ Model + AUM, labeller=label_both)+
   theme_bw()+
@@ -212,7 +212,7 @@ gg <- ggplot()+
     ymin=0, ymax=value),
     color="grey",
     fill="grey",
-    data=some(fpr.fnr.dt[variable=="min(FPR,FNR)"]))+
+    data=some(fpr.fnr.dt[variable=="Min(FPR,FNR)"]))+
   geom_segment(aes(
     min.thresh, value,
     color=variable, size=variable,
@@ -249,18 +249,18 @@ grid.dt <- data.table(expand.grid(
 ))[
 , FNR := 1-TPR
 ][
-, `min(FPR,FNR)` := pmin(FPR,FNR)
+, `Min(FPR,FNR)` := pmin(FPR,FNR)
 ][]
 text.off <- 0.03
 roc.lim <- c(-0.1,1.1)
 gg <- ggplot()+
   theme_bw()+
   scale_fill_gradient(
-    "min(FPR,FNR)",
+    "Min(FPR,FNR)",
     low="white",
     high="purple")+
   geom_tile(aes(
-    FPR, TPR, fill=`min(FPR,FNR)`),
+    FPR, TPR, fill=`Min(FPR,FNR)`),
     data=grid.dt)+
   geom_path(aes(
     FPR, TPR),
