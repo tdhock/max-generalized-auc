@@ -22,7 +22,6 @@ best.ls <- ls.dt[
 ][
 , algorithm := "AUM, line search"
 ][]
-
 constant.dt[step_number==0 & loss=="AUM" & lr==1, .(data.name,seed,set_name,auc)]
 ls.dt[step.number==0 & objective=="max.auc" & set.obj=="subtrain", .(data.name,seed,set,auc)]
 
