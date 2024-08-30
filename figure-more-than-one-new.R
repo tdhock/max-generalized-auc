@@ -200,8 +200,18 @@ roc.rate <- data.table(roc.dt)[
 fpr.fnr.dt <- data.table::melt(
   roc.rate,
   measure.vars=c("FPR", "FNR", "Min(FPR,FNR)"))
+ar <- function(model, x, y, xend, yend){
+  data.table(Model=factor(model, model.ord), x, y, xend, yend)
+}
+arrows.only <- rbind(
+  ar("best", 4.5, 0.8, 4.5, 0),
+  ar("good", 6, 0.5, 6, 0.05),
+  ar("ok", 4, 0.9, 4, 0.1),
+  ar("bad", 6, 0.76, 6, 0.1))
+arrows.auc <- fpr.fnr.dt[arrows.only, on="Model", mult="first"]
+arrow.color <- "grey30"
 gg <- ggplot()+
-  facet_grid(. ~ Model + AUM, labeller=label_both)+
+  facet_grid(. ~ Model, labeller=label_both)+
   theme_bw()+
   geom_vline(aes(
     xintercept=min.thresh),
@@ -227,6 +237,19 @@ gg <- ggplot()+
     vjust=0,
     size=3,
     data=some(fpr.fnr.dt))+
+  geom_segment(aes(
+    x, y, xend=xend, yend=yend),
+    data=arrows.auc,
+    color=arrow.color,
+    size=1,
+    arrow=grid::arrow(length=grid::unit(0.5,"lines"), type="closed"))+
+  geom_label(aes(
+    x, y,
+    label=sprintf("AUM=%.1f", AUM)),
+    vjust=0,
+    color=arrow.color,
+    size=3,
+    data=arrows.auc)+
   scale_color_manual(leg, values=rate.colors)+
   scale_size_manual(leg, values=rate.sizes)+
   scale_x_continuous(
@@ -237,7 +260,7 @@ gg <- ggplot()+
 print(gg)
 png(
   "figure-more-than-one-new-binary-aum-rate.png", 
-  width=6.6, height=2.2, units="in", res=200)
+  width=6.6, height=2, units="in", res=200)
 print(gg)
 dev.off()
 
