@@ -296,7 +296,7 @@ gg <- ggplot()+
   geom_point(aes(
     FPR, TPR),
     data=some(roc.join))+
-  facet_grid(.~AUC+`sum(min)`, labeller=label_both)+
+  facet_grid(.~`sum(min)`+AUC, labeller=label_both)+
   coord_equal()+
   scale_x_continuous(
     "False Positive Rate (FPR)",
