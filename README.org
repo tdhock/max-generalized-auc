@@ -47,8 +47,8 @@ Source:
 
 ** Title, abstract, slides
 
-Title: Efficient line search for optimizing Area Under the ROC Curve
-in gradient descent
+Title: [[https://github.com/tdhock/max-generalized-auc/blob/master/HOCKING-slides-toronto.pdf][Efficient line search for optimizing Area Under the ROC Curve
+in gradient descent]]
 
 Receiver Operating Characteristic (ROC) curves are useful for
 evaluation in binary classification and changepoint detection, but

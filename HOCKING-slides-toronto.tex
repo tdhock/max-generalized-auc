@@ -212,7 +212,35 @@ linear representation of
 \end{frame}
 
 \begin{frame}
-  \frametitle{Proposed line search algorithm uses AUC/AUM structure}
+\frametitle{Simple example, proposed line search with 4 binary labels}
+
+  Theorem: when learning a linear model, $f(\mathbf x)= \mathbf w^T \mathbf x$,
+  \begin{itemize}
+  \item AUC is piecewise constant, and
+  \item AUM is piecewise linear,
+  \end{itemize}
+  as a function of step size in gradient descent.
+
+  \begin{center}
+\parbox{0.6\textwidth}{
+\hspace{0.0cm}
+\includegraphics[width=0.5\textwidth]{figure-line-search-example-binary-roc.png}
+\\
+\includegraphics[width=0.6\textwidth]{figure-line-search-example-binary-error.png}\\
+ROC curves and error functions
+}\parbox{0.39\textwidth}{
+  \includegraphics[width=0.35\textwidth]{figure-line-search-example-binary.png}\\
+  Proposed line search
+}
+  \end{center}
+  
+  Letters show correspondence between points on the ROC curve, and intervals of constants added to predicted values.
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Change-point example, comparison with grid search}
 
   Theorem: when learning a linear model, $f(\mathbf x)= \mathbf w^T \mathbf x$,
   \begin{itemize}
@@ -278,6 +306,20 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 \end{frame}
 
 \begin{frame}
+  \frametitle{AUM gradient descent increases validation AUC,\\
+    four image classification data sets}
+ 
+\includegraphics[width=\textwidth]{data_Classif_batchtools_best_valid_scatter}
+
+\begin{itemize}
+\item Gradient descent with constant step size, best of $10^{-4}$ to $10^5$.
+\item Max Validation AUC comparable or better than baselines.
+\item Computation time comparable or much faster.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
   \frametitle{Proposed search consistently faster than grid search}
 
   Analyzed supervised genomic change-point detection data set
@@ -334,6 +376,22 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
     size$\in\{10^{-9},10^{-8},\dots,10^1,10^0\}$.
   \item[quadratic(proposed):] all line search iterations.
   \item[linear(proposed):] only first $N$ line search iterations.
+  \end{description}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Asymptotic time complexity analysis}
+
+  \includegraphics[width=\textwidth]{data_Classif_figure_units}
+
+  \begin{description}
+  \item[max:] theoretical worst case, $N(N-1)/2$ iterations.
+  \item[quadratic(proposed):] all line search iterations.
+  \item[first min(proposed):] keep iterating until first AUM increase
+    (same number of steps/solution as quadratic, but asymptotically 
+    faster/smaller slope).
+  \item[linear(proposed):] only first $N$ line search iterations.    
   \end{description}
 \end{frame}
 
