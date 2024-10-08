@@ -101,13 +101,6 @@ gg <- ggplot()+
     data=log.aum)+
   geom_text(aes(
     x,y,label=label),
-    data=data.table(x=-Inf,y=-Inf,label="   correct rank"),
-    color="grey50",
-    vjust=1,
-    angle=45,
-    hjust=0)+
-  geom_text(aes(
-    x,y,label=label),
     data=data.table(x=Inf,y=-Inf,label="correct \nlabels "),
     hjust=1,
     vjust=-0.2)+
@@ -120,16 +113,24 @@ gg <- ggplot()+
   metR::geom_contour2(aes(
     pos, neg, z=loss.value, label=stat(level)),
     breaks=show.breaks,
-    color="blue",
+    color="violet",
     size=1,
     data=log.aum)+
+  geom_label(aes(
+    x,y,label=label),
+    data=data.table(x=-Inf,y=-Inf,label="   correct rank"),
+    color="grey50",
+    alpha=0.5,
+    vjust=1,
+    angle=45,
+    hjust=0)+
   theme_bw()+
   theme(panel.spacing=grid::unit(0, "lines"))+
   facet_grid(. ~ loss.name)+
   scale_fill_gradient(
     "Loss\nvalues",
     low="white",
-    high="red")+
+    high=rgb(0.3,0.5,0.3))+
   coord_equal()+
   geom_abline(aes(
     intercept=intercept, slope=slope),
