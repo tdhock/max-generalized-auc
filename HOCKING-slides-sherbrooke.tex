@@ -1,4 +1,4 @@
-\documentclass[t]{beamer} 
+\documentclass[t]{beamer}
 \usepackage{tikz}
 \usepackage[all]{xy}
 \usepackage{amsmath,amssymb}
@@ -40,15 +40,14 @@
 
 \begin{document}
 
-\title{Efficient line search optimization of penalty functions in
-  supervised changepoint detection}
+\title{Sort-based gradient descent learning algorithms for ROC curve optimization}
 
 \author{
-  Toby Dylan Hocking --- toby.hocking@nau.edu\\ 
-  joint work with my student Jadon Fowler\\
-  Machine Learning Research Lab --- \url{http://ml.nau.edu}\\
-  School of Informatics, Computing and Cyber Systems\\
-  Northern Arizona University, USA\\
+  Toby Dylan Hocking --- toby.dylan.hocking@usherbrooke.ca\\ 
+  joint work with former master student Jadon Fowler\\
+  Learning Algorithms, Statistical Software, Optimization (LASSO Lab) --- \url{https://lassolab.org}\\
+  Département d'Informatique \\
+  Université de Sherbrooke\\
   \includegraphics[height=4cm]{2023-02-02-group-meeting} \\
 }
 
@@ -72,8 +71,19 @@
       \textbf{False positives:} $f(\mathbf x)>0$ but $y=0$ (predict
       budding, but cell is not).\\
       \textbf{False negatives:} $f(\mathbf x)<0$ but $y=1$ (predict
-      not budding but cell is).  }
+      not budding, but cell is).  }
   \end{itemize} 
+\end{frame}
+
+\begin{frame}
+  \frametitle{ROC curves for evaluation, especially useful with imbalance}
+
+  \includegraphics[width=0.65\textwidth]{figure-batchtools-expired-earth-roc}
+
+  \begin{itemize}
+  \item At default FPR=24\% (D), glmnet has fewer errors.
+  \item At FPR=4\%, xgboost has fewer errors.
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
@@ -92,8 +102,10 @@
   % \item Proposed idea: a new surrogate for AUC that is differentiable,
   %   so can be used for gradient descent learning.
   \end{itemize}
-  \includegraphics[width=\textwidth]{figure-more-than-one-binary}
+  \includegraphics[width=\textwidth]{figure-more-than-one-new-binary}
 \end{frame}
+
+
 
 \begin{frame}
   \frametitle{Research question and new idea}
@@ -105,13 +117,145 @@
   \item The Area Under the ROC Curve (AUC) is piecewise constant
     (gradient zero almost everywhere), so can not be used with
     gradient descent algorithms.
-  \item We propose to encourage points to be in the upper left of ROC
+  \item We proposed (Hocking, Hillman 2023) to encourage points to be in the upper left of ROC
     space, using a loss function which is a differentiable surrogate
-    of the sum of min(FP,FN).
+    of the sum of min(FPR,FNR).
   \end{itemize}
-  \includegraphics[width=\textwidth]{figure-more-than-one-binary-heat}
+  \includegraphics[width=\textwidth]{figure-more-than-one-new-binary-heat}
 \end{frame}
  
+\section{ROC curve optimization using sort-based gradient descent}
+
+\begin{frame}
+  \frametitle{Comparing proposed loss with baselines}
+  \begin{itemize}
+  \small
+  \item Classic baselines: hinge and logistic loss, sum over samples, $\ell[yf(x)]$.
+  \item Bamber (1975) proved ROC-AUC relation to Mann-Whitney
+    U statistic (double sum over all pairs of positive and negative
+    samples).
+  \item Recently:  $\text{SVM}^{\text{struct}}$ (Joachims 2005),
+    X-risk (Yang 2022), %https://arxiv.org/abs/2206.00439
+    All Pairs Squared Hinge (Rust and Hocking 2023),
+    sum loss over pairs of positive and negative samples, $\ell[f(x^+)-f(x^-)]$.
+  \item Proposed: sort-based AUM loss (sum over points on ROC curve).
+  \item Figure below: loss for two samples: one positive, one negative.
+  \end{itemize}
+
+  \includegraphics[width=0.7\textwidth]{figure-compare-hinge-loss-contours-logistic.png}
+
+    Barr, Hocking, Morton, Thatcher, Shaw, \emph{TransAI} (2022).
+
+  %AUM loss here = linear hinge with no margin, summed over pairs.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Large AUC $\approx$ small Area Under Min(FP,FN) (AUM)}
+  \small
+  
+  \includegraphics[height=1.3in]{figure-more-than-one-new-binary-heat}
+
+  Above: purple heat map = numbers near dots = distance to top or left
+
+  = same as black min error rate functions below.
+
+  \includegraphics[height=1.3in]{figure-more-than-one-new-binary-aum-rate}
+
+  Hocking, Hillman, \emph{Journal of Machine Learning Research} (2023).
+
+  %Proposal: track how thresholds in error plot change with step size.
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Computing Sum of Min (SM)}
+  \includegraphics[width=\textwidth]{figure-more-than-one-new-binary-aum-rate}
+  \vskip -0.2cm
+  \begin{itemize}
+  \item Let $\mathbf{\hat y}$ be the $N$-vector of predicted scores,
+  \item with up to $N$ points on the ROC curve,
+  \item with sorted thresholds $-\infty=\tau(\mathbf{\hat y})_0<\cdots<\tau(\mathbf{\hat y})_N=\infty\in\mathbb R$,
+  \item and corresponding min error values $m(\mathbf{\hat y})_1,\dots,m(\mathbf{\hat y})_N$.
+  \item Then the sum of the min (SM), over all ROC points, is:
+  \end{itemize}
+\begin{equation*}
+  \label{eq:SM-computation}
+    \text{SM}(\mathbf {\hat y}) =
+    \sum_{i=2}^{N-1}
+    I[ \tau(\mathbf {\hat y})_{i} \neq \tau(\mathbf {\hat y})_{i-1} ]
+    m(\mathbf {\hat y})_i =
+    \sum_{i:\tau(\mathbf {\hat y})_{i} \neq \tau(\mathbf {\hat y})_{i-1} }
+    m(\mathbf {\hat y})_i.
+\end{equation*}
+
+($\neq$ required: tied scores in $\mathbf{\hat y}$ delete points from the ROC curve)
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Computing Area Under Min (AUM)}
+  \includegraphics[width=\textwidth]{figure-more-than-one-new-binary-aum-rate}
+
+The AUM can be interpreted as an L1 relaxation of SM,
+
+\begin{eqnarray*}
+    \text{SM}(\mathbf {\hat y}) &=&
+    \sum_{i=2}^{N-1}
+    I[ \tau(\mathbf {\hat y})_{i} \neq \tau(\mathbf {\hat y})_{i-1} ]
+    m(\mathbf {\hat y})_i =
+    \sum_{i:\tau(\mathbf {\hat y})_{i} \neq \tau(\mathbf {\hat y})_{i-1} }
+                                    m(\mathbf {\hat y})_i.
+                                    \\
+    \text{AUM}(\mathbf {\hat y}) &=&
+    \sum_{i=2}^{N-1}
+    [ \tau(\mathbf {\hat y})_{i} - \tau(\mathbf {\hat y})_{i-1} ]
+                                     m(\mathbf {\hat y})_i.\\
+\end{eqnarray*}
+AUM is therefore a surrogate loss for ROC optimization, and it is differentiable almost everywhere $\Rightarrow$ gradient descent learning!
+\end{frame}
+
+\begin{frame}
+  \frametitle{AUM gradient descent increases validation AUC,\\
+    four image classification data sets}
+ 
+\includegraphics[width=\textwidth]{data_Classif_batchtools_best_valid_scatter}
+
+\begin{itemize}
+\item Implemented AUM loss using \texttt{torch.argsort} (auto-grad).
+\item Gradient descent with constant step size, best of $10^{-4}$ to $10^5$.
+\item Max Validation AUC comparable or better than baselines.
+\item Number of epochs comparable to baselines.
+\item Time per epoch is $O(N \log N)$ (sort), small log factor larger than standard logistic/cross-entropy loss, $O(N)$.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Discussion}
+  \begin{itemize}
+  \item Classic baselines are simple (sum over samples).
+  \item Proposed AUM loss similar to recent losses that sum over all
+    pairs of positive and negative examples (both can be implemented
+    by sorting predicted scores); proposed AUM loss uses a
+    different/novel relaxation similar to ROC curve computation.
+  \item Proposed AUM loss implemented in 15 lines of pytorch code, can be used as a drop-in replacement for logistic/binary cross-entropy loss, \url{https://tdhock.github.io/blog/2022/aum-learning/}
+  \item Best way to use with stochastic gradient algorithms?
+    At least one positive and one negative example is required in each
+    batch.
+  \item Works well in binary classification, how to adapt to
+    multi-class setting, or other problems such as ranking/information
+    retrieval? (next: change-point detection)
+  \end{itemize}
+\end{frame}
+
+% \begin{frame}
+%   \frametitle{TODO other classification data sets}
+%  \includegraphics[width=\textwidth]{figure-unbalanced-grad-desc}
+% \begin{itemize}
+% \item TODO from JMLR paper
+% \end{itemize}
+% \end{frame}
+
 \section{Problem setting 2: ROC curves for evaluating supervised changepoint algorithms}
 
 \begin{frame}
@@ -164,73 +308,7 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
   test AUC than previous algorithms.
 \end{frame}
 
-\section{ROC curve optimization using gradient descent}
-
-\begin{frame}
-  \frametitle{Comparing logistic loss and rank/AUM loss}
-  \begin{itemize}
-  \small
-  \item Classic baselines: hinge and logistic loss, sum over samples, $\ell[yf(x)]$.
-  \item Bamber (1975) proved ROC-AUC relation to Mann-Whitney
-    U statistic (double sum over all pairs of positive and negative
-    samples).
-  \item Recently:  $\text{SVM}^{\text{struct}}$ (Joachims 2005) and X-risk (Yang 2022)
-    %https://arxiv.org/abs/2206.00439
-    sum loss over pairs of positive and negative samples, $\ell[f(x^+)-f(x^-)]$.
-  \item Proposed: AUM loss (sum over points on ROC curve).
-  \item Figure below: loss for two samples: one positive, one negative.
-  \end{itemize}
-
-  \includegraphics[width=0.7\textwidth]{figure-compare-hinge-loss-contours-logistic.png}
-
-  %AUM loss here = linear hinge with no margin, summed over pairs.
-\end{frame}
-
-\begin{frame}
-  \frametitle{L1 relaxation}
-  \includegraphics[width=\textwidth]{figure-more-than-one-binary-heat}
-Let $\hat y$ be the $N$-vector of predicted scores, making $Q$ points on the ROC curve, with sorted thresholds $\tau$, and min(FPR,FNR) values $m$. Then the sum of the min over all ROC points is:
-\begin{equation*}
-  \label{eq:SM-computation}
-    \text{SM}(\mathbf {\hat y}) =
-    \sum_{q=2}^{Q-1}
-    I[ \tau(\mathbf {\hat y})_{q} \neq \tau(\mathbf {\hat y})_{q-1} ]
-    m(\mathbf {\hat y})_q =
-    \sum_{q:\tau(\mathbf {\hat y})_{q} \neq \tau(\mathbf {\hat y})_{q-1} }
-    m(\mathbf {\hat y})_q.
-\end{equation*}
-
-
-TODO
-
-The AUM can be interpreted as an L1 relaxation of the following non-convex \textbf{S}um of \textbf{M}in(FP,FN) function, 
-
-\begin{equation}
-\label{eq:AUM-computation}
-    \text{AUM}(\mathbf {\hat y}) =
-    \sum_{q=2}^{Q-1}
-    [ \tau(\mathbf {\hat y})_{q} - \tau(\mathbf {\hat y})_{q-1} ]
-    m(\mathbf {\hat y})_q.
-\end{equation}
-
-\end{frame}
-
 \section{Proposed complete line search algorithm for surrogate loss: Area Under Min\{FP,FN\} (AUM)} 
-
-\begin{frame}
-  \frametitle{Large AUC $\approx$ small Area Under Min(FP,FN) (AUM)} 
-  
-  \includegraphics[height=1.3in]{figure-more-than-one-binary-heat}
-
-  \includegraphics[height=1.3in]{figure-more-than-one-binary-aum-rate}
-
-  Barr, Hocking, Morton, Thatcher, Shaw, \emph{TransAI} (2022).
-
-  Hocking, Hillman, \emph{Journal of Machine Learning Research} (2023).
-
-  Proposal: track how thresholds in error plot change with step size.
-  
-\end{frame}
 
 \begin{frame}
   \frametitle{Using thresholds to compute AUM}
@@ -245,7 +323,7 @@ The AUM can be interpreted as an L1 relaxation of the following non-convex \text
   % thresholds are increasing: $T_$
 Hillman and Hocking, JMLR 2023, showed that AUM for the
 current predictions, can be computed efficiently, as a function of
-$T_1<\cdots<T_B$, thresholds of the min label error $M_b$,
+$T_1<\cdots<T_B$, thresholds when min label error $M_b$ changes,
 \begin{equation*}
   \text{AUM} = \sum_{b=2}^B [T_{b} - T_{b-1}] M_b
 \end{equation*}
@@ -352,20 +430,6 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 \item Right: linear model initialized by minimizing regularized convex
   loss (surrogate for label error, Hocking \emph{et al.} ICML 2013),
   gradient descent on weight vector.
-\end{itemize}
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{AUM gradient descent increases validation AUC,\\
-    four image classification data sets}
- 
-\includegraphics[width=\textwidth]{data_Classif_batchtools_best_valid_scatter}
-
-\begin{itemize}
-\item Gradient descent with constant step size, best of $10^{-4}$ to $10^5$.
-\item Max Validation AUC comparable or better than baselines.
-\item Computation time comparable or much faster.
 \end{itemize}
 
 \end{frame}
