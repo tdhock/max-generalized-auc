@@ -172,23 +172,23 @@
   \includegraphics[width=\textwidth]{figure-more-than-one-new-binary-aum-rate}
   \vskip -0.2cm
   \begin{itemize}
-  \item Let $\mathbf{\hat y}$ be the $N$-vector of predicted scores,
-  \item with up to $N$ points on the ROC curve,
-  \item with sorted thresholds $-\infty=\tau(\mathbf{\hat y})_0<\cdots<\tau(\mathbf{\hat y})_N=\infty\in\mathbb R$,
-  \item and corresponding min error values $m(\mathbf{\hat y})_1,\dots,m(\mathbf{\hat y})_N$.
-  \item Then the sum of the min (SM), over all ROC points, is:
+  \item For $N$ samples, there are $\leq N+1$ points on the ROC curve,
+  \item with sorted thresholds $T_1\leq\cdots\leq T_N\in\mathbb R$,
+  \item and corresponding min error values $M_1,\dots,M_N$.
+  \item Then if $I$ is the indicator function, we can write the sum of
+    the min (SM), over all ROC points, as:
   \end{itemize}
 \begin{equation*}
   \label{eq:SM-computation}
-    \text{SM}(\mathbf {\hat y}) =
-    \sum_{i=2}^{N-1}
-    I[ \tau(\mathbf {\hat y})_{i} \neq \tau(\mathbf {\hat y})_{i-1} ]
-    m(\mathbf {\hat y})_i =
-    \sum_{i:\tau(\mathbf {\hat y})_{i} \neq \tau(\mathbf {\hat y})_{i-1} }
-    m(\mathbf {\hat y})_i.
+    \text{SM} =
+    \sum_{i=2}^{N}
+    I[ T_{i} \neq T_{i-1} ]
+    M_i =
+    \sum_{i:T_{i} \neq T_{i-1} }
+    M_i.
 \end{equation*}
 
-($\neq$ required: tied scores in $\mathbf{\hat y}$ delete points from the ROC curve)
+($\neq$ required: a tie $T_i=T_{i-1}$ deletes a point from the ROC curve)
 
 \end{frame}
 
@@ -199,19 +199,78 @@
 The AUM can be interpreted as an L1 relaxation of SM,
 
 \begin{eqnarray*}
-    \text{SM}(\mathbf {\hat y}) &=&
-    \sum_{i=2}^{N-1}
-    I[ \tau(\mathbf {\hat y})_{i} \neq \tau(\mathbf {\hat y})_{i-1} ]
-    m(\mathbf {\hat y})_i =
-    \sum_{i:\tau(\mathbf {\hat y})_{i} \neq \tau(\mathbf {\hat y})_{i-1} }
-                                    m(\mathbf {\hat y})_i.
+    \text{SM} &=&
+    \sum_{i=2}^{N}
+    I[ T_{i} \neq T_{i-1} ]
+    M_i =
+    \sum_{i:T_{i} \neq T_{i-1} }
+                  M_i.
                                     \\
-    \text{AUM}(\mathbf {\hat y}) &=&
-    \sum_{i=2}^{N-1}
-    [ \tau(\mathbf {\hat y})_{i} - \tau(\mathbf {\hat y})_{i-1} ]
-                                     m(\mathbf {\hat y})_i.\\
+    \text{AUM} &=&
+    \sum_{i=2}^{N}
+    [ T_{i} - T_{i-1} ]
+                   M_i.\\
 \end{eqnarray*}
 AUM is therefore a surrogate loss for ROC optimization, and it is differentiable almost everywhere $\Rightarrow$ gradient descent learning!
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{ROC curve pytorch code}
+  \begin{verbatim}
+def ROC_curve(pred_tensor, label_tensor):
+    sorted_indices = torch.argsort(-pred_tensor)
+    ...
+    return { # a dictionary of torch tensors
+        "FPR":FPR,
+        "FNR":FNR,
+        "TPR":1 - FNR,
+        "min(FPR,FNR)":torch.minimum(FPR, FNR),
+        "min_constant":torch.cat([
+          torch.tensor([-torch.inf]), uniq_thresh]),
+        "max_constant":torch.cat([
+          uniq_thresh, torch.tensor([torch.inf])])
+    }
+\end{verbatim}
+
+    \url{https://tdhock.github.io/blog/2024/torch-roc-aum/}
+
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{AUC and AUM pytorch code uses argsort}
+
+  \begin{itemize}
+  \item ROC AUC and proposed AUM are both implemented by first
+    computing the ROC curve.
+  \end{itemize}
+  \begin{verbatim}
+def ROC_AUC(pred_tensor, label_tensor):
+    roc = ROC_curve(pred_tensor, label_tensor)
+    FPR_diff = roc["FPR"][1:]-roc["FPR"][:-1]
+    TPR_sum = roc["TPR"][1:]+roc["TPR"][:-1]
+    return torch.sum(FPR_diff*TPR_sum/2.0)
+
+def Proposed_AUM(pred_tensor, label_tensor):
+    roc = ROC_curve(pred_tensor, label_tensor)
+    min_FPR_FNR = roc["min(FPR,FNR)"][1:-1]
+    constant_diff = roc["min_constant"][1:].diff()
+    return torch.sum(min_FPR_FNR * constant_diff)
+\end{verbatim}
+
+  \url{https://tdhock.github.io/blog/2024/torch-roc-aum/}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{AUM pytorch code, auto-grad demo}
+
+  \begin{itemize}
+  \item Assume two samples, $(x_0,y_0=0), (x_1,y_1=1)$,
+  \item Plot objective and gradient with respect to predicted scores.
+  \end{itemize}
+
+  \includegraphics[width=\textwidth]{gg_aum_grad}
+
+  \url{https://tdhock.github.io/blog/2024/torch-roc-aum/}
 \end{frame}
 
 \begin{frame}
@@ -223,6 +282,8 @@ AUM is therefore a surrogate loss for ROC optimization, and it is differentiable
 \begin{itemize}
 \item Implemented AUM loss using \texttt{torch.argsort} (auto-grad).
 \item Gradient descent with constant step size, best of $10^{-4}$ to $10^5$.
+\item Full gradient (batch size = number of samples).
+\item Max iterations = 100,000.
 \item Max Validation AUC comparable or better than baselines.
 \item Number of epochs comparable to baselines.
 \item Time per epoch is $O(N \log N)$ (sort), small log factor larger than standard logistic/cross-entropy loss, $O(N)$.
@@ -237,11 +298,12 @@ AUM is therefore a surrogate loss for ROC optimization, and it is differentiable
   \item Proposed AUM loss similar to recent losses that sum over all
     pairs of positive and negative examples (both can be implemented
     by sorting predicted scores); proposed AUM loss uses a
-    different/novel relaxation similar to ROC curve computation.
-  \item Proposed AUM loss implemented in 15 lines of pytorch code, can be used as a drop-in replacement for logistic/binary cross-entropy loss, \url{https://tdhock.github.io/blog/2022/aum-learning/}
-  \item Best way to use with stochastic gradient algorithms?
+    different/novel relaxation.
+  \item Proposed AUM loss implemented in 15 lines of pytorch code, can be used as a drop-in replacement for logistic/binary cross-entropy loss, \url{https://tdhock.github.io/blog/2024/torch-roc-aum/}
+  \item Best use with stochastic gradient algorithms?
     At least one positive and one negative example is required in each
     batch.
+  \item Margin-based algorithms like SVM?
   \item Works well in binary classification, how to adapt to
     multi-class setting, or other problems such as ranking/information
     retrieval? (next: change-point detection)
@@ -306,6 +368,25 @@ $$\argmin_{u_1,\dots,u_T\in\mathbb R} \sum_{t=1}^T (u_t - z_t)^2 + \lambda\sum_{
 
   LOPART algorithm (R package LOPART) has consistently larger
   test AUC than previous algorithms.
+\end{frame}
+
+\begin{frame}
+  \frametitle{AUM gradient descent results in increased train AUC for
+    a real changepoint problem}
+ 
+Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
+
+\includegraphics[height=3.7cm]{figure-aum-optimized-iterations.png}
+\includegraphics[height=3.7cm]{figure-aum-train-both.png}
+
+\begin{itemize}
+\item Left/middle: changepoint problem initialized to prediction vector with
+  min label errors, gradient descent on prediction vector.
+\item Right: linear model initialized by minimizing regularized convex
+  loss (surrogate for label error, Hocking \emph{et al.} ICML 2013),
+  gradient descent on weight vector.
+\end{itemize}
+
 \end{frame}
 
 \section{Proposed complete line search algorithm for surrogate loss: Area Under Min\{FP,FN\} (AUM)} 
@@ -416,25 +497,6 @@ possible changes in slope of AUM / values of AUC (orange dots).
 \section{Empirical results: increased speed and comparable accuracy using proposed complete line search} 
 
 \begin{frame}
-  \frametitle{AUM gradient descent results in increased train AUC for
-    a real changepoint problem}
- 
-Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
-
-\includegraphics[height=3.7cm]{figure-aum-optimized-iterations.png}
-\includegraphics[height=3.7cm]{figure-aum-train-both.png}
-
-\begin{itemize}
-\item Left/middle: changepoint problem initialized to prediction vector with
-  min label errors, gradient descent on prediction vector.
-\item Right: linear model initialized by minimizing regularized convex
-  loss (surrogate for label error, Hocking \emph{et al.} ICML 2013),
-  gradient descent on weight vector.
-\end{itemize}
-
-\end{frame}
-
-\begin{frame}
   \frametitle{Proposed search consistently faster than grid search}
 
   Analyzed supervised genomic change-point detection data set
@@ -531,13 +593,12 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
   \item Empirical results provide evidence that proposed complete line
     search is consistently faster than grid search, and has 
     comparable accuracy (in terms of max validation AUC).
-  \item Implementations available in R/C++ and python:
+  \item Line search implemented in R/C++:
     {\scriptsize
     \url{https://cloud.r-project.org/web/packages/aum/} (R/C++ line search)
-    \url{https://tdhock.github.io/blog/2022/aum-learning/} (pytorch AUM loss)
     }
-  \item Future work: non-linear learning algorithms that use AUM
-    minimization as a surrogate for AUC maximization.
+  \item Future work: line search for non-linear prediction functions
+    such as neural networks with ReLU activation?
   \end{itemize}
 \end{frame}
 
@@ -548,6 +609,14 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 
   Contact: toby.hocking@nau.edu
 
+\end{frame}
+
+\begin{frame}
+  \frametitle{AUC can be greater than one for change-point problems with non-monotonic error functions}
+  \centering
+  \includegraphics[height=0.7\textheight]{screenshot-auc-2-example}
+  \scriptsize
+  \url{https://nhintruong.github.io/figure-aum-convexity-interactive}
 \end{frame}
 
 \begin{frame}
