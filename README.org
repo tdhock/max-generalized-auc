@@ -47,10 +47,10 @@ Source:
 
 ** Title, abstract, slides
 
-Title: [[https://github.com/tdhock/max-generalized-auc/blob/master/HOCKING-slides-toronto.pdf][Efficient line search for optimizing Area Under the ROC Curve
-in gradient descent]]
+Title: Efficient line search for optimizing Area Under the ROC Curve
+in gradient descent
 
-Receiver Operating Characteristic (ROC) curves are useful for
+Abstract: Receiver Operating Characteristic (ROC) curves are useful for
 evaluation in binary classification and changepoint detection, but
 difficult to use for learning since the Area Under the Curve (AUC) is
 piecewise constant (gradient zero almost everywhere).  Recently the
@@ -67,6 +67,12 @@ empirical study of binary classification problems, we verify that our
 proposed algorithm is fast and exact; in changepoint detection
 problems we show that the proposed algorithm is just as accurate as
 grid search, but faster.
+
+Slides PDF
+- https://github.com/tdhock/max-generalized-auc/blob/master/HOCKING-slides-toronto.pdf
+- https://github.com/tdhock/max-generalized-auc/blob/master/HOCKING-slides-sherbrooke.pdf
+
+See also https://github.com/tdhock/two-new-algos-sci-ml
 
 ** 5 Aug 2024
 
