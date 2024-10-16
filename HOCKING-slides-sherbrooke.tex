@@ -1,4 +1,6 @@
 \documentclass[t]{beamer}
+%\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+%\usepackage{pdffonts}
 \usepackage{tikz}
 \usepackage[all]{xy}
 \usepackage{amsmath,amssymb}
@@ -46,9 +48,8 @@
   Toby Dylan Hocking --- toby.dylan.hocking@usherbrooke.ca\\ 
   joint work with former master student Jadon Fowler\\
   Learning Algorithms, Statistical Software, Optimization (LASSO Lab) --- \url{https://lassolab.org}\\
-  Département d'Informatique \\
-  Université de Sherbrooke\\
-  \includegraphics[height=4cm]{2023-02-02-group-meeting} \\
+  Département d'Informatique, Université de Sherbrooke\\
+  \includegraphics[height=5cm]{2023-02-02-group-meeting} \\
 }
 
 \date{}
@@ -102,7 +103,7 @@
   % \item Proposed idea: a new surrogate for AUC that is differentiable,
   %   so can be used for gradient descent learning.
   \end{itemize}
-  \includegraphics[width=\textwidth]{figure-more-than-one-new-binary}
+  \includegraphics[width=0.9\textwidth]{figure-more-than-one-new-binary}
 \end{frame}
 
 
@@ -125,6 +126,30 @@
 \end{frame}
  
 \section{ROC curve optimization using sort-based gradient descent}
+
+\begin{frame}
+  \frametitle{Gradients of sample-based loss are influenced by imbalance}
+  \includegraphics[width=\textwidth]{roc-gradient-arrows}
+  \begin{itemize}
+  \item Left: some imbalance, ~20\% positive labels, gradient 4x
+    stronger along X axis / False Positive Rate.
+  \item Right: large imbalance, ~0.1\% positive labels, gradient 1000x
+    stronger along X axis / False Positive Rate. (True Positive / Y
+    axis gradients essentially ignored)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Gradients using balanced sample weights, proposed loss}
+  \includegraphics[width=\textwidth]{roc-gradient-arrows-proposed}
+  \begin{itemize}
+  \item Left: gradient 4x
+    stronger along X axis for sample weights=1. Balanced sample
+    weights mean equal influence for gradients along both axes, based on the current prediction threshold.
+  \item Right: proposed method computes gradients based on all ROC
+    points, not just the current prediction threshold.
+  \end{itemize}
+\end{frame}
 
 \begin{frame}
   \frametitle{Comparing proposed loss with baselines}
