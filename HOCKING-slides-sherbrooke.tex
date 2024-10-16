@@ -43,7 +43,7 @@
 \begin{document}
 
 \title{Sort-based gradient descent learning algorithms for ROC curve optimization}
-
+ 
 \author{
   Toby Dylan Hocking --- toby.dylan.hocking@usherbrooke.ca\\ 
   joint work with former master student Jadon Fowler\\
@@ -125,7 +125,7 @@
   \includegraphics[width=\textwidth]{figure-more-than-one-new-binary-heat}
 \end{frame}
  
-\section{ROC curve optimization using sort-based gradient descent}
+\section{Proposed AUM loss, a differentiable surrogate for ROC curve optimization (JMLR'23)}
 
 \begin{frame}
   \frametitle{Gradients of sample-based loss are influenced by imbalance}
@@ -305,7 +305,7 @@ def Proposed_AUM(pred_tensor, label_tensor):
 \includegraphics[width=\textwidth]{data_Classif_batchtools_best_valid_scatter}
 
 \begin{itemize}
-\item Implemented AUM loss using \texttt{torch.argsort} (auto-grad).
+\item Unbalanced binary classification: 10\% negative, 90\% positive.
 \item Gradient descent with constant step size, best of $10^{-4}$ to $10^5$.
 \item Full gradient (batch size = number of samples).
 \item Linear model, max iterations = 100,000.
@@ -324,7 +324,7 @@ def Proposed_AUM(pred_tensor, label_tensor):
     pairs of positive and negative examples (both can be implemented
     by sorting predicted scores); proposed AUM loss uses a
     different/novel relaxation.
-  \item Proposed AUM loss implemented in 15 lines of pytorch code, can be used as a drop-in replacement for logistic/binary cross-entropy loss, \url{https://tdhock.github.io/blog/2024/torch-roc-aum/}
+  \item Proposed AUM loss can be used as a drop-in replacement for logistic/binary cross-entropy loss, \url{https://tdhock.github.io/blog/2024/torch-roc-aum/}
   \item Best use with stochastic gradient algorithms?
     At least one positive and one negative example is required in each
     batch.
@@ -414,7 +414,7 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
 
 \end{frame}
 
-\section{Proposed complete line search algorithm for surrogate loss: Area Under Min\{FP,FN\} (AUM)} 
+\section{Proposed complete line search algorithm for optimizing AUM and AUC (in progress)} 
 
 \begin{frame}
   \frametitle{Using thresholds to compute AUM}
@@ -427,18 +427,18 @@ Hillman, Hocking, \emph{Journal of Machine Learning Research} (2023).
   % Let 
   % let $p_1,\dots,p_B$ be a permutation of $1,\dots,B$ such that
   % thresholds are increasing: $T_$
-Hillman and Hocking, JMLR 2023, showed that AUM for the
-current predictions, can be computed efficiently, as a function of
+\textbf{Hillman and Hocking, JMLR 2023}, showed that in a data set with $N$ samples and $B\geq N$ breakpoints in label error functions, the AUM for the
+\textbf{current predictions} can be computed as a function of
 $T_1<\cdots<T_B$, thresholds when min label error $M_b$ changes,
 \begin{equation*}
   \text{AUM} = \sum_{b=2}^B [T_{b} - T_{b-1}] M_b
 \end{equation*}
 
-This contribution: when learning a linear model,
+\textbf{Proposed}: when learning a linear model,
 $f(\mathbf x)= \mathbf w^T \mathbf x$, we can update the weights
 $\mathbf w$ using AUM gradient descent. We compute an exact
-representation of thresholds $T_b(s)$ and min error $M_b(s)$ as a
-function of step size $s$, which results in a complete piecewise
+representation of thresholds $T_b(s)$ and min error $M_b(s)$ \textbf{as a
+function of step size} $s$, which results in a complete piecewise
 linear representation of
 \begin{equation*}
   \text{AUM}(s) = \sum_{b=2}^B [T_{b}(s) - T_{b-1}(s)] M_b(s).
@@ -519,7 +519,7 @@ possible changes in slope of AUM / values of AUC (orange dots).
   \end{description}
 \end{frame}
 
-\section{Empirical results: increased speed and comparable accuracy using proposed complete line search} 
+%\section{Empirical results: increased speed and comparable accuracy using proposed complete line search} 
 
 \begin{frame}
   \frametitle{Proposed search consistently faster than grid search}
