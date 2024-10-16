@@ -283,7 +283,7 @@ def Proposed_AUM(pred_tensor, label_tensor):
 \item Implemented AUM loss using \texttt{torch.argsort} (auto-grad).
 \item Gradient descent with constant step size, best of $10^{-4}$ to $10^5$.
 \item Full gradient (batch size = number of samples).
-\item Max iterations = 100,000.
+\item Linear model, max iterations = 100,000.
 \item Max Validation AUC comparable or better than baselines.
 \item Number of epochs comparable to baselines.
 \item Time per epoch is $O(N \log N)$ (sort), small log factor larger than standard logistic/cross-entropy loss, $O(N)$.
