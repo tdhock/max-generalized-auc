@@ -240,7 +240,7 @@ AUM is therefore a surrogate loss for ROC optimization, and it is differentiable
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{ROC curve pytorch code}
+  \frametitle{ROC curve pytorch code uses argsort}
   \begin{verbatim}
 def ROC_curve(pred_tensor, label_tensor):
     sorted_indices = torch.argsort(-pred_tensor)
@@ -262,7 +262,7 @@ def ROC_curve(pred_tensor, label_tensor):
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{AUC and AUM pytorch code uses argsort}
+  \frametitle{AUC and AUM both use ROC curve}
 
   \begin{itemize}
   \item ROC AUC and proposed AUM are both implemented by first
@@ -302,6 +302,7 @@ def Proposed_AUM(pred_tensor, label_tensor):
   \frametitle{Comparing AUM with weighted logistic loss}
   \includegraphics[width=\textwidth]{figure-aum-neural-networks-test-auc}
   \begin{itemize}
+  \item Two image classification data sets.
   \item LeNet5 convolutional neural network, batch size 1000.
   \item Step size from $10^{-4}$ to $10^2$ (keep best).
   \item AUM rate uses Area Under Min of FPR/FNR, more accurate in
