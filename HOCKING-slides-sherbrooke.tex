@@ -299,6 +299,19 @@ def Proposed_AUM(pred_tensor, label_tensor):
 \end{frame}
 
 \begin{frame}
+  \frametitle{Comparing AUM with weighted logistic loss}
+  \includegraphics[width=\textwidth]{figure-aum-neural-networks-test-auc}
+  \begin{itemize}
+  \item LeNet5 convolutional neural network, batch size 1000.
+  \item Step size from $10^{-4}$ to $10^2$ (keep best).
+  \item AUM rate uses Area Under Min of FPR/FNR, more accurate in
+    these data than AUM count (FP/FN totals), .
+  \item logistic unweighted is usual binary cross-entropy loss (uniform weight=1 for each sample). 
+  \item for logistic weighted, we compute class frequencies, $n_1=\sum_{i=1}^N I[y_i=1]$ and $n_0$ similar; then weights are $w_i=1/n_{y_i}$ so that total weight of positive class equals total weight of negative class.
+  \end{itemize}
+\end{frame}
+ 
+\begin{frame}
   \frametitle{AUM gradient descent increases validation AUC,\\
     four image classification data sets}
  
