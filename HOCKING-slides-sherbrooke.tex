@@ -241,20 +241,26 @@ AUM is therefore a surrogate loss for ROC optimization, and it is differentiable
 
 \begin{frame}[fragile]
   \frametitle{ROC curve pytorch code uses argsort}
+\small
   \begin{verbatim}
 def ROC_curve(pred_tensor, label_tensor):
-    sorted_indices = torch.argsort(-pred_tensor)
-    ...
-    return { # a dictionary of torch tensors
-        "FPR":FPR,
-        "FNR":FNR,
-        "TPR":1 - FNR,
-        "min(FPR,FNR)":torch.minimum(FPR, FNR),
-        "min_constant":torch.cat([
-          torch.tensor([-torch.inf]), uniq_thresh]),
-        "max_constant":torch.cat([
-          uniq_thresh, torch.tensor([torch.inf])])
-    }
+  sorted_indices=torch.argsort(-pred_tensor)
+  ...
+  return { # a dictionary of torch tensors
+    "FPR":FPR, "FNR":FNR, "TPR":1 - FNR,
+    "min(FPR,FNR)":torch.minimum(FPR, FNR),
+    "min_constant":torch.cat([
+      torch.tensor([-torch.inf]), uniq_thresh]),
+    "max_constant":torch.cat([
+      uniq_thresh, torch.tensor([torch.inf])])  }
+>>> pd.DataFrame(ROC_curve(torch.tensor(
+...   [2.0, -3.5, -1.0, 1.5]), torch.tensor([0,0,1,1])))
+   FPR  FNR  TPR  min(FPR,FNR)  min_constant  max_constant
+0  0.0  1.0  0.0           0.0          -inf          -2.0
+1  0.5  1.0  0.0           0.5          -2.0          -1.5
+2  0.5  0.5  0.5           0.5          -1.5           1.0
+3  0.5  0.0  1.0           0.0           1.0           3.5
+4  1.0  0.0  1.0           0.0           3.5           inf
 \end{verbatim}
 
     \url{https://tdhock.github.io/blog/2024/torch-roc-aum/}
