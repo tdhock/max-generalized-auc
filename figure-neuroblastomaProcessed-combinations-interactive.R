@@ -61,7 +61,7 @@ rfac <- 5
 auc.stats[, round.aum := round(aum*rfac)/rfac]
 auc.stats[, prop.finite := n.finite/max.finite]
 panel.titles <- c(
-  round.aum="Area under both",
+  round.aum="Area Under Min",
   prop.finite="Prop. predictions in finite interval",
   round.auc="Area under ROC curve")
 xlevs <- c("prop.finite", "round.aum")
@@ -99,8 +99,6 @@ auc.panels[, panel.key := paste(xvar, yvar, key)]
 count.dt <- auc.panels[, .(
   combos=.N
 ), by=.(size, xfac, yfac, xval, yval, key, panel.key)]
-ggplot()+facet_wrap("size")+geom_bar(aes(combos), data=count.dt)
-
 ggplot()+facet_wrap("size")+geom_bar(aes(log10(combos)), data=count.dt)
 
 combos.for.panel.key <- count.dt[auc.panels, .(
@@ -139,8 +137,8 @@ small.alpha <- 0.7
 med.size <- 6
 big.size <- 7
 err.sizes <- c(
-  fp=3,
-  fn=2,
+  fp=5,
+  fn=3,
   errors=1)
 err.colors <- c(
   fp="red",
@@ -161,7 +159,25 @@ aum0 <- auc.stats[, .(
   auc1=sum(auc==1),
   auc.over1=sum(auc>1)
 ), by=.(size)]
-aum0.tall <- melt(aum0, id.vars="size")
+(aum0.tall <- melt(aum0, id.vars="size")[
+, log10.size := log10(size)
+][])
+
+roc.area.rects <- roc.dt[, let(
+  next.FPR = c(FPR[-1],NA),
+  next.TPR = c(TPR[-1],NA),
+  FPR.diff = c(diff(FPR),NA)
+), by=.(size,combo.i)][, let(
+  pmin.FPR = pmin(FPR, next.FPR),
+  pmax.FPR = pmax(FPR, next.FPR),
+  rect.area=(next.FPR-FPR)*TPR
+)][next.FPR!=FPR & TPR > 0]
+roc.area.text <- roc.area.rects[, .(
+  total.area=sum(rect.area)
+), by=.(size, combo.i, FPR, next.FPR, FPR.diff, TPR, sign=sign(FPR.diff))]
+roc.area.rects[next.TPR != TPR]# no diagonal moves.
+roc.area.rects[is.na(next.FPR)]
+roc.area.rects[next.FPR<FPR]
 viz <- animint(
   title="Generalized ROC curve metrics",
   source="https://github.com/tdhock/max-generalized-auc/blob/master/figure-neuroblastomaProcessed-combinations-interactive.R",
@@ -170,54 +186,105 @@ viz <- animint(
     ggtitle("Select margin size")+
     theme_bw()+
     theme_animint(width=300, height=300)+
-    theme(panel.margin=grid::unit(0, "lines"))+
     facet_grid(variable ~ ., scales="free")+
     scale_x_continuous(
-      "Margin size of prediction wrt inf. interval")+
+      "Margin size of prediction wrt inf. interval",
+      breaks=unique(aum0.tall$log10.size))+
     scale_y_continuous("Number of prediction combinations")+
     geom_point(aes(
-      log10(size), value),
+      log10.size, value),
+      help="One dot per margin size.",
       data=aum0.tall)+
     geom_tallrect(aes(
       xmin=log10(size)-0.5,
       xmax=log10(size)+0.5),
       data=aum0,
       alpha=0.5,
+      help="Gray rect shows selected margin size.",
       clickSelects="size"),
   scatter=ggplot()+
     ggtitle("ROC curve, AUC/AUM distribution, select prediction")+
     theme_bw()+
     theme_animint(width=500, height=500)+
-    theme(panel.margin=grid::unit(0.5, "lines"))+
     guides(color="none")+
     facet_grid(yfac ~ xfac, scales="free")+
     scale_x_continuous("", breaks=break.vec)+
     scale_y_continuous("", breaks=break.vec)+
     scale_color_manual(values=c(none="white", some="black"))+
     scale_fill_gradient(low="white", high="red")+
+    geom_rect(aes(
+      xmin=pmin.FPR, xmax=pmax.FPR,
+      key=thresh.i,
+      ymin=0, ymax=TPR),
+      color="black",
+      size=1,
+      fill="black",
+      help="Shaded grey rectangles represent positive Area Under the ROC Curve, created when the FPR moves to the right.",
+      alpha=0.2,
+      showSelected=c("size", "combo.i"),
+      data=XPANEL("prop.finite", YPANEL("prop.finite", roc.area.rects)))+
+    geom_rect(aes(
+      xmin=pmin.FPR, xmax=pmax.FPR,
+      key=thresh.i,
+      ymin=0, ymax=TPR),
+      color="red",
+      size=1,
+      fill="red",
+      help="Shaded red rectangles represent negative Area Under the ROC Curve, created when the FPR moves to the left.",
+      alpha=0.2,
+      showSelected=c("size", "combo.i"),
+      data=XPANEL("prop.finite", YPANEL("prop.finite", roc.area.rects[next.FPR<FPR])))+
+    geom_text(aes(
+      x=(FPR+next.FPR)/2, TPR/2+FPR.diff/2,
+      key=paste(FPR,next.FPR,TPR),
+      label=sprintf("%.3f", total.area)),
+      showSelected=c("size", "combo.i"),
+      help="Red text counts negative AUC.",
+      color="red",
+      data=XPANEL("prop.finite", YPANEL("prop.finite", roc.area.text[total.area<0])))+
+    geom_text(aes(
+      x=(FPR+next.FPR)/2, TPR/2+FPR.diff/2,
+      key=paste(FPR,next.FPR,TPR),
+      label=sprintf("%.3f", total.area)),
+      showSelected=c("size", "combo.i"),
+      help="Black text counts positive AUC.",
+      color="black",
+      data=XPANEL("prop.finite", YPANEL("prop.finite", roc.area.text[total.area>0])))+
     geom_path(aes(
       FPR, TPR, key=1),
+      help="Blue path shows ROC curve.",
       data=XPANEL("prop.finite", YPANEL("prop.finite", roc.dt)),
       color=roc.color,
+      size=3,
+      showSelected=c("size", "combo.i"))+
+    geom_point(aes(
+      FPR, TPR, key=paste(FPR,TPR)),
+      help="Blue points emphasize discrete values on ROC curve.",
+      data=XPANEL("prop.finite", YPANEL("prop.finite", roc.dt)),
+      size=3,
+      clickSelects="thresh.i",
+      color="black",
+      color_off="black",
+      fill="black",
+      fill_off=roc.color,
+      alpha=1,
+      alpha_off=1,
       showSelected=c("size", "combo.i"))+
     geom_point(aes(
       FPR, TPR, key=1),
+      help="Black dot shows ROC point corresponding to currently selected threshold.",
       data=XPANEL("prop.finite", YPANEL("prop.finite", roc.dt)),
       showSelected=c("size", "combo.i", "thresh.i"))+
     geom_hline(aes(
       yintercept=auc),
+      help="Horizontal line shows AUC=1.",
       data=YPANEL("round.auc", auc=1),
       color="grey50")+
     geom_vline(aes(
       xintercept=aum),
+      help="Vertical line shows AUM=0.",
       data=XPANEL("round.aum", aum=0),
       color="grey50")+
-    geom_point(aes(
-      xval, yval,
-      key=1),
-      size=big.size,
-      showSelected=c("size", "panel.key"),
-      data=count.tall)+
     geom_point(aes(
       xval, yval,
       key=key,
@@ -227,27 +294,48 @@ viz <- animint(
         xfac, paste(xval),
         yfac, paste(yval),
         paste(size)),
+      help="One dot per pair of possible values of AUC, AUM, and proportion of predictions in finite interval, with shades of red indicating how many ROC curves that have these values.",
       color=combos.chr,
-      fill=combos),
+      fill=log10(combos)),
       size=med.size,
-      clickSelects="panel.key",
+      alpha=1,
       showSelected=c("size"),
       data=count.tall)+
     geom_point(aes(
+      xval, yval, key=panel.key),
+      help="Thick black border for selected combination.",
+      size=big.size,
+      alpha_off=0,
+      alpha=1,
+      fill=NA,
+      color="black",
+      showSelected=c("size"),
+      clickSelects="panel.key",
+      data=count.tall)+
+    geom_point(aes(
       xorig, yorig, key=combo.i),
+      help="Dots with transparent fill represent different ROC curves with values closest to this combination.",
       showSelected=c("size", "panel.key"),
       clickSelects="combo.i",
-      alpha=small.alpha,
+      alpha=1,
+      alpha_off=1,
       size=small.size,
+      fill=NA,
+      fill_off=NA,
+      color=roc.color,
+      color_off="black",
+      stroke=2,
       data=auc.orig)+
     geom_point(aes(
       xorig, yorig, key=1),
+      help="Blue dot represents currently displayed ROC curve.",
       color=roc.color,
       showSelected=c("size", "combo.i"),
       size=small.size,
       data=auc.orig)+
     geom_blank(aes(
       x, y),
+      help="Blank geom used to ensure every panel has (0,0) point.",
       data=data.table(x=0, y=0)),
   err=ggplot()+
     ggtitle("Error curves, select threshold")+
@@ -264,8 +352,10 @@ viz <- animint(
       xmin=min.new, ymin=0,
       key=thresh.i,
       xmax=max.new, ymax=min.fp.fn),
-      alpha=0.1,
-      size=0,
+      fill="grey",
+      color="grey",
+      help="Grey rect represents Area Under Min (AUM).",
+      size=1,
       showSelected=c("size", "combo.i"),
       data=roc.dt)+
     geom_segment(aes(
@@ -273,64 +363,29 @@ viz <- animint(
       key=paste(variable, thresh.i),
       color=variable, size=variable,
       xend=max.new, yend=value),
+      help="Segments represent error functions.",
       data=roc.dt.tall,
       showSelected=c("size", "combo.i"))+
     geom_rect(aes(
       xmin=min.new, ymin=-Inf,
       xmax=max.new, ymax=Inf,
       key=thresh.i),
+      help="Grey rect shows currently selected interval of thresholds, corresponding to one point on the ROC curve.",
       clickSelects="thresh.i",
       showSelected=c("size", "combo.i"),
       alpha=0.5,
       data=roc.dt),
-    ## geom_point(aes(
-    ##   thresh.i, value),
-    ##   data=roc.dt.tall,
-    ##   showSelected=c("size", "combo.i")),
-  ## uniq=ggplot()+
-  ##   theme_bw()+
-  ##   theme(panel.margin=grid::unit(0, "lines"))+
-  ##   geom_hline(yintercept=1, col="grey")+
-  ##   scale_fill_gradient(low="white", high="red")+
-  ##   scale_y_continuous(breaks=seq(0, 1.2, by=0.2))+
-  ##   scale_x_continuous(breaks=seq(0, 20, by=2))+
-  ##   geom_point(aes(
-  ##     n.uniq, auc,
-  ##     key=1),
-  ##     showSelected=c("size", "panel.key"),
-  ##     size=big.size,
-  ##     data=auc.stat.counts)+
-  ##   geom_point(aes(
-  ##     n.uniq, auc,
-  ##     key=panel.key,
-  ##     fill=count),
-  ##     showSelected="size",
-  ##     clickSelects="panel.key",
-  ##     size=med.size,
-  ##     data=auc.stat.counts)+
-  ##   geom_point(aes(
-  ##     n.uniq, auc,
-  ##     key=combo.i),
-  ##     showSelected=c("size", "panel.key"),
-  ##     clickSelects="combo.i",
-  ##     size=small.size,
-  ##     alpha=small.alpha,
-  ##     data=auc.stats)+
-  ##   geom_point(aes(
-  ##     n.uniq, auc,
-  ##     key=1),
-  ##     showSelected=c("size", "combo.i"),
-  ##     color=roc.color,
-  ##     size=small.size,
-  ##     data=auc.stats),
   duration=list(size=1000, combo.i=1000, thresh.i=500),
   first=list(
     thresh.i=1,
     size=1e-4,
     combo.i=132,
     panel.key="prop.finite round.auc 0.625 1.1667"),
-  time=list(variable="thresh.i", ms=500)
+  time=list(variable="thresh.i", ms=500),
+  video="https://vimeo.com/1052818937"
 )
+
+viz
 if(FALSE){
   animint2pages(viz, "2024-06-26-neuroblastomaProcessed-combinations")
 }
