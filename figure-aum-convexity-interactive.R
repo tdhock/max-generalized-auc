@@ -184,6 +184,7 @@ selected.err <- err.list$label.errors[selected.dt, on=.(
   label, segments)][, error.type := type.abbrev[status] ]
 viz <- animint(
   title="Simple non-monotonic ROC curve",
+  video="https://vimeo.com/1053132517",
   out.dir="2021-11-12-aum-convexity",
   overview=ggplot()+
     ggtitle("Overview, select difference")+
@@ -196,6 +197,7 @@ viz <- animint(
       "FALSE"="orange"))+
     geom_point(aes(
       pred.diff, value, fill=differentiable),
+      help="One dot per prediction difference which could be selected.",
       size=4,
       shape=21,
       data=metrics.tall)+
@@ -210,6 +212,7 @@ viz <- animint(
     theme_animint(width=600, height=300)+
     geom_tallrect(aes(
       xmin=min/1e6, xmax=max/1e6, fill=annotation),
+      help="One rect per label. The negative label (orange/top) generates a false positive if any change-points are predicted inside. The positive label (violet/bottom) generates a false negative if no change-points are predicted inside.",
       alpha=0.5,
       data=nb.some$annotations)+
     scale_fill_manual(
@@ -219,11 +222,13 @@ viz <- animint(
         normal="orange"))+
     geom_point(aes(
       position/1e6, logratio),
+      help="One dot per data point to segment.",
       color="grey50",
       data=nb.some$profiles)+
     geom_tallrect(aes(
       xmin=min/1e6, xmax=max/1e6,
       color=error.type),
+      help="Rect border if predicted change-points generate a label error: grey=correct, red=false positive, blue=false negative.",
       data=selected.err,
       showSelected=c("pred.diff", "roc.point"),
       size=5,
@@ -231,12 +236,14 @@ viz <- animint(
     geom_segment(aes(
       start.pos/1e6, mean,
       xend=end.pos/1e6, yend=mean),
+      help="Blue segments show predicted mean model.",
       data=selected.segs,
       size=3,
       color=text.color,
       showSelected=c("pred.diff", "roc.point"))+
     geom_vline(aes(
       xintercept=start.pos/1e6),
+      help="Blue vertical lines show predicted change-points.",
       data=selected.segs[start>1],
       size=2,
       color=text.color,
@@ -256,25 +263,29 @@ viz <- animint(
     facet_grid(label ~ ., labeller=label_both)+
     geom_vline(aes(
       xintercept=pred.plus.constant),
+      help="Black vertical line shows predicted value, f(x) = -log(penalty).",
       data=pred.tall.thresh,
       showSelected=c("pred.diff", "roc.point"))+
     geom_segment(aes(
-      min.log.lambda, value,
-      xend=max.log.lambda, yend=value,
-      color=error.type, size=error.type),
-      showSelected="error.type",
-      data=some.err.tall)+
-    geom_segment(aes(
       pos, -Inf,
       xend=neg, yend=-Inf),
+      help="Black horizontal segment shows the difference in predicted values, between the two labeled data sequences (panels).",
       data=pred.tall.thresh.wide,
       showSelected=c("pred.diff", "roc.point"))+
     geom_text(aes(
       neg-0.1, -0.3,
       label=sprintf("pred.diff=%.2f", pred.diff)),
+      help="Text shows the difference in predicted values, between the two labeled data sequences (panels).",
       hjust=1,
       data=pred.tall.thresh.wide,
       showSelected=c("pred.diff", "roc.point"))+
+    geom_segment(aes(
+      min.log.lambda, value,
+      xend=max.log.lambda, yend=value,
+      color=error.type, size=error.type),
+      help="Blue and red segments show number of label errors, for each data sequence, as a function of predicted value f(x) = -log(penalty).",
+      showSelected="error.type",
+      data=some.err.tall)+
     scale_y_continuous(
       "Label errors",
       breaks=c(0,1),
@@ -292,6 +303,7 @@ viz <- animint(
       xmin=min.thresh, xmax=max.thresh,
       ymin=0, ymax=min.fp.fn),
       fill="grey50",
+      help="Grey rects represent AUM = Area Under Min of False Positive and False Negative rates.",
       color=NA,
       alpha=0.5,
       showSelected="pred.diff",
@@ -301,25 +313,30 @@ viz <- animint(
       xend=max.thresh, yend=value,
       color=error.type, size=error.type),
       showSelected="pred.diff",
+      help="Blue/red/black segments show number of label errors, summed over all data sequences, as a function of the selected threshold, or constant c added to predicted values, f(x)+c = -log(penalty)+c.",
       data=show.roc.tall)+
     geom_vline(aes(
       xintercept=text.constant),
       showSelected=c("pred.diff", "roc.point"),
       color=text.color,
+      help="Blue vertical line shows a constant that could be added to predicted values, which corresponds to the selected point on the ROC curve.",
       alpha=0.5,
       data=show.roc.dt)+
     geom_text(aes(
       text.constant, -0.25, label=roc.point),
       showSelected="pred.diff",
+      help="One number for each interval of constant label error / point on the ROC curve.",
       size=text.size,
       color=text.color,
       data=show.roc.dt)+
     geom_text(aes(
       -1.5, 0.25, label=sprintf("AUM=%.2f", aum)),
+      help="Text shows AUM = Area Under Min of False Positive and False Negative rates.",
       data=metrics.wide,
       showSelected="pred.diff")+
     geom_tallrect(aes(
       xmin=min.thresh, xmax=max.thresh),
+      help="Light grey rect represents interval of constants that could be added to predicted values, to obtain the selected point on the ROC curve.",
       data=show.roc.dt,
       fill=text.color,
       clickSelects="roc.point",
@@ -328,12 +345,14 @@ viz <- animint(
       alpha=0.1)+
     scale_y_continuous(
       "Label errors",
-      breaks=c(0,1))+
+      breaks=c(0,1),
+      limits=c(-0.4, 1.4))+
     scale_color_manual(leg,values=err.colors)+
     scale_size_manual(leg,values=err.sizes)+
-    geom_blank(aes(
-      x, y),
-      data=data.table(x=0, y=c(-0.4,1.4)))+
+    ## geom_blank(aes(
+    ##   x, y),
+    ##   help="Blank geom for enlarging 
+    ##   data=data.table(x=0, y=c(-0.4,1.4)))+
     scale_x_continuous(
       "Constant added to pred. values"),
   roc=ggplot()+
@@ -343,10 +362,12 @@ viz <- animint(
     theme_animint(width=300, height=300)+
     geom_path(aes(
       FPR, TPR),
+      help="Black path represents ROC curve.",
       showSelected="pred.diff",
       data=show.roc.dt)+
     geom_text(aes(
       0.5, 0.5, label=paste0("AUC=", auc)),
+      help="Text shows AUC = Area Under the ROC Curve.",
       data=metrics.wide,
       showSelected="pred.diff")+
     scale_x_continuous(
@@ -357,6 +378,7 @@ viz <- animint(
       breaks=seq(0,1,by=0.5))+
     geom_point(aes(
       FPR, TPR),
+      help="One blue dot per point on the ROC curve.",
       data=show.roc.dt,
       size=4,
       alpha=0.5,
@@ -364,6 +386,7 @@ viz <- animint(
       showSelected=c("pred.diff", "roc.point"))+
     geom_text(aes(
       text.FPR, TPR+0.01, label=roc.point),
+      help="One number per point on the ROC curve, lower numbers for points generated by smaller constants c added to predicted values, f(x)+c = -log(penalty)+c.",
       size=text.size,
       color=text.color,
       showSelected="pred.diff",
@@ -371,8 +394,12 @@ viz <- animint(
       data=show.roc.dt),
   time=list(
     variable="pred.diff",
-    ms=500)
+    ms=500),
+  source="https://github.com/tdhock/max-generalized-auc/blob/master/figure-aum-convexity-interactive.R"
 )
-##viz
-##animint2gist(viz)
+
+viz
+if(FALSE){
+  animint2pages(viz, "2025-02-03-aum-convexity")
+}
 
